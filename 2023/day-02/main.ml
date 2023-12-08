@@ -1,5 +1,4 @@
-let fail s = raise (Failure s)
-let comp f g x = f (g x)
+open Utils
 
 module Cubes = struct
   type t = { r : int; g : int; b : int } [@@deriving show]
@@ -50,11 +49,13 @@ let solve0 (input : string list) : int =
 
 let solve1 (input : string list) : int =
   let games = List.map Game.of_string input in
-  List.fold_left (+) 0 @@ List.map (comp Cubes.power Game.minBag) games
+  List.fold_left (+) 0 @@ List.map (Cubes.power % Game.minBag) games
 
-let solve_file (filename : string) =
+let solve_file (filename : string) expected =
   let input = Core.In_channel.read_lines filename in
-  print_endline Fmt.(str "%s: %d %d" filename (solve0 input) (solve1 input))
+  let result = (solve0 input, solve1 input) in
+  print_string @@ Fmt.str "%s: %s" filename @@ [%show: int * int] result;
+  check_results ~expected:expected ~actual:result
 
-let () = solve_file "input-ex0.txt"
-let () = solve_file "input-real0.txt"
+let () = solve_file "input-ex0.txt" @@ (Some (8, 2286))
+let () = solve_file "input-real0.txt" @@ (Some (2439, 63711))

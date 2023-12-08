@@ -15,7 +15,7 @@ let is_symbol = function | Symbol _ -> true | _ -> false
 let is_gear = function | Symbol '*' -> true | _ -> false
 
 let print_line (line : pchar list) : unit =
-  List.iter (comp print_string [%show: pchar]) line;
+  List.iter (print_string % [%show: pchar]) line;
   print_newline ()
 
 let print_board (board : pchar list list) : unit =
@@ -72,22 +72,24 @@ let rec extract_numbers : (PartFlag.t * pchar) list -> (PartFlag.loc * int) list
   | (_ :: rest) -> extract_numbers rest
 
 let solve0 (input : string list) : int =
-  let board = List.map (comp (List.map parse_char) (comp List.of_seq String.to_seq)) input in
+  let board = List.map (List.map parse_char % List.of_seq % String.to_seq) input in
   let annotated_board = zip2d (blur2d (symbols is_symbol board)) board in
   let part_numbers = List.concat_map extract_numbers annotated_board in
   sum (List.map snd part_numbers)
 
 let solve1 (input : string list) : int =
-  let board = List.map (comp (List.map parse_char) (comp List.of_seq String.to_seq)) input in
+  let board = List.map (List.map parse_char % List.of_seq % String.to_seq) input in
   let annotated_board = zip2d (blur2d (symbols is_gear board)) board in
   let part_numbers = List.sort compare (List.concat_map extract_numbers annotated_board) in
   let grouped = List.map (List.map snd) @@ group_on fst part_numbers in
   let ratios = List.filter_map (function | [x; y] -> Some (x * y) | _ -> None) grouped in
   sum ratios
 
-let solve_file (filename : string) =
+let solve_file (filename : string) expected =
   let input = Core.In_channel.read_lines filename in
-  print_endline Fmt.(str "%s: %d %d" filename (solve0 input) (solve1 input))
+  let result = (solve0 input, solve1 input) in
+  print_string @@ Fmt.str "%s: %s" filename @@ [%show: int * int] result;
+  check_results ~expected:expected ~actual:result
 
-let () = solve_file "input-ex0.txt"
-let () = solve_file "input-real0.txt"
+let () = solve_file "input-ex0.txt" @@ Some (4361, 467835)
+let () = solve_file "input-real0.txt" @@ Some (540212, 87605697)

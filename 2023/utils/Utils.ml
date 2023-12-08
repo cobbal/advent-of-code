@@ -1,6 +1,7 @@
+open Containers
+
 let fail s = raise (Failure s)
-let comp f g x = f (g x)
-let (%) = comp
+let (%) f g x = f (g x)
 
 let rec tails : 'a list -> 'a list list = function
   | [] -> []
@@ -31,7 +32,17 @@ let rec group_by (f : 'a -> 'a -> bool) : 'a list -> 'a list list = function
     let (left, right) = span (f x) xs in
     (x :: left) :: group_by f right
 
-let group (l : 'a list) : 'a list list = group_by (==) l
-let group_on (key : 'a -> 'b) : 'a list -> 'a list list = group_by (fun x y -> key x == key y)
+let group_on (key : 'a -> 'b) : 'a list -> 'a list list = group_by (fun x y -> Stdlib.(key x = key y))
+let group (key : 'a -> 'b) : 'a list -> 'a list list = group_by Stdlib.(=)
+
+let words = List.filter (String.(<>) "") % String.split_on_char ' '
 
 let undigits : int list -> int = List.fold_left (fun sum digit -> sum * 10 + digit) 0
+
+let check_results ~expected ~actual = match expected with
+  | Some expectation ->
+    if Stdlib.(expectation = actual)
+    then print_endline " \u{2705}"
+    else (print_endline " \u{274c}"; fail "Wrong answer")
+  | None ->
+    print_newline ()

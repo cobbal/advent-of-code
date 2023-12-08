@@ -18,16 +18,17 @@ let char_list_digit1 : char list -> int option = function
   | c -> char_list_digit0 c
 
 let digits char_list_digit (str : string) : int list = List.filter_map char_list_digit (tails (List.of_seq (String.to_seq str)))
-let solve_line (line : int list) : int = 10 * List.hd line + List.hd (List.rev line)
-let solve char_list_digit (input : string list) : int = List.fold_left (+) 0 (List.map (comp solve_line (digits char_list_digit)) input)
+let solve_line (line : int list) : int = 10 * List.hd (line @ [0]) + List.hd (List.rev line @ [0])
+let solve char_list_digit (input : string list) : int = List.fold_left (+) 0 (List.map (solve_line % digits char_list_digit) input)
 
-let solve_file char_list_digit (filename : string) =
-  let input = Core.In_channel.read_lines filename
-  in
+let solve_file (filename : string) expected =
+  let input = Core.In_channel.read_lines filename in
   (* print_endline Fmt.(str "%s: %a" filename Dump.(list (list int)) (List.map digits input)); *)
-  print_endline Fmt.(str "%s: %a" filename int (solve char_list_digit input))
+  let result = (solve char_list_digit0 input, solve char_list_digit1 input) in
+  print_string @@ Fmt.str "%s: %s" filename @@ [%show: int * int] result;
+  check_results ~expected:expected ~actual:result
 
-let () = solve_file char_list_digit0 "input-ex0.txt"
-let () = solve_file char_list_digit0 "input-real0.txt"
-let () = solve_file char_list_digit1 "input-ex1.txt"
-let () = solve_file char_list_digit1 "input-real0.txt"
+
+let () = solve_file "input-ex0.txt" @@ Some (142, 142)
+let () = solve_file "input-ex1.txt" @@ Some (209, 281)
+let () = solve_file "input-real0.txt" @@ Some (56506, 56017)
