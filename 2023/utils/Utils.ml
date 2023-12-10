@@ -5,6 +5,9 @@ let (%) f g x = f (g x)
 let id x = x
 let flip f x y = f y x
 
+let curry f x y = f (x, y)
+let uncurry f (x, y) = f x y
+
 let rec tails : 'a list -> 'a list list = function
   | [] -> []
   | (_ :: xs) as l -> l :: tails xs

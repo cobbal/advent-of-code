@@ -1,9 +1,8 @@
-(library
- (name utils)
- (modules Utils IntRangeSet)
- (wrapped false)
+(executable
+ (name main)
+ (public_name day-06)
  (preprocess (pps ppx_deriving.show ppx_deriving.ord))
- (libraries fmt core ppx_deriving containers))
+ (libraries fmt core ppx_deriving utils containers))
 (env
   (dev
     (flags (:standard -warn-error -A -w -26-27-32-34-69))))

@@ -1,43 +1,29 @@
-open Utils
+open Utils 
 
 module SeedMap = struct
-  type range = { lo : int; hi : int }
-  let pp_range (fmt : Format.formatter) (r : range) : unit =
-    Format.pp_print_string fmt @@ Fmt.str "(%d, %d)" r.lo r.hi
-  let range_contains r i = r.lo <= i && i < r.hi
-  let range_intersect r s =
-    let lo = max r.lo s.lo in
-    let hi = min r.hi s.hi in
-    let res = if lo < hi then Some { lo = lo; hi = hi } else None in
-    print_endline @@ Fmt.str "%a int %a -> %a" pp_range r pp_range s (Format.pp_print_option pp_range) res;
-    res
-
-  type segment = { source : range; offset : int }
+  type segment = { source : IntRangeSet.t; offset : int }
   let pp_segment (fmt : Format.formatter) (map : segment) : unit =
     Format.pp_print_string fmt @@
-    Fmt.str "%a%s%d" pp_range map.source (if map.offset >= 0 then "+" else "") map.offset
+    Fmt.str "%a%s%d" IntRangeSet.pp map.source (if map.offset >= 0 then "+" else "") map.offset
 
   type t = segment list [@@deriving show]
 
   let rec apply (map : t) (i : int) : int = match map with
     | [] -> i
-    | seg :: _ when range_contains seg.source i -> i + seg.offset
+    | seg :: _ when IntRangeSet.mem i seg.source -> i + seg.offset
     | _ :: map -> apply map i
 
-  let rec apply_range (map : t) (r : range) : range list = match map with
-    | [] -> [r]
-    | seg :: rest -> begin match range_intersect seg.source r with
-        | Some intersection -> [{
-            lo = intersection.lo + seg.offset;
-            hi = intersection.hi + seg.offset;
-          }] @ ???
-        | None -> apply_range rest r
-      end
+  let rec apply_set (map : t) (r : IntRangeSet.t) : IntRangeSet.t = match map with
+    | [] -> r
+    | seg :: rest -> 
+      let overlap = IntRangeSet.inter r seg.source in 
+      let missed = IntRangeSet.diff r seg.source in
+      IntRangeSet.union (IntRangeSet.offset seg.offset overlap) (apply_set rest missed)
 
   let of_para : string list list -> t =
     let of_line : int list -> segment = function
       | [map_to; from; count] -> {
-          source = { lo = from; hi = from + count };
+          source = IntRangeSet.range from (from + count - 1);
           offset = map_to - from
         }
       | _ -> fail "parse error"
@@ -62,16 +48,15 @@ let solve1 (input : string list) : int =
   match tokens with
   | ["seeds:" :: seed_strings] :: map_strings ->
     let maps = List.map SeedMap.of_para map_strings in
-    let mk_range (lo, count) = SeedMap.{ lo = lo; hi = lo + count } in
-    let seeds = List.map mk_range @@ pairs @@ List.map int_of_string seed_strings in
-    print_endline @@ [%show: SeedMap.range list] seeds;
+    let mk_range (lo, count) = IntRangeSet.range lo (lo + count - 1) in
+    let seeds = List.fold_left IntRangeSet.union IntRangeSet.empty
+      @@ List.map mk_range @@ pairs @@ List.map int_of_string seed_strings in
+(*     print_endline @@ [%show: IntRangeSet.t] seeds; *)
     let loc_of_seeds seeds = List.fold_left (fun r map ->
-        List.concat_map (SeedMap.apply_range map) r
+        SeedMap.apply_set map r
       ) seeds maps in
     let locations = loc_of_seeds seeds in
-    print_endline @@ [%show: SeedMap.range list] @@ SeedMap.apply_range (List.hd maps) (List.hd seeds);
-    print_endline @@ [%show: SeedMap.range list] locations;
-    0
+    IntRangeSet.min_elt locations
     (* List.fold_left min (List.hd locations) locations *)
   | _ -> fail "parse error"
 
@@ -81,5 +66,5 @@ let solve_file (filename : string) expected =
   print_string @@ Fmt.str "%s: %s" filename @@ [%show: int * int] result;
   check_results ~expected:expected ~actual:result
 
-let () = solve_file "input-ex0.txt" @@ None
-(* let () = solve_file "input-real0.txt" @@ None *)
+let () = solve_file "input-ex0.txt" @@ Some (35, 46)
+let () = solve_file "input-real0.txt" @@ Some (525792406, 79004094)
