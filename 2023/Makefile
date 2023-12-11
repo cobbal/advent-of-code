@@ -1,4 +1,4 @@
-days := $(wildcard day-*)
+days := $(sort $(wildcard day-*))
 
 all: $(days:day-%=%)
 

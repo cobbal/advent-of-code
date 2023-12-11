@@ -29,6 +29,8 @@ let solve_file (filename : string) expected =
   check_results ~expected:expected ~actual:result
 
 
-let () = solve_file "input-ex0.txt" @@ Some (142, 142)
-let () = solve_file "input-ex1.txt" @@ Some (209, 281)
-let () = solve_file "input-real0.txt" @@ Some (56506, 56017)
+let () = time @@ fun () ->
+  solve_file "input-ex0.txt" @@ Some (142, 142);
+  solve_file "input-ex1.txt" @@ Some (209, 281);
+  solve_file "input-real0.txt" @@ Some (56506, 56017);
+  ()

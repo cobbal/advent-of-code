@@ -66,5 +66,7 @@ let solve_file (filename : string) expected =
   print_string @@ Fmt.str "%s: %s" filename @@ [%show: int * int] result;
   check_results ~expected:expected ~actual:result
 
-let () = solve_file "input-ex0.txt" @@ Some (35, 46)
-let () = solve_file "input-real0.txt" @@ Some (525792406, 79004094)
+let () = time @@ fun () ->
+  solve_file "input-ex0.txt" @@ Some (35, 46);
+  solve_file "input-real0.txt" @@ Some (525792406, 79004094);
+  ()

@@ -63,3 +63,9 @@ let rec pairs = function
   | [] -> []
   | [x] -> fail "odd length list to pairs"
   | x :: y :: rest -> (x, y) :: pairs rest
+
+let time thunk =
+    let start = Sys.time() in
+    let res = thunk () in
+    Format.printf "time: %fs\n" (Sys.time() -. start);
+    res
