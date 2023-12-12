@@ -2,6 +2,7 @@ val fail : string -> 'a
 val ( % ) : ('a -> 'b) -> ('c -> 'a) -> 'c -> 'b
 val id : 'a -> 'a
 val flip : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
+val const : 'a -> 'b -> 'a
 val curry : ('a * 'b -> 'c) -> 'a -> 'b -> 'c
 val uncurry : ('a -> 'b -> 'c) -> 'a * 'b -> 'c
 val tails : 'a list -> 'a list list
