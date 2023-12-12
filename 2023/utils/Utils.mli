@@ -19,3 +19,5 @@ val split_by : ('a -> bool) -> 'a list -> 'a list list
 val paragraphs : string list -> string list list
 val pairs : 'a list -> ('a * 'a) list
 val time : (unit -> 'a) -> 'a
+val gcd : int -> int -> int
+val lcm : int -> int -> int
