@@ -1,9 +1,11 @@
 days := $(sort $(wildcard day-*))
 
+OPAM := opam
+
 all: $(days:day-%=%)
 
 %: day-%
 	@echo
 	@echo "== $< =="
-	cd $<; dune exec $<
+	eval $$($(OPAM) env); cd $<; dune exec $<
 	@echo
