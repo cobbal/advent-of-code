@@ -25,6 +25,7 @@ let rec zip2d (xs : 'a list list) (ys : 'b list list) : ('a * 'b) list list =
   | x :: xs, y :: ys -> List.combine x y :: zip2d xs ys
 
 let sum = List.fold_left (+) 0
+let prod = List.fold_left ( * ) 1
 
 let rec span (p : 'a -> bool) : 'a list -> 'a list * 'a list = function
   | head :: tail when p head ->
@@ -59,6 +60,9 @@ let rec split_by (pred : 'a -> bool) : 'a list -> 'a list list = function
   | x :: xs -> let (first, rest) = List.hd_tl (split_by pred xs) in (x :: first) :: rest
 
 let paragraphs : string list -> string list list = split_by (String.(=) "")
+
+let list_of_string = List.of_seq % String.to_seq
+let string_of_list = String.of_seq % List.to_seq
 
 let rec pairs = function
   | [] -> []

@@ -9,6 +9,7 @@ val tails : 'a list -> 'a list list
 val transpose : 'a list list -> 'a list list
 val zip2d : 'a list list -> 'b list list -> ('a * 'b) list list
 val sum : int list -> int
+val prod : int list -> int
 val span : ('a -> bool) -> 'a list -> 'a list * 'a list
 val group_by : ('a -> 'a -> bool) -> 'a list -> 'a list list
 val group_on : ('a -> 'b) -> 'a list -> 'a list list
@@ -18,6 +19,8 @@ val undigits : int list -> int
 val check_results : expected:('a option) -> actual:'a -> unit
 val split_by : ('a -> bool) -> 'a list -> 'a list list
 val paragraphs : string list -> string list list
+val list_of_string : string -> char list
+val string_of_list : char list -> string
 val pairs : 'a list -> ('a * 'a) list
 val time : (unit -> 'a) -> 'a
 val gcd : int -> int -> int
