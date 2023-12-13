@@ -9,3 +9,7 @@ all: $(days:day-%=%)
 	@echo "== $< =="
 	eval $$($(OPAM) env); cd $<; dune exec $<
 	@echo
+
+time-all:
+	dune build
+	zsh -c 'time (for day in $(days); do (cd $$day; ../_build/default/$$day/main.exe); done)'
