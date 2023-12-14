@@ -9,6 +9,10 @@ let const x _ = x
 let curry f x y = f (x, y)
 let uncurry f (x, y) = f x y
 
+let rec repeatedly i f x = match i with
+  | 0 -> x
+  | i -> repeatedly (i - 1) f (f x)
+
 let rec tails : 'a list -> 'a list list = function
   | [] -> []
   | (_ :: xs) as l -> l :: tails xs

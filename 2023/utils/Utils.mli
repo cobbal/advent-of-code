@@ -5,6 +5,7 @@ val flip : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
 val const : 'a -> 'b -> 'a
 val curry : ('a * 'b -> 'c) -> 'a -> 'b -> 'c
 val uncurry : ('a -> 'b -> 'c) -> 'a * 'b -> 'c
+val repeatedly : int -> ('a -> 'a) -> 'a -> 'a
 val tails : 'a list -> 'a list list
 val transpose : 'a list list -> 'a list list
 val zip2d : 'a list list -> 'b list list -> ('a * 'b) list list
