@@ -2,8 +2,11 @@
  (name utils)
  (modules Utils IntRangeSet Memo)
  (wrapped false)
- (preprocess (pps ppx_deriving.show ppx_deriving.ord))
+ (preprocess
+  (pps ppx_deriving.show ppx_deriving.ord))
  (libraries fmt core ppx_deriving containers))
+
 (env
-  (dev
-    (flags (:standard -warn-error -A -w -26-27-32-34-69))))
+ (dev
+  (flags
+   (:standard -warn-error -A -w -26-27-32-34-69))))

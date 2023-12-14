@@ -2,16 +2,17 @@ open Utils
 open Containers
 
 module SS = struct
-  include Set.Make(String)
+  include Set.Make (String)
+
   let pp = pp String.pp
 end
 
-let parse (line : string): SS.t * SS.t =
+let parse (line : string) : SS.t * SS.t =
   match String.split ~by:": " line with
-  | [_; line] -> begin match String.split ~by: " | " line with
-      | [left; right] -> (SS.of_list (words left), SS.of_list (words right))
-      | _ -> fail @@ "bad parse of line: " ^ line
-    end
+  | [ _; line ] -> (
+      match String.split ~by:" | " line with
+      | [ left; right ] -> (SS.of_list (words left), SS.of_list (words right))
+      | _ -> fail @@ "bad parse of line: " ^ line)
   | _ -> fail @@ "bad parse of line: " ^ line
 
 let count_wins (winners, guesses) = SS.cardinal @@ SS.inter winners guesses
@@ -36,9 +37,10 @@ let solve_file (filename : string) expected =
   let input = Core.In_channel.read_lines filename in
   let result = (solve0 input, solve1 input) in
   print_string @@ Fmt.str "%s: %s" filename @@ [%show: int * int] result;
-  check_results ~expected:expected ~actual:result
+  check_results ~expected ~actual:result
 
-let () = time @@ fun () ->
+let () =
+  time @@ fun () ->
   solve_file "input-ex0.txt" @@ Some (13, 30);
   solve_file "input-real0.txt" @@ Some (27454, 6857330);
   ()

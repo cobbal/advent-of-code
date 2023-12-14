@@ -1,4 +1,5 @@
 type t
+
 val pp : Format.formatter -> t -> unit
 val empty : t
 val range : int -> int -> t

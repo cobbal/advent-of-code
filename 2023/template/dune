@@ -1,8 +1,11 @@
 (executable
  (name main)
  (public_name day-00)
- (preprocess (pps ppx_deriving.show ppx_deriving.ord))
+ (preprocess
+  (pps ppx_deriving.show ppx_deriving.ord))
  (libraries fmt core ppx_deriving utils containers))
+
 (env
-  (dev
-    (flags (:standard -warn-error -A -w -26-27-32-33-34-69))))
+ (dev
+  (flags
+   (:standard -warn-error -A -w -26-27-32-33-34-69))))

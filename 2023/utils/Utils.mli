@@ -15,9 +15,9 @@ val span : ('a -> bool) -> 'a list -> 'a list * 'a list
 val group_by : ('a -> 'a -> bool) -> 'a list -> 'a list list
 val group_on : ('a -> 'b) -> 'a list -> 'a list list
 val group : ('a -> 'b) -> 'a list -> 'a list list
-val words : string -> Containers.String.t Containers.List.t
+val words : string -> string list
 val undigits : int list -> int
-val check_results : expected:('a option) -> actual:'a -> unit
+val check_results : expected:'a option -> actual:'a -> unit
 val split_by : ('a -> bool) -> 'a list -> 'a list list
 val paragraphs : string list -> string list list
 val list_of_string : string -> char list
