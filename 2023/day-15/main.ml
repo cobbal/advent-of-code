@@ -7,40 +7,39 @@ let solve0 : string list -> int = function
   | [ line ] -> sum @@ List.map hash @@ String.split_on_char ',' line
   | _ -> fail "parse error"
 
-type boxes = (string * int ref) list array
+type boxes = (string * int) list list
 
 let print_boxes : boxes -> unit =
-  Array.iteri @@ fun i l ->
+  List.iteri @@ fun i l ->
   if not (List.is_empty l) then
-    Format.printf "Box %d: %s\n" i @@ String.concat " "
-    @@ List.map (fun (s, fl) -> Fmt.str "[%s %d]" s !fl) (List.rev l)
+    Format.printf "Box %d: %s\n" i @@ String.concat " " @@ List.map (fun (s, fl) -> Fmt.str "[%s %d]" s fl) (List.rev l)
 
-let array_update (arr : 'a array) (idx : int) (f : 'a -> 'a) : unit = arr.(idx) <- f arr.(idx)
+let rec list_update (l : 'a list) (f : 'a -> 'a) : int -> 'a list = function
+  | 0 -> f (List.hd l) :: List.tl l
+  | i -> List.hd l :: list_update (List.tl l) f (i - 1)
 
-let do_box (bs : boxes) (cmd : string) =
+let rec update_assoc ~eq (k : 'a) (v : 'b) : ('a * 'b) list -> ('a * 'b) list = function
+  | [] -> [ (k, v) ]
+  | (k', _) :: rest when eq k k' -> (k, v) :: rest
+  | kv :: rest -> kv :: update_assoc ~eq k v rest
+
+let do_box (bs : boxes) (cmd : string) : boxes =
   let eq = String.( = ) in
   match String.chop_suffix ~suf:"-" cmd with
-  | Some label -> array_update bs (hash label) (List.remove_assoc ~eq label)
+  | Some label -> list_update bs (List.remove_assoc ~eq label) (hash label)
   | None -> (
       match String.split_on_char '=' cmd with
       | [ label; fl_str ] ->
           let fl = int_of_string fl_str in
-          array_update bs (hash label) (fun l ->
-              match List.assoc_opt ~eq label l with
-              | None -> (label, ref fl) :: l
-              | Some old_fl ->
-                  old_fl := fl;
-                  l)
+          list_update bs (update_assoc ~eq label fl) (hash label)
       | _ -> fail ("bad command: " ^ cmd))
 
-let score_boxes : boxes -> int =
-  sum % Array.to_list % Array.mapi (fun i -> sum % List.mapi (fun j (_, fl) -> (i + 1) * (j + 1) * !fl) % List.rev)
+let score_boxes : boxes -> int = sum % List.mapi (fun i -> sum % List.mapi (fun j (_, fl) -> (i + 1) * (j + 1) * fl))
 
 let solve1 : string list -> int = function
   | [ line ] ->
-      let bs = Array.init 256 (const []) in
-      List.iter (do_box bs) @@ String.split_on_char ',' line;
-      score_boxes bs
+      let empty = List.init 256 (const []) in
+      score_boxes @@ List.fold_left do_box empty @@ String.split_on_char ',' line
   | _ -> fail "parse error"
 
 let solve_file (filename : string) expected =
