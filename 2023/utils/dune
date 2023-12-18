@@ -1,12 +1,14 @@
 (library
  (name utils)
- (modules Utils IntRangeSet Memo)
+ (modules Utils IntRangeSet Memo Graphs)
  (wrapped false)
  (preprocess
   (pps ppx_deriving.show ppx_deriving.ord))
- (libraries fmt core ppx_deriving containers))
+ (libraries fmt core ppx_deriving containers core_kernel.pairing_heap oseq))
 
 (env
  (dev
+  (ocamlopt_flags
+   (:standard -O3))
   (flags
    (:standard -warn-error -A -w -26-27-32-34-69))))

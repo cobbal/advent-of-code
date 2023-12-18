@@ -7,5 +7,7 @@
 
 (env
  (dev
+  (ocamlopt_flags
+   (:standard -O3))
   (flags
    (:standard -warn-error -A -w -26-27-32-33-34-69))))
