@@ -3,11 +3,11 @@
  (public_name day-17)
  (preprocess
   (pps ppx_deriving.show ppx_deriving.ord ppx_deriving.eq))
- (libraries fmt core ppx_deriving utils containers ocamlgraph oseq))
+ (libraries fmt core ppx_deriving utils containers oseq))
 
 (env
  (dev
   (ocamlopt_flags
-   (:standard -O3))
+   (:standard -O3 -g))
   (flags
    (:standard -warn-error -A -w -26-27-32-33-34-69))))

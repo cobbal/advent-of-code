@@ -40,11 +40,12 @@ let go (p : Pos.t) (d : dir) : Pos.t =
 module Vert = struct
   type t = Start | End | Pos of Pos.t [@@deriving ord, show { with_path = false }]
 
-  let of_int w = function -1 -> Start | -2 -> End | i -> Pos (Pos.of_int w i)
-  let to_int w = function Start -> -1 | End -> -2 | Pos p -> Pos.to_int w p
+  let of_int w = function 0 -> Start | 1 -> End | i -> Pos (Pos.of_int w (i - 2))
+  let to_int w = function Start -> 0 | End -> 1 | Pos p -> 2 + Pos.to_int w p
 end
 
-module G = Graphs.Graph (Int)
+(* module G = Graphs.Graph (Int) *)
+module G = Graphs.IntGraph
 
 let solve_grid min_run max_run (g : grid) : int =
   let h = Array.length g in
