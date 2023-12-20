@@ -1,26 +1,16 @@
 open Utils
 open Containers
-
-module SM = struct
-  include Map.Make (String)
-
-  let pp = pp String.pp
-end
-
+module SM = Map.Make (String)
 module SS = Set.Make (String)
 
-module Queue = struct
-  include Queue
-
-  let pp element_pp fmt : 'a t -> unit = List.pp element_pp fmt % List.of_seq % to_seq
-end
-
 type ff_modl = { mutable state : bool; outputs : int array } [@@deriving show]
-type conj_modl = { mutable state : int64; outputs : int array } [@@deriving show]
+type conj_modl = { mutable state : int; outputs : int array } [@@deriving show]
 type modl = FF of ff_modl | Conj of conj_modl | Special of int array [@@deriving show]
 type network = { modls : modl array; labels : string array }
 
-let unlabel network s = fst @@ Option.get_exn_or "bad label" @@ Array.find_idx (String.( = ) s) network.labels
+let unlabel_opt network s = Option.map fst @@ Array.find_idx (String.( = ) s) network.labels
+let unlabel network s = Option.get_exn_or "bad label" @@ unlabel_opt network s
+let outputs_of = function FF { outputs; _ } -> outputs | Conj { outputs; _ } -> outputs | Special outputs -> outputs
 
 let parse_network (input : string list) : network =
   let parse_modl (line : string) =
@@ -49,26 +39,38 @@ let parse_network (input : string list) : network =
         let outputs = Array.of_list @@ List.map unlabel outputs in
         match typ with
         | `FF -> FF { state = false; outputs }
-        | `Conj -> Conj { state = -1L; outputs }
+        | `Conj -> Conj { state = -1; outputs }
         | `Special -> Special outputs)
   in
 
   let add_input sender receiver =
     match modls.(unlabel receiver) with
-    | Conj conj -> conj.state <- Int64.(conj.state land lnot (1L lsl unlabel sender))
+    | Conj conj -> conj.state <- conj.state land lnot (1 lsl unlabel sender)
     | _ -> ()
   in
   SM.iter (fun name (_, outputs) -> List.iter (add_input name) outputs) raw_modls;
-(*  Array.iter (print_endline % [%show: modl]) modls; *)
+  (*  Array.iter (print_endline % [%show: modl]) modls; *)
   { modls; labels }
 
+let copy_network { modls; labels } =
+  let copy_modl = function
+    | FF { state; outputs } -> FF { state; outputs }
+    | Conj { state; outputs } -> Conj { state; outputs }
+    | Special outputs -> Special outputs
+  in
+  { modls = Array.map copy_modl modls; labels }
+
+let preds (n : network) (target : int) : int list =
+  Array.foldi
+    (fun acc src modl -> Array.fold (fun acc dst -> if dst = target then src :: acc else acc) acc (outputs_of modl))
+    [] n.modls
+
 let queue : (int * bool * int) Queue.t = Queue.create ()
+
 let press_button (network : network) (f : bool -> int -> unit) : unit =
   let push sender signal receiver =
-(*    let lsend = network.labels.(sender) in *)
-(*    let lrecv = network.labels.(receiver) in *)
     f signal receiver;
-(*    Format.printf "%s -%s-> %s\n" lsend (if signal then "high" else "low") lrecv; *)
+    (* Format.printf "%s -%s-> %s\n" network.labels.(sender) (if signal then "high" else "low") network.labels.(receiver); *)
     Queue.push (sender, signal, receiver) queue
   in
   let rec loop () =
@@ -84,9 +86,9 @@ let press_button (network : network) (f : bool -> int -> unit) : unit =
               modl.state <- state;
               Array.iter (push name state) outputs
         | Conj ({ state; outputs } as modl) ->
-            let state = Int64.(if signal then state lor (1L lsl sender) else state land lnot (1L lsl sender)) in
+            let state = if signal then state lor (1 lsl sender) else state land lnot (1 lsl sender) in
             modl.state <- state;
-            let all_on = Int64.(state = -1L) in
+            let all_on = state = -1 in
             Array.iter (push name (not all_on)) outputs);
         loop ()
   in
@@ -104,19 +106,22 @@ let solve0 (input : string list) : int =
 
 let solve1 (input : string list) : int =
   let network = parse_network input in
-  match Array.find_idx (String.( = ) "rx") network.labels with
-  | None -> -1
-  | Some (rx_idx, _) ->
+  let find_rise target =
+    let network = copy_network network in
     let finished = ref false in
     let presses = ref 0 in
-    let ticks = 1000000 in
     while not !finished do
       incr presses;
-      if !presses mod ticks = 0 then print_endline ("click " ^ string_of_int (!presses / ticks) ^ "_" ^ String.drop 1 (string_of_int ticks));
-      press_button network (fun signal dest -> if not signal && dest = rx_idx then finished := true)
+      press_button network (fun signal dest -> if (not signal) && dest = target then finished := true)
     done;
-    (*  print_endline @@ [%show: int * int] (!lows, !highs); *)
     !presses
+  in
+  match Option.map (preds network) (unlabel_opt network "rx") with
+  (* This is somewhat specific to the puzzle input *)
+  | Some [ pred ] ->
+      let subcycles = List.map find_rise (preds network pred) in
+      List.fold_left lcm 1 subcycles
+  | _ -> -1
 
 let solve_file (filename : string) expected =
   let input = Core.In_channel.read_lines filename in
@@ -126,7 +131,7 @@ let solve_file (filename : string) expected =
 
 let () =
   time @@ fun () ->
-  solve_file "input-ex0.txt" @@ None;
-  solve_file "input-ex1.txt" @@ None;
-    solve_file "input-real0.txt" @@ None;
+  solve_file "input-ex0.txt" @@ Some (32000000, -1);
+  solve_file "input-ex1.txt" @@ Some (11687500, -1);
+  solve_file "input-real0.txt" @@ Some (681194780, 238593356738827);
   ()
