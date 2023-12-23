@@ -1,0 +1,13 @@
+(executable
+ (name main)
+ (public_name day-22)
+ (preprocess
+  (pps ppx_deriving.show ppx_deriving.ord))
+ (libraries fmt core ppx_deriving utils containers))
+
+(env
+ (dev
+  (ocamlopt_flags
+   (:standard -O3))
+  (flags
+   (:standard -warn-error -A -w -26-27-32-33-34-69))))
