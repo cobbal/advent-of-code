@@ -11,7 +11,7 @@ module Seq =
         if arr.Length = 2 then
             (arr[0], arr[1])
         else
-            failwith "bad length, expected 2 got %d{arr.Length}"
+            failwith $"bad length, expected 2 got %d{arr.Length}"
 
 let checkResults expected actual =
     match expected with
