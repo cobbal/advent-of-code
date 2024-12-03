@@ -12,13 +12,18 @@ let allDays =
     List.monoid {
         [ Day01.day01 ]
         [ Day02.day02 ]
+        [ Day03.day03 ]
     }
 
 let days =
     let dayArgs = Environment.GetCommandLineArgs () |> Array.skip 1 |> List.ofArray
 
     let getDay : string -> Day option =
-        let dayMap = List.map (fun day -> (day.dayNumber, day)) allDays |> Map.ofList
+        let dayMap =
+            (List.map (fun day -> (day.dayNumber, day)) allDays)
+            |> List.cons (-1, List.last allDays)
+            |> Map.ofList
+
         FSharpOption.ParseInt >=> flip Map.tryFind dayMap
 
     if List.isEmpty dayArgs then

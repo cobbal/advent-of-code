@@ -1,11 +1,8 @@
 ﻿module Day02
 
 open FSharpx.Collections
-open Utils
 open FSharpx.Text
-open System
 open FSharpx
-open FSharpx.IO
 
 let parse (input : string list) : int list list =
     input

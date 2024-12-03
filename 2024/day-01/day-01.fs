@@ -2,7 +2,6 @@
 
 open Utils
 open FSharpx
-open FSharpx.Collections
 open FSharpx.Text
 
 let parse (input : string list) : int list * int list =
