@@ -3,6 +3,7 @@
 open FSharpx.Collections
 open FSharpx.Text
 open FSharpx
+open Utils
 
 let parse (input : string list) : int list list =
     input
@@ -18,7 +19,7 @@ let isSafe (level : int list) =
 
 let solvePart0 (input : string list) : int =
     let levels = parse input
-    List.filter isSafe levels |> List.length
+    List.count isSafe levels
 
 let solvePart1 (input : string list) : int =
     let levels = parse input
@@ -28,7 +29,7 @@ let solvePart1 (input : string list) : int =
         | [] -> []
         | x :: xs -> xs :: (List.map (List.cons x) (removeOnes xs))
 
-    List.filter (List.exists isSafe << removeOnes) levels |> List.length
+    List.count (List.exists isSafe << removeOnes) levels
 
 let day02 =
     Day.day 02 solvePart0 solvePart1

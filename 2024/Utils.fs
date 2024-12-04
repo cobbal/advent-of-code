@@ -13,6 +13,15 @@ module Seq =
         else
             failwith $"bad length, expected 2 got %d{arr.Length}"
 
+module List =
+    let count (predicate : 'a -> bool) : 'a list -> int =
+        let rec help acc =
+            function
+            | [] -> acc
+            | x :: xs -> help (if predicate x then acc + 1 else acc) xs
+
+        help 0
+
 let timer (f : unit -> 'a) : 'a =
     let watch = System.Diagnostics.Stopwatch.StartNew ()
     let result = f ()
