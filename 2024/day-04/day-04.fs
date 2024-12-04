@@ -34,25 +34,25 @@ let solvePart0 (input : string list) : int =
     let grid = parse input
 
     let dirLines =
-        grid
-        @ List.map List.rev grid
-        @ List.transpose grid
-        @ List.transpose (List.rev grid)
-        @ diagonalize grid
-        @ List.map List.rev (diagonalize grid)
-        @ diagonalize (List.rev grid)
-        @ List.map List.rev (diagonalize (List.rev grid))
+        grid // 🡒
+        @ List.map List.rev grid // 🡐
+        @ List.transpose grid // 🡓
+        @ List.transpose (List.rev grid) // 🡑
+        @ diagonalize grid // 🡗
+        @ List.map List.rev (diagonalize grid) // 🡕
+        @ diagonalize (List.rev grid) // 🡔
+        @ List.map List.rev (diagonalize (List.rev grid)) // 🡖
 
     List.map countString dirLines |> List.sum
 
-let rec heads2d : 'a list list -> 'a list list list =
+let rec heads2d (l : 'a list list) : 'a list list list =
     let rec horizontalHeads (l : 'a list list) : 'a list list list =
         if List.forall List.isEmpty l then
             []
         else
             l :: horizontalHeads (List.map List.tail l)
 
-    function
+    match l with
     | [] -> []
     | _ :: xss as l -> horizontalHeads l @ heads2d xss
 
