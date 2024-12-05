@@ -45,30 +45,20 @@ let solvePart0 (input : string list) : int =
 
     List.map countString dirLines |> List.sum
 
-let rec heads2d (l : 'a list list) : 'a list list list =
-    let rec horizontalHeads (l : 'a list list) : 'a list list list =
-        if List.forall List.isEmpty l then
-            []
-        else
-            l :: horizontalHeads (List.map List.tail l)
-
-    match l with
-    | [] -> []
-    | _ :: xss as l -> horizontalHeads l @ heads2d xss
-
-let isXMas : char list list -> bool =
+let isXMas (arr : char array array) (x : int, y : int) : bool =
     let isMS a b =
         (a, b) = ('M', 'S') || (a, b) = ('S', 'M')
 
-    function
-    | (x0 :: _ :: y0 :: _) ::
-      (_ :: 'A' :: _ :: _) ::
-      (y1 :: _ :: x1 :: _) ::
-      _ -> isMS x0 x1 && isMS y0 y1
-    | _ -> false
+    let c0, d0 = arr[y][x], arr[y][x + 2]
+    let mid = arr[y + 1][x + 1]
+    let d1, c1 = arr[y + 2][x], arr[y + 2][x + 2]
+    mid = 'A' && isMS c0 c1 && isMS d0 d1
 
 let solvePart1 (input : string list) : int =
-    parse input |> heads2d |> List.count isXMas
+    let grid = parse input |> List.map Array.ofList |> Array.ofList
+    let height, width = Array.length grid, Array.length grid[0]
+
+    Seq.allPairs { 0 .. width - 3 } { 0 .. height - 3 } |> Seq.count (isXMas grid)
 
 let day04 =
     Day.day 04 solvePart0 solvePart1
