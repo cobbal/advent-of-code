@@ -43,7 +43,7 @@ let days =
             printfn $"Unknown days requested: %A{bad}"
             exit 1
 
-let doTheWork () =
+let main () =
     flip List.map days
     <| fun day ->
         let dayPath = $"day-%02d{day.dayNumber}"
@@ -79,6 +79,7 @@ let doTheWork () =
              exit 1)
     )
 
-let workerThread = Thread (doTheWork, Int32.MaxValue / 32 * 32)
-workerThread.Start ()
-workerThread.Join ()
+// let workerThread = Thread (main, Int32.MaxValue / 32 * 32)
+// workerThread.Start ()
+// workerThread.Join ()
+main ()
