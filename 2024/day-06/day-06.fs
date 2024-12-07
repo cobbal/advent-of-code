@@ -14,15 +14,15 @@ type Dir =
 type DirSet = int
 
 [<Struct>]
-type XY = { x : Int16 ; y : Int16 }
+type XY = { x : int ; y : int }
 
 let moveInDirection : XY -> Dir -> XY =
     fun pos ->
         function
-        | Dir.N -> { x = pos.x ; y = pos.y - 1s }
-        | Dir.E -> { x = pos.x + 1s ; y = pos.y }
-        | Dir.S -> { x = pos.x ; y = pos.y + 1s }
-        | Dir.W -> { x = pos.x - 1s ; y = pos.y }
+        | Dir.N -> { x = pos.x ; y = pos.y - 1 }
+        | Dir.E -> { x = pos.x + 1 ; y = pos.y }
+        | Dir.S -> { x = pos.x ; y = pos.y + 1 }
+        | Dir.W -> { x = pos.x - 1 ; y = pos.y }
         | _ -> ArgumentOutOfRangeException () |> raise
 
 let rotate =
@@ -45,32 +45,32 @@ type Step = { pos : XY ; dir : Dir }
 module Step =
     let Escaped =
         {
-            pos = { x = 0s ; y = 0s }
+            pos = { x = 0 ; y = 0 }
             dir = Dir.Escaped
         }
 
     let isEscaped step = step.dir = Dir.Escaped
 
-type Grid(grid : char array, width : int16, height : int16, start : XY) =
+type Grid(grid : char array, width : int, height : int, start : XY) =
     member this.grid = grid
     member this.width = width
     member this.height = height
     member this.start = start
 
     member this.Item
-        with get pos = this.grid[int pos.y * int width + int pos.x]
-        and set pos value = this.grid[int pos.y * int width + int pos.x] <- value
+        with get pos = this.grid[pos.y * width + pos.x]
+        and set pos value = this.grid[pos.y * width + pos.x] <- value
 
     new(grid : char array array)
         =
-        let width = Array.length grid[0] |> int16
-        let height = Array.length grid |> int16
+        let width = Array.length grid[0]
+        let height = Array.length grid
 
         let start =
             seq {
-                for y in 0s .. height - 1s do
-                    for x in 0s .. width - 1s do
-                        if grid[int y][int x] = '^' then
+                for y in 0 .. height - 1 do
+                    for x in 0 .. width - 1 do
+                        if grid[y][x] = '^' then
                             yield { x = x ; y = y }
             }
 
@@ -79,7 +79,7 @@ type Grid(grid : char array, width : int16, height : int16, start : XY) =
     member this.travel1 pos dir =
         let pos' = moveInDirection pos dir
 
-        if pos'.x < 0s || width <= pos'.x || pos'.y < 0s || height <= pos'.y then
+        if pos'.x < 0 || width <= pos'.x || pos'.y < 0 || height <= pos'.y then
             Step.Escaped
         else if this[pos'] = '#' then
             { pos = pos ; dir = rotate dir }
