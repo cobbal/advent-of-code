@@ -21,6 +21,9 @@ module Seq =
 module List =
     let count (predicate : 'a -> bool) : 'a list -> int =
         List.fold (fun acc x -> acc + if predicate x then 1 else 0) 0
+    let uncons = function
+        | [] -> failwith "uncons of nil"
+        | x :: xs -> (x, xs)
 
 type MultiMap<'K, 'V> when 'K : comparison and 'V : comparison = Map<'K, Set<'V>>
 
@@ -52,3 +55,7 @@ let timer (f : unit -> 'a) : 'a =
     watch.Stop ()
     printfn $"Time taken: %d{watch.ElapsedMilliseconds}ms"
     result
+
+// https://stackoverflow.com/a/35848799/73681
+/// Euclidean remainder, the proper modulo operation
+let inline (%!) a b = (a % b + b) % b
