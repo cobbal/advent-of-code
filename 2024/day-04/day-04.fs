@@ -10,10 +10,10 @@ let parse (input : string list) : char list list =
     |> List.filter (not << Strings.isNullOrEmpty)
     |> List.map (List.ofArray << String.toCharArray)
 
-let rec countString : char list -> int =
+let rec countString : char list -> int64 =
     function
     | [] -> 0
-    | 'X' :: 'M' :: 'A' :: 'S' :: xs -> 1 + countString xs
+    | 'X' :: 'M' :: 'A' :: 'S' :: xs -> 1L + countString xs
     | _ :: xs -> countString xs
 
 let rec map2default (f : 'a -> 'a -> 'a) : 'a list -> 'a list -> 'a list =
@@ -30,7 +30,7 @@ let rec diagonalize : 'a list list -> 'a list list =
     | [] :: _ -> []
     | (x :: xs) :: xss -> [ x ] :: map2default List.append (List.map List.singleton xs) (diagonalize xss)
 
-let solvePart0 (input : string list) : int =
+let solvePart0 (input : string list) : int64 =
     let grid = parse input
 
     let dirLines =
@@ -54,7 +54,7 @@ let isXMas (arr : char array array) (x : int, y : int) : bool =
     let d1, c1 = arr[y + 2][x], arr[y + 2][x + 2]
     mid = 'A' && isMS c0 c1 && isMS d0 d1
 
-let solvePart1 (input : string list) : int =
+let solvePart1 (input : string list) : int64 =
     let grid = parse input |> List.map Array.ofList |> Array.ofList
     let height, width = Array.length grid, Array.length grid[0]
 

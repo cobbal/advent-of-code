@@ -4,15 +4,15 @@ open FSharpx.Collections
 open FSharpx.Text
 open FSharpx
 
-let parse (input : string list) : int list list =
+let parse (input : string list) : int64 list list =
     input
     |> List.filter (not << Strings.isNullOrEmpty)
-    |> List.map (Strings.split ' ' >> List.ofArray >> List.choose FSharpOption.ParseInt)
+    |> List.map (Strings.split ' ' >> List.ofArray >> List.map int64)
 
-let solvePart0 (input : string list) : int =
+let solvePart0 (input : string list) : int64 =
     -1
 
-let solvePart1 (input : string list) : int =
+let solvePart1 (input : string list) : int64 =
     -1
 
 let day00 =

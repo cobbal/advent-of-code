@@ -15,13 +15,15 @@ module Seq =
         else
             failwith $"bad length, expected 2 got %d{arr.Length}"
 
-    let count (predicate : 'a -> bool) : 'a seq -> int =
-        Seq.fold (fun acc x -> acc + if predicate x then 1 else 0) 0
+    let count (predicate : 'a -> bool) : 'a seq -> int64 =
+        Seq.fold (fun acc x -> acc + if predicate x then 1L else 0L) 0L
 
 module List =
-    let count (predicate : 'a -> bool) : 'a list -> int =
-        List.fold (fun acc x -> acc + if predicate x then 1 else 0) 0
-    let uncons = function
+    let count (predicate : 'a -> bool) : 'a list -> int64 =
+        List.fold (fun acc x -> acc + if predicate x then 1L else 0L) 0L
+
+    let uncons =
+        function
         | [] -> failwith "uncons of nil"
         | x :: xs -> (x, xs)
 

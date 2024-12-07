@@ -31,14 +31,17 @@ let inCorrectOrder prereqs : int list -> bool =
     let postreqs = MultiMap.inverse prereqs
     fun l -> satisfiesPrereqs prereqs l && satisfiesPrereqs postreqs (List.rev l)
 
-let mid l = (List.item (List.length l / 2) l)
+let mid l = List.item (List.length l / 2) l
 
-let solvePart0 (input : string list) : int =
+let solvePart0 (input : string list) : int64 =
     let prereqs, required = parse input
 
-    required |> List.filter (inCorrectOrder prereqs) |> List.map mid |> List.sum
+    required
+    |> List.filter (inCorrectOrder prereqs)
+    |> List.map (int64 << mid)
+    |> List.sum
 
-let solvePart1 (input : string list) : int =
+let solvePart1 (input : string list) : int64 =
     let prereqs, required = parse input
 
     let rec sort =
@@ -50,7 +53,7 @@ let solvePart1 (input : string list) : int =
             | before, after -> sort (before @ [ x ] @ after)
 
     List.filter (not << inCorrectOrder prereqs) required
-    |> List.map (mid << sort)
+    |> List.map (int64 << mid << sort)
     |> List.sum
 
 let day05 =

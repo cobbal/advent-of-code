@@ -116,11 +116,11 @@ type Grid(grid : char array, width : int, height : int, start : XY) =
         newGrid[pos] <- '#'
         newGrid
 
-let solvePart0 (input : string list) : int =
+let solvePart0 (input : string list) : int64 =
     let grid = parse input |> Grid
-    grid.travel Map.empty grid.start Dir.N |> Option.get |> Set.count
+    grid.travel Map.empty grid.start Dir.N |> Option.get |> Set.count |> int64
 
-let solvePart1 (input : string list) : int =
+let solvePart1 (input : string list) : int64 =
     let grid = parse input |> Grid
 
     let rec travel (seen : Map<XY, DirSet>) (acc : Set<XY>) pos (dir : Dir) =
@@ -137,7 +137,7 @@ let solvePart1 (input : string list) : int =
 
             travel seen' acc' step.pos step.dir
 
-    travel Map.empty Set.empty grid.start Dir.N |> Set.count
+    travel Map.empty Set.empty grid.start Dir.N |> Set.count |> int64
 
 let day06 =
     Day.day 06 solvePart0 solvePart1

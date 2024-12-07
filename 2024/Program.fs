@@ -57,9 +57,9 @@ let main () =
                 let lines = readFile $"%s{dayPath}/%s{inputFile}" |> List.ofSeq
                 printf $"%s{inputFile}: "
                 let result0 = day.solvePart0 lines
-                printf $"%A{result0} "
+                printf $"%d{result0} "
                 let result1 = day.solvePart1 lines
-                printf $"%A{result1} "
+                printf $"%d{result1} "
 
                 match expected with
                 | Some expectation ->
