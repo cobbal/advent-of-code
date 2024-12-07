@@ -1,25 +1,29 @@
 ﻿module Day06
 
+open System
 open FSharpx.Collections
 open FSharpx.Text
-open FSharpx
-open Utils
 
 type Dir =
     | N = 8
     | E = 4
     | S = 2
     | W = 1
+    | Escaped = 0
 
 type DirSet = int
 
-let step (x, y) =
-    function
-    | Dir.N -> (x, y - 1)
-    | Dir.E -> (x + 1, y)
-    | Dir.S -> (x, y + 1)
-    | Dir.W -> (x - 1, y)
-    | _ -> System.ArgumentOutOfRangeException () |> raise
+[<Struct>]
+type XY = { x : Int16 ; y : Int16 }
+
+let moveInDirection : XY -> Dir -> XY =
+    fun pos ->
+        function
+        | Dir.N -> { x = pos.x ; y = pos.y - 1s }
+        | Dir.E -> { x = pos.x + 1s ; y = pos.y }
+        | Dir.S -> { x = pos.x ; y = pos.y + 1s }
+        | Dir.W -> { x = pos.x - 1s ; y = pos.y }
+        | _ -> ArgumentOutOfRangeException () |> raise
 
 let rotate =
     function
@@ -27,7 +31,7 @@ let rotate =
     | Dir.E -> Dir.S
     | Dir.S -> Dir.W
     | Dir.W -> Dir.N
-    | _ -> System.ArgumentOutOfRangeException () |> raise
+    | _ -> ArgumentOutOfRangeException () |> raise
 
 let parse (input : string list) : char array array =
     input
@@ -35,58 +39,82 @@ let parse (input : string list) : char array array =
     |> List.map Array.ofSeq
     |> Array.ofList
 
-let find2 (arr : 'a array array) (elem : 'a) : (int * int) seq =
-    seq {
-        for y in 0 .. Array.length arr - 1 do
-            for x in 0 .. Array.length arr[y] - 1 do
-                if arr[y][x] = elem then
-                    yield (x, y)
-    }
+[<Struct>]
+type Step = { pos : XY ; dir : Dir }
 
-type Step =
-    | Looped
-    | Escaped of Map<int * int, DirSet>
-    | Rotate of Map<int * int, DirSet> * Dir
-    | Step of Map<int * int, DirSet> * (int * int)
+module Step =
+    let Escaped =
+        {
+            pos = { x = 0s ; y = 0s }
+            dir = Dir.Escaped
+        }
 
-type Grid(grid : char array array, width : int, height : int, start : int * int) =
+    let isEscaped step = step.dir = Dir.Escaped
+
+type Grid(grid : char array, width : int16, height : int16, start : XY) =
     member this.grid = grid
     member this.width = width
     member this.height = height
     member this.start = start
-    new(grid) = Grid (grid, Array.length grid[0], Array.length grid, find2 grid '^' |> Seq.head)
 
-    member this.travel1 seen (x, y) dir =
-        if Map.findOrDefault (x, y) 0 seen &&& int dir <> 0 then
-            Looped
+    member this.Item
+        with get pos = this.grid[int pos.y * int width + int pos.x]
+        and set pos value = this.grid[int pos.y * int width + int pos.x] <- value
+
+    new(grid : char array array)
+        =
+        let width = Array.length grid[0] |> int16
+        let height = Array.length grid |> int16
+
+        let start =
+            seq {
+                for y in 0s .. height - 1s do
+                    for x in 0s .. width - 1s do
+                        if grid[int y][int x] = '^' then
+                            yield { x = x ; y = y }
+            }
+
+        Grid (Array.concat grid, width, height, Seq.head start)
+
+    member this.travel1 pos dir =
+        let pos' = moveInDirection pos dir
+
+        if pos'.x < 0s || width <= pos'.x || pos'.y < 0s || height <= pos'.y then
+            Step.Escaped
+        else if this[pos'] = '#' then
+            { pos = pos ; dir = rotate dir }
         else
+            { pos = pos' ; dir = dir }
 
-        let seen = Map.change (x, y) (fun v -> Some (defaultArg v 0 ||| int dir)) seen
-        let x', y' = step (x, y) dir
+    member this.trackedTravel1 (seen : Map<XY, DirSet>) pos dir =
+        let seen = Map.change pos (fun v -> Some (defaultArg v 0 ||| int dir)) seen
+        struct (seen, this.travel1 pos dir)
 
-        if x' < 0 || width <= x' || y' < 0 || height <= y' then
-            Escaped seen
-        else if grid[y'][x'] = '#' then
-            Rotate (seen, rotate dir)
-        else
-            Step (seen, (x', y'))
+    member this.travel seen (pos : XY) dir : Set<XY> option =
+        match this.trackedTravel1 seen pos dir with
+        | seen', step when Step.isEscaped step -> Some (Set.ofSeq seen'.Keys)
+        | seen', step -> this.travel seen' step.pos step.dir
 
-    member this.travel seen xy dir : Set<int * int> option =
-        match this.travel1 seen xy dir with
-        | Looped -> None
-        | Escaped seen' -> Some (Set.ofSeq seen'.Keys)
-        | Rotate (seen', dir') -> this.travel seen' xy dir'
-        | Step (seen', xy') -> this.travel seen' xy' dir
+    member this.loops : XY -> Dir -> bool =
+        let stepOnce s =
+            if Step.isEscaped s then s else this.travel1 s.pos s.dir
 
-    member this.withObstacle (x, y) (f : unit -> 'a option) : 'a option =
-        if this.grid[y][x] = '.' then
-            this.grid[y][x] <- '#'
-            let res = f ()
-            this.grid[y][x] <- '.'
-            res
-        else
-            assert (this.grid[y][x] = '^')
-            None
+        let rec loop tortoise hare =
+            let tortoise' = stepOnce tortoise
+            let hare' = stepOnce (stepOnce hare)
+
+            if Step.isEscaped hare' then false
+            else if tortoise' = hare' then true
+            else loop tortoise' hare'
+
+        fun pos dir ->
+            let start = { pos = pos ; dir = dir }
+            loop start start
+
+    member this.withObstacle pos =
+        let newGrid = Grid (Array.copy this.grid, this.width, this.height, this.start)
+        newGrid[pos] <- '#'
+        newGrid
 
 let solvePart0 (input : string list) : int =
     let grid = parse input |> Grid
@@ -95,21 +123,19 @@ let solvePart0 (input : string list) : int =
 let solvePart1 (input : string list) : int =
     let grid = parse input |> Grid
 
-    let rec travel (seen : Map<int * int, DirSet>) (acc : Set<int * int>) xy (dir : Dir) =
-        match grid.travel1 seen xy dir with
-        | Looped -> failwith "unexpected"
-        | Escaped _ -> acc
-        | Rotate (seen', dir') -> travel seen' acc xy dir'
-        | Step (seen', (x', y')) ->
-            let shouldBlock = Map.findOrDefault (x', y') 0 seen = 0
-            let mutable acc' = acc
-            if shouldBlock then
-                assert (grid.grid[y'][x'] = '.')
-                grid.grid[y'][x'] <- '#'
-                if Option.isNone (grid.travel seen xy dir) then
-                    acc' <- Set.add (x', y') acc
-                grid.grid[y'][x'] <- '.'
-            travel seen' acc' (x', y') dir
+    let rec travel (seen : Map<XY, DirSet>) (acc : Set<XY>) pos (dir : Dir) =
+        match grid.trackedTravel1 seen pos dir with
+        | _, step when Step.isEscaped step -> acc
+        | seen', step ->
+            let shouldBlock = pos <> step.pos && Map.findOrDefault step.pos 0 seen = 0
+
+            let acc' =
+                if shouldBlock && (grid.withObstacle step.pos).loops pos dir then
+                    Set.add step.pos acc
+                else
+                    acc
+
+            travel seen' acc' step.pos step.dir
 
     travel Map.empty Set.empty grid.start Dir.N |> Set.count
 
