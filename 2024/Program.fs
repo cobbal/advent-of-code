@@ -2,7 +2,6 @@
 
 open System
 open System.Threading
-open Day
 open FSharpx
 open FSharpx.Option
 open Utils
@@ -25,7 +24,8 @@ let days =
 
     let getDay : string -> Day option =
         let dayMap =
-            (List.map (fun day -> (day.dayNumber, day)) allDays)
+            allDays
+            |> List.map (fun day -> (day.dayNumber, day))
             |> List.cons (-1, List.last allDays)
             |> Map.ofList
 
@@ -80,7 +80,9 @@ let main () =
              exit 1)
     )
 
-// let workerThread = Thread (main, Int32.MaxValue / 32 * 32)
-// workerThread.Start ()
-// workerThread.Join ()
-main ()
+if false then
+    let workerThread = Thread (main, Int32.MaxValue / 32 * 32)
+    workerThread.Start ()
+    workerThread.Join ()
+else
+    main ()

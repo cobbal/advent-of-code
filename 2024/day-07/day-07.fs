@@ -1,7 +1,8 @@
 ﻿module Day07
 
-open FSharpx.Text
 open FSharpx
+open FSharpx.Text
+open Utils
 
 let parse (input : string list) : (int64 * int64 list) list =
     input

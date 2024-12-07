@@ -1,10 +1,11 @@
-﻿module Utils
+﻿namespace Utils
 
 open FSharpx.Collections
 
-type 'T ``[]`` with
-    member xs.GetOp (n : int) : 'T option =
-        if 0 <= n && n < xs.Length then Some (xs[n]) else None
+module Extensions =
+    type 'T ``[]`` with
+        member xs.TryGet (n : int) : 'T option =
+            if 0 <= n && n < xs.Length then Some (xs[n]) else None
 
 module Seq =
     let assertPairs (xs : 'T seq) : 'T * 'T =
@@ -50,14 +51,15 @@ module MultiMap =
     let inverse (m : MultiMap<'K, 'V>) : MultiMap<'V, 'K> =
         m |> toSeq |> Seq.map (fun (k, v) -> (v, k)) |> ofSeq
 
+[<AutoOpen>]
+module Values =
+    let timer (f : unit -> 'a) : 'a =
+        let watch = System.Diagnostics.Stopwatch.StartNew ()
+        let result = f ()
+        watch.Stop ()
+        printfn $"Time taken: %d{watch.ElapsedMilliseconds}ms"
+        result
 
-let timer (f : unit -> 'a) : 'a =
-    let watch = System.Diagnostics.Stopwatch.StartNew ()
-    let result = f ()
-    watch.Stop ()
-    printfn $"Time taken: %d{watch.ElapsedMilliseconds}ms"
-    result
-
-// https://stackoverflow.com/a/35848799/73681
-/// Euclidean remainder, the proper modulo operation
-let inline (%!) a b = (a % b + b) % b
+    // https://stackoverflow.com/a/35848799/73681
+    /// Euclidean remainder, the proper modulo operation
+    let inline (%!) a b = (a % b + b) % b

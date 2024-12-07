@@ -3,6 +3,7 @@
 open System
 open FSharpx.Collections
 open FSharpx.Text
+open Utils
 
 type Dir =
     | N = 8

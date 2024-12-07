@@ -3,6 +3,7 @@
 open FSharpx.Collections
 open FSharpx.Text
 open FSharpx
+open Utils
 
 let parse (input : string list) : int64 list list =
     input

@@ -1,6 +1,7 @@
 ﻿module Day03
 
 open System.Text.RegularExpressions
+open Utils
 
 let solvePart0 (input : string list) : int64 =
     let input = String.concat "\n" input

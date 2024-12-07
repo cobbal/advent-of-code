@@ -1,4 +1,4 @@
-﻿module Day
+﻿namespace Utils
 
 type Day =
     {
@@ -8,12 +8,13 @@ type Day =
         inputs : (string * (int64 * int64) option) list
     }
 
-let day number solvePart0 solvePart1 =
-    {
-        dayNumber = number
-        solvePart0 = solvePart0
-        solvePart1 = solvePart1
-        inputs = []
-    }
+module Day =
+    let day number solvePart0 solvePart1 =
+        {
+            dayNumber = number
+            solvePart0 = solvePart0
+            solvePart1 = solvePart1
+            inputs = []
+        }
 
-let addInput file expected day = { day with inputs = day.inputs @ [(file, expected)] }
+    let addInput file expected day = { day with inputs = day.inputs @ [(file, expected)] }
