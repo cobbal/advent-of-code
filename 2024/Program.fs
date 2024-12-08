@@ -17,6 +17,7 @@ let allDays =
         Day05.day05
         Day06.day06
         Day07.day07
+        Day08.day08
     ]
 
 let days =
@@ -45,40 +46,42 @@ let days =
             exit 1
 
 let main () =
-    flip List.map days
-    <| fun day ->
-        let dayPath = $"day-%02d{day.dayNumber}"
-        printfn $"=== %s{dayPath} ==="
+    let all () =
+        flip List.map days
+        <| fun day ->
+            let dayPath = $"day-%02d{day.dayNumber}"
+            printfn $"=== %s{dayPath} ==="
 
-        timer
-        <| fun () ->
-            flip List.map day.inputs
-            <| fun (inputFile, expected) ->
-                let lines = readFile $"%s{dayPath}/%s{inputFile}" |> List.ofSeq
-                printf $"%s{inputFile}: "
-                let result0 = day.solvePart0 lines
-                printf $"%d{result0} "
-                let result1 = day.solvePart1 lines
-                printf $"%d{result1} "
+            timer (fun ms -> printfn $"time: %d{ms}ms"; printfn "")
+            <| fun () ->
+                flip List.map day.inputs
+                <| fun (inputFile, expected) ->
+                    let lines = readFile $"%s{dayPath}/%s{inputFile}" |> List.ofSeq
+                    printf $"%s{inputFile}: "
+                    let result0 = day.solvePart0 lines
+                    printf $"%d{result0} "
+                    let result1 = day.solvePart1 lines
+                    printf $"%d{result1} "
 
-                match expected with
-                | Some expectation ->
-                    if expectation = (result0, result1) then
-                        printfn " \u2705 good"
+                    match expected with
+                    | Some expectation ->
+                        if expectation = (result0, result1) then
+                            printfn " \u2705 good"
+                            true
+                        else
+                            printfn " \u274c bad"
+                            false
+                    | None ->
+                        printfn ""
                         true
-                    else
-                        printfn " \u274c bad"
-                        false
-                | None ->
-                    printfn ""
-                    true
-            |> List.forall id
-    |> (fun successes ->
-        if not (List.forall id successes) then
-            (printfn ""
-             printfn "\u274c Exiting due to earlier errors"
-             exit 1)
-    )
+                |> List.forall id
+        |> (fun successes ->
+            if not (List.forall id successes) then
+                (printfn ""
+                 printfn "\u274c Exiting due to earlier errors"
+                 exit 1)
+        )
+    if List.length days > 1 then timer (printfn "Total time: %dms") all else all ()
 
 if false then
     let workerThread = Thread (main, Int32.MaxValue / 32 * 32)

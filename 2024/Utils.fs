@@ -53,13 +53,21 @@ module MultiMap =
 
 [<AutoOpen>]
 module Values =
-    let timer (f : unit -> 'a) : 'a =
+    let timer (reporter : int64 -> unit) (f : unit -> 'a) : 'a =
         let watch = System.Diagnostics.Stopwatch.StartNew ()
         let result = f ()
         watch.Stop ()
-        printfn $"Time taken: %d{watch.ElapsedMilliseconds}ms"
+        reporter watch.ElapsedMilliseconds
         result
 
     // https://stackoverflow.com/a/35848799/73681
     /// Euclidean remainder, the proper modulo operation
     let inline (%!) a b = (a % b + b) % b
+
+    let gcd x y =
+        let rec gcd' a =
+            function
+            | 0 -> a
+            | b -> gcd' b (a %! b)
+
+        gcd' (abs x) (abs y)
