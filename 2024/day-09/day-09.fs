@@ -42,6 +42,7 @@ let solvePart0 (input : string list) : int64 =
     compact 0 (totalLen - 1)
     checksum buffer 0 0L
 
+[<Struct>]
 type File = { Id : int ; Pos : int ; Len : int }
 
 let solvePart1 (input : string list) : int64 =
@@ -49,47 +50,38 @@ let solvePart1 (input : string list) : int64 =
     let totalLen = List.sum lens
     let buffer = Array.create totalLen -1
 
-    let rec loadDisk (i : int) (pos : int) (acc : File list) : int list -> File list =
+    let rec loadDisk (i : int) (pos : int) (acc : File list) : int list -> File array =
         function
-        | x :: y :: xs ->
-            loadDisk
-                (i + 1)
-                (pos + x + y)
-                ({ Id = -1 ; Pos = pos + x ; Len = y } :: { Id = i ; Pos = pos ; Len = x } :: acc)
-                xs
-        | _ -> List.rev acc
+        | x :: y :: xs -> loadDisk (i + 1) (pos + x + y) ({ Id = i ; Pos = pos ; Len = x } :: acc) xs
+        | _ -> List.rev acc |> Array.ofList
 
-    let nonEmpty f = f.Len > 0
+    let disk = loadDisk 0 0 [] lens
 
-    let disk = loadDisk 0 0 [] lens |> List.filter nonEmpty
-    let files = disk |> List.filter (fun f -> f.Id <> -1) |> List.rev
+    let rec defrag1 (i : int) (pos : int) (file : File) (disk : File array) : File array =
+        let nextFile = disk[int i]
 
-    let rec defrag1 acc disk file =
-        match disk with
-        | block :: _ when file.Pos <= block.Pos -> List.revAppend acc disk
-        | space :: disk when space.Id = -1 && file.Len <= space.Len ->
-            if file.Len = space.Len then
-                List.revAppend acc ({ file with Pos = space.Pos } :: disk)
-            else
-               List.revAppend acc (
-                   { file with Pos = space.Pos }
-                   :: { Id = -1; Pos = space.Pos + file.Len; Len = space.Len - file.Len }
-                   :: disk
-               )
-        | block :: disk -> defrag1 (block :: acc) disk file
-        | [] -> failwith "unreachable?"
+        if file.Pos <= pos then
+            disk
+        else if int file.Len <= int (nextFile.Pos - pos) then
+            Array.insertAt (int i) { file with Pos = pos } disk
+        else
+            defrag1 (i + 1) (nextFile.Pos + nextFile.Len) file disk
 
-    let rec dedup seen = function
-        | file :: rest when file.Id <> -1 && not (Map.containsKey file.Id seen) -> dedup (Map.add file.Id file seen) rest
+    let rec dedup seen =
+        function
+        | file :: rest when not (Map.containsKey file.Id seen) ->
+            dedup (Map.add file.Id file seen) rest
         | _ :: rest -> dedup seen rest
         | [] -> seen
 
-    let defragged = List.fold (defrag1 []) disk files |> dedup Map.empty
+    let defragged =
+        Array.foldBack (defrag1 0 0) disk disk |> List.ofArray |> dedup Map.empty
 
-    defragged |> Map.values
+    defragged
+    |> Map.values
     |> Seq.iter (fun file ->
-        for i in file.Pos .. file.Pos + file.Len - 1 do
-            buffer[i] <- file.Id
+        for i in file.Pos .. file.Pos + int file.Len - 1 do
+            buffer[int i] <- int file.Id
     )
 
     checksum buffer 0 0L
