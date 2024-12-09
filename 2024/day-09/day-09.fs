@@ -27,20 +27,18 @@ let solvePart0 (input : string list) : int64 =
             loadBuffer (pos + x + y) (id + 1) xs
         | _ -> ()
 
-    let rec compact fwd rev =
-        if fwd < rev then
-            if buffer[fwd] <> -1 then
-                compact (fwd + 1) rev
-            else if buffer[rev] = -1 then
-                compact fwd (rev - 1)
-            else
-                buffer[fwd] <- buffer[rev]
-                buffer[rev] <- -1
-                compact (fwd + 1) (rev - 1)
+    let rec compact acc fwd rev =
+        if rev < fwd then
+            acc
+        else if buffer[fwd] <> -1 then
+            compact (acc + int64 (fwd * buffer[fwd])) (fwd + 1) rev
+        else if buffer[rev] = -1 then
+            compact acc fwd (rev - 1)
+        else
+            compact (acc + int64 (fwd * buffer[rev]))(fwd + 1) (rev - 1)
 
     loadBuffer 0 0 lens
-    compact 0 (totalLen - 1)
-    checksum buffer 0 0L
+    compact 0L 0 (totalLen - 1)
 
 [<Struct>]
 type File = { Id : int ; Pos : int ; Len : int }
