@@ -84,7 +84,7 @@ let main () =
         )
     if List.length days > 1 then timer (printfn "Total time: %dms") all else all ()
 
-if true then
+if false then
     let workerThread = Thread (main, Int32.MaxValue / 32 * 32)
     workerThread.Start ()
     workerThread.Join ()

@@ -28,6 +28,11 @@ module List =
         | [] -> failwith "uncons of nil"
         | x :: xs -> (x, xs)
 
+    let rec revAppend l1 l2 =
+        match l1 with
+        | [] -> l2
+        | x :: xs -> revAppend xs (x :: l2)
+
 type MultiMap<'K, 'V> when 'K : comparison and 'V : comparison = Map<'K, Set<'V>>
 
 module MultiMap =
