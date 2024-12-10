@@ -1,5 +1,6 @@
 ﻿namespace Utils
 
+open FSharpx
 open FSharpx.Collections
 
 module Extensions =
@@ -18,6 +19,17 @@ module Seq =
 
     let count (predicate : 'a -> bool) : 'a seq -> int64 =
         Seq.fold (fun acc x -> acc + if predicate x then 1L else 0L) 0L
+
+    let choosei (f : int -> 'a -> 'b option) : 'a seq -> 'b seq =
+        Seq.indexed >> Seq.choose (uncurry f)
+
+    let collecti (f : int -> 'a -> 'b seq) : 'a seq -> 'b seq =
+        Seq.indexed >> Seq.collect (uncurry f)
+
+    let ofOption =
+        function
+        | Some x -> seq { yield x }
+        | None -> seq { }
 
 module List =
     let count (predicate : 'a -> bool) : 'a list -> int64 =
