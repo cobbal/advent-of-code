@@ -3,10 +3,9 @@
 open FSharpx
 open FSharpx.Collections
 
-module Extensions =
-    type 'T ``[]`` with
-        member xs.TryGet (n : int) : 'T option =
-            if 0 <= n && n < xs.Length then Some (xs[n]) else None
+module Array =
+    let tryGet (n : int) (xs : 'T array) : 'T option =
+        if 0 <= n && n < xs.Length then Some (xs[n]) else None
 
 module Seq =
     let assertPairs (xs : 'T seq) : 'T * 'T =
@@ -20,11 +19,9 @@ module Seq =
     let count (predicate : 'a -> bool) : 'a seq -> int64 =
         Seq.fold (fun acc x -> acc + if predicate x then 1L else 0L) 0L
 
-    let choosei (f : int -> 'a -> 'b option) : 'a seq -> 'b seq =
-        Seq.indexed >> Seq.choose (uncurry f)
+    let choosei (f : int -> 'a -> 'b option) : 'a seq -> 'b seq = Seq.indexed >> Seq.choose (uncurry f)
 
-    let collecti (f : int -> 'a -> 'b seq) : 'a seq -> 'b seq =
-        Seq.indexed >> Seq.collect (uncurry f)
+    let collecti (f : int -> 'a -> 'b seq) : 'a seq -> 'b seq = Seq.indexed >> Seq.collect (uncurry f)
 
     let ofOption =
         function
@@ -70,12 +67,14 @@ module MultiMap =
 
 [<AutoOpen>]
 module Values =
-    let timer (reporter : int64 -> unit) (f : unit -> 'a) : 'a =
+    let timerf (reporter : int64 -> unit) (f : unit -> 'a) : 'a =
         let watch = System.Diagnostics.Stopwatch.StartNew ()
         let result = f ()
         watch.Stop ()
         reporter watch.ElapsedMilliseconds
         result
+
+    let timer (name: string) : (unit -> 'a) -> 'a = timerf (printfn "%s: %dms" name)
 
     // https://stackoverflow.com/a/35848799/73681
     /// Euclidean remainder, the proper modulo operation

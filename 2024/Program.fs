@@ -21,6 +21,7 @@ let allDays =
         Day09.day09
         Day10.day10
         Day11.day11
+        Day12.day12
     ]
 
 let days =
@@ -55,7 +56,7 @@ let main () =
             let dayPath = $"day-%02d{day.dayNumber}"
             printfn $"=== %s{dayPath} ==="
 
-            timer (fun ms -> printfn $"time: %d{ms}ms"; printfn "")
+            timerf (fun ms -> printfn $"time: %d{ms}ms"; printfn "")
             <| fun () ->
                 flip List.map day.inputs
                 <| fun (inputFile, expected) ->
@@ -84,7 +85,7 @@ let main () =
                  printfn "\u274c Exiting due to earlier errors"
                  exit 1)
         )
-    if List.length days > 1 then timer (printfn "Total time: %dms") all else all ()
+    if List.length days > 1 then timer "Total time" all else all ()
 
 if false then
     let workerThread = Thread (main, Int32.MaxValue / 32 * 32)
