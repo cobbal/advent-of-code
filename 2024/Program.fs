@@ -20,6 +20,7 @@ let allDays =
         Day08.day08
         Day09.day09
         Day10.day10
+        Day11.day11
     ]
 
 let days =
