@@ -2,6 +2,7 @@
 
 open FSharpx
 open FSharpx.Collections
+open System.Text.RegularExpressions
 
 module Array =
     let tryGet (n : int) (xs : 'T array) : 'T option =
@@ -27,6 +28,9 @@ module Seq =
         function
         | Some x -> seq { yield x }
         | None -> seq { }
+
+    let tryMin (s : 'a seq) : 'a option =
+        if Seq.isEmpty s then None else Some (Seq.min s)
 
 module List =
     let count (predicate : 'a -> bool) : 'a list -> int64 =
@@ -64,6 +68,11 @@ module MultiMap =
 
     let inverse (m : MultiMap<'K, 'V>) : MultiMap<'V, 'K> =
         m |> toSeq |> Seq.map (fun (k, v) -> (v, k)) |> ofSeq
+
+module Strings =
+    let int64sIn : string -> int64 seq =
+        let rx = Regex @"\d+"
+        rx.Matches >> Seq.map (_.Value >> int64)
 
 [<AutoOpen>]
 module Values =
