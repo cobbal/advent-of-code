@@ -3,6 +3,7 @@
 open FSharpx
 open FSharpx.Collections
 open System.Text.RegularExpressions
+open Microsoft.FSharp.Core.LanguagePrimitives
 
 module Array =
     let tryGet (n : int) (xs : 'T array) : 'T option =
@@ -71,7 +72,7 @@ module MultiMap =
 
 module Strings =
     let int64sIn : string -> int64 seq =
-        let rx = Regex @"\d+"
+        let rx = Regex @"-?\d+"
         rx.Matches >> Seq.map (_.Value >> int64)
 
 [<AutoOpen>]
@@ -88,6 +89,31 @@ module Values =
     // https://stackoverflow.com/a/35848799/73681
     /// Euclidean remainder, the proper modulo operation
     let inline (%!) a b = (a % b + b) % b
+
+    // Adapted from https://en.wikipedia.org/wiki/Extended_Euclidean_algorithm#Pseudocode
+    let inline extended_gcd (a : ^T) (b : ^T) =
+        let zero : ^T = GenericZero
+        let one : ^T = GenericOne
+        let rec loop (old_r, r) (old_s, s) =
+            if r = zero then
+                (old_s, (if b = zero then zero else (old_r - old_s * a) / b), old_r)
+            else
+                // TODO: div instead of / here?
+                let quotient = old_r / r
+                loop
+                    (r, old_r - quotient * r)
+                    (s, old_s - quotient * s)
+        loop (a, b) (one, zero)
+
+    let inline chineseRemainderTheorem (s : (^T * ^T) seq) : ^T =
+        let remainders, moduli = Array.unzip (Array.ofSeq s)
+        let totalModulus = Array.fold (*) GenericOne moduli
+        let bezouts = Array.map (fun n -> let m, _, _ = extended_gcd (totalModulus / n) n in m) moduli
+        Array.map3
+            (fun a m n -> a * m * (totalModulus / n))
+            remainders bezouts moduli
+        |> Array.sum
+        |> flip (%!) totalModulus
 
     let gcd x y =
         let rec gcd' a =
