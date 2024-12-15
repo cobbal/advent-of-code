@@ -2,6 +2,12 @@
 
 open System.Diagnostics
 
+type Dir =
+    | N
+    | E
+    | S
+    | W
+
 [<Struct>]
 type XY =
     val X : int
@@ -17,7 +23,31 @@ type XY =
     [<DebuggerBrowsable(DebuggerBrowsableState.Never)>]
     member this.W = XY (this.X - 1, this.Y)
 
+    member this.Item
+        with get dir =
+            match dir with
+            | N -> XY (this.X, this.Y - 1)
+            | E -> XY (this.X + 1, this.Y)
+            | S -> XY (this.X, this.Y + 1)
+            | W -> XY (this.X - 1, this.Y)
+
     override this.ToString() = $"%d{this.X},%d{this.Y}"
+
+module Dir =
+    let ofChar =
+        function
+        | '^' -> N
+        | '>' -> E
+        | 'v' -> S
+        | '<' -> W
+        | c -> failwith $"bad direction {c}"
+
+    let toChar =
+        function
+        | N -> '^'
+        | E -> '>'
+        | S -> 'v'
+        | W -> '<'
 
 type Grid(grid : byte array, width : int, height : int) =
     member this.Grid = grid

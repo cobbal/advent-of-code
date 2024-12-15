@@ -6,28 +6,6 @@ open FSharpx
 open Utils
 open Grid
 
-type dir =
-    | N
-    | E
-    | S
-    | W
-
-module Dir =
-    let ofChar =
-        function
-        | '^' -> N
-        | '>' -> E
-        | 'v' -> S
-        | '<' -> W
-        | c -> failwith $"bad direction {c}"
-
-    let move (xy : XY) =
-        function
-        | N -> XY (xy.X, xy.Y - 1)
-        | E -> XY (xy.X + 1, xy.Y)
-        | S -> XY (xy.X, xy.Y + 1)
-        | W -> XY (xy.X - 1, xy.Y)
-
 let parse (input : string list) (gridder : char -> string) =
     let grid, moves = List.split Strings.isNullOrEmpty input
     (Grid.Grid (List.map (String.collect gridder) grid), String.concat "" moves |> Seq.map Dir.ofChar |> List.ofSeq)
@@ -35,26 +13,33 @@ let parse (input : string list) (gridder : char -> string) =
 let solvePart0 (input : string list) : int64 =
     let grid, moves = parse input (fun c -> System.String [| c |])
     let start = grid.FindIndicesOf '@' |> Seq.head
-    grid[start] <- '.'
+    let boxes = grid.FindIndicesOf 'O' |> Set.ofSeq
 
-    let push pos dir =
-        let firstBox = Dir.move pos dir
+    let grid =
+        Grid.Grid (grid.Grid |> Array.map (fun b -> if b = byte '#' then b else byte '.'), grid.Width, grid.Height)
 
-        let rec loop pos =
-            if grid[pos] = 'O' then loop (Dir.move pos dir) else pos
+    let push (boxes, pos : XY) dir =
+        let firstBox = pos[dir]
 
-        let lastBox = loop firstBox
+        let rec movedBoxes acc pos =
+            if grid[pos] = '#' then
+                None
+            else if Set.contains pos boxes then
+                movedBoxes (Set.add pos acc) pos[dir]
+            else
+                Some acc
 
-        if grid[lastBox] = '.' then
-            grid.Swap (firstBox, lastBox)
-            firstBox
-        else
-            pos
+        match movedBoxes Set.empty firstBox with
+        | Some moved ->
+            let boxes' =
+                Set.difference boxes moved |> Set.union (Set.map (fun (xy: XY) -> xy[dir]) moved)
 
-    let endPos = List.fold push start moves
-    // grid.Print (Map.ofList [ (endPos, '@') ])
+            (boxes', firstBox)
+        | None -> (boxes, pos)
 
-    grid.FindIndicesOf 'O' |> Seq.sumBy (fun xy -> 100 * xy.Y + xy.X) |> int64
+    let boxes, endPos = List.fold push (boxes, start) moves
+    // grid.Print (Map.ofList ((endPos, '@') :: List.ofSeq (Seq.map (flip tuple2 'O') boxes)))
+    boxes |> Seq.sumBy (fun xy -> 100 * xy.Y + xy.X) |> int64
 
 let solvePart1 (input : string list) : int64 =
     let grid, moves =
@@ -67,52 +52,64 @@ let solvePart1 (input : string list) : int64 =
             | c -> failwith $"parseError: {c}"
 
     let start = grid.FindIndicesOf '@' |> Seq.head
-    grid[start] <- '.'
+    let boxes = grid.FindIndicesOf '[' |> Set.ofSeq
 
-    let push pos dir =
-        // grid.Print (Map.ofList [ (pos, '@') ])
-        let firstBox = Dir.move pos dir
+    let grid =
+        Grid.Grid (grid.Grid |> Array.map (fun b -> if b = byte '#' then b else byte '.'), grid.Width, grid.Height)
 
-        let rec moveSet (acc : Set<XY>) pos =
-            match grid[pos], dir with
-            | '.', _ -> Some acc
-            | '#', _ -> None
-            | '[', N | '[', S ->
-                Option.maybe {
-                    let! acc' = moveSet (Set.add pos acc) (Dir.move pos dir)
-                    let right = Dir.move pos E
-                    return! moveSet (Set.add right acc') (Dir.move right dir)
-                }
-            | ']', N | ']', S ->
-                Option.maybe {
-                    let! acc' = moveSet (Set.add pos acc) (Dir.move pos dir)
-                    let left = Dir.move pos W
-                    return! moveSet (Set.add left acc') (Dir.move left dir)
-                }
-            | '[', _ | ']', _ ->
-                moveSet (Set.add pos acc) (Dir.move pos dir)
-            | c, _ -> failwith $"unknown grid cell {c}"
-        match moveSet Set.empty firstBox with
-        | Some boxes ->
-            let compareFn: dir -> XY -> int =
-                function
-                | N -> _.Y
-                | E -> fun xy -> -xy.X
-                | S -> fun xy -> -xy.Y
-                | W -> _.X
-            for xy in Seq.sortBy (compareFn dir) boxes do
-                grid.Swap (xy, Dir.move xy dir)
-            firstBox
-        | None -> pos
+    let print chr (boxes, pos) =
+        grid.Print (
+            Map.ofList (
+                (pos, chr)
+                :: List.ofSeq (Seq.collect (fun b -> [ (b, '[') ; (b.E, ']') ]) boxes)
+            )
+        )
 
-    let endPos = List.fold push start moves
-    // grid.Print (Map.ofList [ (endPos, '@') ])
+    let push (boxes, pos : XY) dir =
+        // print (Dir.toChar dir) (boxes, pos)
+        let firstBox = pos[dir]
 
-    grid.FindIndicesOf '[' |> Seq.sumBy (fun xy -> 100 * xy.Y + xy.X) |> int64
+        let rec movedBoxes (acc : Set<XY>) pos =
+            let getBox (pos : XY) =
+                if Set.contains pos boxes then
+                    Some pos
+                else
+                    let pos' = pos.W
+                    if Set.contains pos' boxes then Some pos' else None
+
+            if grid[pos] = '#' then
+                None
+            else
+
+            match getBox pos with
+            | None -> Some acc
+            | Some box ->
+                match dir with
+                | N
+                | S -> [ box ; box.E ]
+                | E -> [ box.E ]
+                | W -> [ box ]
+                |> List.fold
+                    (fun acc pos -> Option.bind (fun acc -> movedBoxes acc pos[dir]) acc)
+                    (Some (Set.add box acc))
+
+        match movedBoxes Set.empty firstBox with
+        | Some moved ->
+            let boxes' =
+                Set.difference boxes moved |> Set.union (Set.map (fun (xy: XY) -> xy[dir]) moved)
+
+            (boxes', firstBox)
+        | None -> (boxes, pos)
+
+    List.fold push (boxes, start) moves
+    // |>! print '@'
+    |> fst
+    |> Seq.sumBy (fun xy -> 100 * xy.Y + xy.X)
+    |> int64
 
 let day15 =
     Day.day 15 solvePart0 solvePart1
-    |> Day.addInput "input-ex0.txt" None
-    |> Day.addInput "input-ex1.txt" None
-    |> Day.addInput "input-ex2.txt" None
-    |> Day.addInput "input-real0.txt" None
+    |> Day.addInput "input-ex0.txt" (Some (10092, 9021))
+    |> Day.addInput "input-ex1.txt" (Some (2028, 1751))
+    |> Day.addInput "input-ex2.txt" (Some (908, 618))
+    |> Day.addInput "input-real0.txt" (Some (1563092, 1582688))
