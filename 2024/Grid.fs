@@ -63,3 +63,16 @@ type Grid(grid : byte array, width : int, height : int) =
                 if this[pos] = target then
                     yield pos
         }
+
+    member this.Print (overrides : Map<XY, char>) =
+        printfn ""
+        for y in 0 .. height - 1 do
+            for x in 0 .. width - 1 do
+                let xy = XY (x, y)
+                printf $"%c{defaultArg (Map.tryFind xy overrides) this[xy]}"
+            printfn ""
+
+    member this.Swap (pos0, pos1) =
+        let temp = this[pos0]
+        this[pos0] <- this[pos1]
+        this[pos1] <- temp
