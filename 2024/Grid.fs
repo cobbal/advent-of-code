@@ -26,10 +26,10 @@ type XY =
     member this.Item
         with get dir =
             match dir with
-            | N -> XY (this.X, this.Y - 1)
-            | E -> XY (this.X + 1, this.Y)
-            | S -> XY (this.X, this.Y + 1)
-            | W -> XY (this.X - 1, this.Y)
+            | N -> this.N
+            | E -> this.E
+            | S -> this.S
+            | W -> this.W
 
     override this.ToString() = $"%d{this.X},%d{this.Y}"
 
