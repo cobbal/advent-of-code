@@ -49,6 +49,27 @@ module Dir =
         | S -> 'v'
         | W -> '<'
 
+    let clockwise =
+        function
+        | N -> E
+        | E -> S
+        | S -> W
+        | W -> N
+
+    let counterClockwise =
+        function
+        | N -> W
+        | E -> N
+        | S -> E
+        | W -> S
+
+    let rev =
+        function
+        | N -> S
+        | E -> W
+        | S -> N
+        | W -> E
+
 type Grid(grid : byte array, width : int, height : int) =
     member this.Grid = grid
     member this.Width = width
