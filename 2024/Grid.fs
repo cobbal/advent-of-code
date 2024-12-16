@@ -16,10 +16,13 @@ type XY =
 
     [<DebuggerBrowsable(DebuggerBrowsableState.Never)>]
     member this.N = XY (this.X, this.Y - 1)
+
     [<DebuggerBrowsable(DebuggerBrowsableState.Never)>]
     member this.E = XY (this.X + 1, this.Y)
+
     [<DebuggerBrowsable(DebuggerBrowsableState.Never)>]
     member this.S = XY (this.X, this.Y + 1)
+
     [<DebuggerBrowsable(DebuggerBrowsableState.Never)>]
     member this.W = XY (this.X - 1, this.Y)
 
@@ -31,7 +34,7 @@ type XY =
             | S -> this.S
             | W -> this.W
 
-    override this.ToString() = $"%d{this.X},%d{this.Y}"
+    override this.ToString () = $"%d{this.X},%d{this.Y}"
 
 module Dir =
     let ofChar =
@@ -117,13 +120,32 @@ type Grid(grid : byte array, width : int, height : int) =
 
     member this.Print (overrides : Map<XY, char>) =
         printfn ""
+
         for y in 0 .. height - 1 do
             for x in 0 .. width - 1 do
                 let xy = XY (x, y)
                 printf $"%c{defaultArg (Map.tryFind xy overrides) this[xy]}"
+
             printfn ""
 
     member this.Swap (pos0, pos1) =
         let temp = this[pos0]
         this[pos0] <- this[pos1]
         this[pos1] <- temp
+
+    member private this.AsTuple () = (this.Grid, this.Width, this.Height)
+
+    override this.Equals other =
+        match other with
+        | :? Grid as other -> this.AsTuple () = other.AsTuple ()
+        | _ -> false
+
+    override this.GetHashCode () = (this.AsTuple ()).GetHashCode ()
+
+    interface System.IComparable<Grid> with
+        member this.CompareTo other =
+            compare (this.AsTuple ()) (other.AsTuple ())
+
+    interface System.IComparable with
+        member this.CompareTo (other) =
+            compare (this.AsTuple ()) ((other :?> Grid).AsTuple ())

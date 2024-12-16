@@ -26,7 +26,7 @@ module PriorityQueue =
 
     let insertIfLower<'K, 'V when 'K : comparison and 'V : comparison> (k : 'K) (v : 'V) (q : PriorityQueue<'K, 'V>) =
         match Map.tryFind k q.Lookup with
-        | Some v0 when v >= v0 -> q
+        | Some v0 when v0 <= v -> q
         | Some v0 ->
             {
                 Priorities = Heap.insert (v, k) q.Priorities
@@ -52,31 +52,32 @@ module PriorityQueue =
             (vk, { q with Priorities = prio })
 
 
-let solve (grid : Grid) =
-    let start = (grid.FindIndicesOf 'S' |> Seq.head, E)
-    let stop = grid.FindIndicesOf 'E' |> Seq.head
+let solve =
+    memo <| fun (grid : Grid) ->
+        let start = (grid.FindIndicesOf 'S' |> Seq.head, E)
+        let stop = grid.FindIndicesOf 'E' |> Seq.head
 
-    let rec loop (heap : PriorityQueue<XY * Dir, int>) =
-        let (dist, (pos, dir)), heap = PriorityQueue.uncons heap
+        let rec loop (heap : PriorityQueue<XY * Dir, int>) =
+            let (dist, (pos, dir)), heap = PriorityQueue.uncons heap
 
-        if (pos, dir) = start then
-            (dist, heap.Lookup)
-        else
-
-        let guardInsert (dist, (pos, dir)) heap =
-            if grid[pos] = '#' then
-                heap
+            if (pos, dir) = start then
+                (dist, heap.Lookup)
             else
-                PriorityQueue.insertIfLower (pos, dir) dist heap
 
-        loop (
-            heap
-            |> guardInsert (1 + dist, (pos[Dir.rev dir], dir))
-            |> guardInsert (1000 + dist, (pos, Dir.clockwise dir))
-            |> guardInsert (1000 + dist, (pos, Dir.counterClockwise dir))
-        )
+            let guardInsert (dist, (pos, dir)) heap =
+                if grid[pos] = '#' then
+                    heap
+                else
+                    PriorityQueue.insertIfLower (pos, dir) dist heap
 
-    loop (PriorityQueue.ofSeq [ (0, (stop, N)) ; (0, (stop, E)) ; (0, (stop, S)) ; (0, (stop, E)) ])
+            loop (
+                heap
+                |> guardInsert (1 + dist, (pos[Dir.rev dir], dir))
+                |> guardInsert (1000 + dist, (pos, Dir.clockwise dir))
+                |> guardInsert (1000 + dist, (pos, Dir.counterClockwise dir))
+            )
+
+        loop (PriorityQueue.ofSeq [ (0, (stop, N)) ; (0, (stop, E)) ; (0, (stop, S)) ; (0, (stop, E)) ])
 
 let solvePart0 (input : string list) : int64 = parse input |> solve |> fst |> int64
 

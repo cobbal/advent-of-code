@@ -84,7 +84,7 @@ module Values =
         reporter watch.ElapsedMilliseconds
         result
 
-    let timer (name: string) : (unit -> 'a) -> 'a = timerf (printfn "%s: %dms" name)
+    let timer (name : string) : (unit -> 'a) -> 'a = timerf (printfn "%s: %dms" name)
 
     // https://stackoverflow.com/a/35848799/73681
     /// Euclidean remainder, the proper modulo operation
@@ -94,24 +94,25 @@ module Values =
     let inline extended_gcd (a : ^T) (b : ^T) =
         let zero : ^T = GenericZero
         let one : ^T = GenericOne
+
         let rec loop (old_r, r) (old_s, s) =
             if r = zero then
                 (old_s, (if b = zero then zero else (old_r - old_s * a) / b), old_r)
             else
                 // TODO: div instead of / here?
                 let quotient = old_r / r
-                loop
-                    (r, old_r - quotient * r)
-                    (s, old_s - quotient * s)
+                loop (r, old_r - quotient * r) (s, old_s - quotient * s)
+
         loop (a, b) (one, zero)
 
     let inline chineseRemainderTheorem (s : (^T * ^T) seq) : ^T =
         let remainders, moduli = Array.unzip (Array.ofSeq s)
         let totalModulus = Array.fold (*) GenericOne moduli
-        let bezouts = Array.map (fun n -> let m, _, _ = extended_gcd (totalModulus / n) n in m) moduli
-        Array.map3
-            (fun a m n -> a * m * (totalModulus / n))
-            remainders bezouts moduli
+
+        let bezouts =
+            Array.map (fun n -> let m, _, _ = extended_gcd (totalModulus / n) n in m) moduli
+
+        Array.map3 (fun a m n -> a * m * (totalModulus / n)) remainders bezouts moduli
         |> Array.sum
         |> flip (%!) totalModulus
 
@@ -122,3 +123,10 @@ module Values =
             | b -> gcd' b (a %! b)
 
         gcd' (abs x) (abs y)
+
+    let memo (f : 'K -> 'v) : 'K -> 'v =
+        let mutable table = Map.empty
+        fun k ->
+            match Map.tryFind k table with
+            | Some v -> v
+            | None -> f k |>! (fun v -> table <- Map.add k v table)
