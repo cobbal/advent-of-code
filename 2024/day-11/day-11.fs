@@ -1,8 +1,6 @@
 ﻿module Day11
 
-open FSharpx.Collections
 open FSharpx.Text
-open FSharpx
 open Utils
 
 let parse (input : string list) : int64 array =
@@ -15,21 +13,6 @@ let digitCount =
         | n -> help (1 + acc) (n / 10L)
 
     help 0
-
-let blink i =
-    match digitCount i with
-    | 0 -> [| 1L |]
-    | d when d % 2 = 0 ->
-        let powerOf10 = pown 10L (d / 2)
-        [| i / powerOf10 ; i % powerOf10 |]
-    | _ -> [| 2024L * i |]
-
-let solvePart0 (input : string list) : int64 =
-    let rocks = parse input
-
-    Seq.fold (fun rocks _ -> Array.collect blink rocks) rocks (seq { 1..25 })
-    |> Array.length
-    |> int64
 
 let multiblink i =
     match digitCount i with
@@ -62,11 +45,15 @@ module MultiSet =
 
     let count = Map.fold (fun acc _ count -> acc + count) 0L
 
-let solvePart1 (input : string list) : int64 =
-    let rocks = parse input |> MultiSet.of1Seq
+let solve blinks input =
+    let rocks = MultiSet.of1Seq input
 
-    Seq.fold (fun rocks _ -> MultiSet.collect multiblink rocks) rocks (seq { 1..75 })
+    Seq.fold (fun rocks _ -> MultiSet.collect multiblink rocks) rocks (seq { 1..blinks })
     |> MultiSet.count
+
+let solvePart0 (input : string list) : int64 = parse input |> solve 25
+
+let solvePart1 (input : string list) : int64 = parse input |> solve 75
 
 let day11 =
     Day.day 11 solvePart0 solvePart1
