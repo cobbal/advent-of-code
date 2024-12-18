@@ -40,6 +40,12 @@ let days =
             printfn $"Unknown days requested: %A{bad}"
             exit 1
 
+let formatObj : obj -> string =
+    function
+    | :? Int64 as i -> $"%d{i}"
+    | :? String as s -> s
+    | o -> $"%A{o}"
+
 let main () =
     let all () =
         flip Array.map days
@@ -55,19 +61,19 @@ let main () =
                 flip Seq.map day.inputs
                 <| fun (inputFile, expected) ->
                     let lines = readFile $"%s{dayPath}/%s{inputFile}" |> List.ofSeq
-                    printf $"%s{inputFile}: "
+                    printf $"%20s{inputFile}: "
                     let result0 = day.solvePart0 lines
-                    printf $"%d{result0} "
+                    printf $"%20s{formatObj result0} "
                     let result1 = day.solvePart1 lines
-                    printf $"%d{result1} "
+                    printf $"%20s{formatObj result1}    "
 
                     match expected with
                     | Some expectation ->
                         if expectation = (result0, result1) then
-                            printfn " \u2705 good"
+                            printfn "\u2705 good"
                             true
                         else
-                            printfn " \u274c bad"
+                            printfn "\u274c bad"
                             false
                     | None ->
                         printfn ""

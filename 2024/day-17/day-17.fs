@@ -52,11 +52,11 @@ let interp (file, program : int array) =
 
     loop [] file
 
-let solvePart0 (input : string list) : int64 =
+let solvePart0 (input : string list) : string =
     parse input
     |> interp
-    // |>! (List.map string >> String.concat "," >> printfn "%s")
-    |> List.fold (fun a b -> 10L * a + int64 b) 0L
+    |> List.map string
+    |> String.concat ","
 
 let solvePart1 (input : string list) : int64 =
     let startFile, program = parse input
@@ -96,6 +96,6 @@ type ThisDay() =
         member this.day () =
             Day.create 17 solvePart0 solvePart1
             <| seq {
-                "input-ex0.txt", Some (4635635210L, -1L)
-                "input-real0.txt", Some (150520135L, 236581108670061L)
+                "input-ex0.txt", Some ("4,6,3,5,6,3,5,2,1,0", -1L)
+                "input-real0.txt", Some ("1,5,0,5,2,0,1,3,5", 236581108670061L)
             }

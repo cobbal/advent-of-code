@@ -59,7 +59,7 @@ let binBoolSearch (monotoneFn : int -> bool) : int * int -> int =
 
     loop
 
-let solvePart1 (input : string list) : int64 =
+let solvePart1 (input : string list) : XY =
     let drops = parse input
     let w = (List.map (fun (xy : XY) -> xy.X) drops |> List.max) + 1
     let h = (List.map (fun (xy : XY) -> xy.Y) drops |> List.max) + 1
@@ -74,14 +74,12 @@ let solvePart1 (input : string list) : int64 =
 
     binBoolSearch blocked (0, List.length drops)
     |> fun i -> List.item (i - 1) drops
-    |> fun pos -> pos.X * 100 + pos.Y
-    |> int64
 
 type ThisDay() =
     interface IDay with
         member this.day () =
             Day.create 18 solvePart0 solvePart1
             <| seq {
-                "input-ex0.txt", Some (22, 601)
-                "input-real0.txt", Some (232, 4464)
+                "input-ex0.txt", Some (22, XY (6, 1))
+                "input-real0.txt", Some (232, XY (44, 64))
             }
