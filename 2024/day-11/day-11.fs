@@ -55,7 +55,11 @@ let solvePart0 (input : string list) : int64 = parse input |> solve 25
 
 let solvePart1 (input : string list) : int64 = parse input |> solve 75
 
-let day11 =
-    Day.day 11 solvePart0 solvePart1
-    |> Day.addInput "input-ex0.txt" (Some (55312L, 65601038650482L))
-    |> Day.addInput "input-real0.txt" (Some (217812L, 259112729857522L))
+type ThisDay() =
+    interface IDay with
+        member this.day () =
+            Day.create 11 solvePart0 solvePart1
+            <| seq {
+                "input-ex0.txt", Some (55312L, 65601038650482L)
+                "input-real0.txt", Some (217812L, 259112729857522L)
+            }

@@ -56,7 +56,11 @@ let solvePart1 (input : string list) : int64 =
     |> List.map (int64 << mid << sort)
     |> List.sum
 
-let day05 =
-    Day.day 05 solvePart0 solvePart1
-    |> Day.addInput "input-ex0.txt" (Some (143, 123))
-    |> Day.addInput "input-real0.txt" (Some (4185, 4480))
+type ThisDay() =
+    interface IDay with
+        member this.day () =
+            Day.create 05 solvePart0 solvePart1
+            <| seq {
+                "input-ex0.txt", Some (143, 123)
+                "input-real0.txt", Some (4185, 4480)
+            }

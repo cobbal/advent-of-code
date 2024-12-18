@@ -32,7 +32,8 @@ let solvePart0 (input : string list) : int64 =
         match movedBoxes Set.empty firstBox with
         | Some moved ->
             let boxes' =
-                Set.difference boxes moved |> Set.union (Set.map (fun (xy: XY) -> xy[dir]) moved)
+                Set.difference boxes moved
+                |> Set.union (Set.map (fun (xy : XY) -> xy[dir]) moved)
 
             (boxes', firstBox)
         | None -> (boxes, pos)
@@ -96,7 +97,8 @@ let solvePart1 (input : string list) : int64 =
         match movedBoxes Set.empty firstBox with
         | Some moved ->
             let boxes' =
-                Set.difference boxes moved |> Set.union (Set.map (fun (xy: XY) -> xy[dir]) moved)
+                Set.difference boxes moved
+                |> Set.union (Set.map (fun (xy : XY) -> xy[dir]) moved)
 
             (boxes', firstBox)
         | None -> (boxes, pos)
@@ -107,9 +109,13 @@ let solvePart1 (input : string list) : int64 =
     |> Seq.sumBy (fun xy -> 100 * xy.Y + xy.X)
     |> int64
 
-let day15 =
-    Day.day 15 solvePart0 solvePart1
-    |> Day.addInput "input-ex0.txt" (Some (10092, 9021))
-    |> Day.addInput "input-ex1.txt" (Some (2028, 1751))
-    |> Day.addInput "input-ex2.txt" (Some (908, 618))
-    |> Day.addInput "input-real0.txt" (Some (1563092, 1582688))
+type ThisDay() =
+    interface IDay with
+        member this.day () =
+            Day.create 15 solvePart0 solvePart1
+            <| seq {
+                "input-ex0.txt", Some (10092, 9021)
+                "input-ex1.txt", Some (2028, 1751)
+                "input-ex2.txt", Some (908, 618)
+                "input-real0.txt", Some (1563092, 1582688)
+            }

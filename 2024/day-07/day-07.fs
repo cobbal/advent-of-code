@@ -45,7 +45,11 @@ let solvePart1 (input : string list) : int64 =
 
     parse input |> List.filter (uncurry isGood) |> List.map fst |> List.sum
 
-let day07 =
-    Day.day 07 solvePart0 solvePart1
-    |> Day.addInput "input-ex0.txt" (Some (3749, 11387))
-    |> Day.addInput "input-real0.txt" (Some (28730327770375L, 424977609625985L))
+type ThisDay() =
+    interface IDay with
+        member this.day () =
+            Day.create 07 solvePart0 solvePart1
+            <| seq {
+                "input-ex0.txt", Some (3749, 11387)
+                "input-real0.txt", Some (28730327770375L, 424977609625985L)
+            }

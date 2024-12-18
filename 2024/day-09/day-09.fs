@@ -66,7 +66,11 @@ let solvePart1 (input : string list) : int64 =
     |> Map.values
     |> Seq.fold (fun acc file -> acc + int64 file.Id * int64 file.Len * int64 (2 * file.Pos + file.Len - 1) / 2L) 0L
 
-let day09 =
-    Day.day 09 solvePart0 solvePart1
-    |> Day.addInput "input-ex0.txt" (Some (1928, 2858))
-    |> Day.addInput "input-real0.txt" (Some (6432869891895L, 6467290479134L))
+type ThisDay() =
+    interface IDay with
+        member this.day () =
+            Day.create 09 solvePart0 solvePart1
+            <| seq {
+                "input-ex0.txt", Some (1928, 2858)
+                "input-real0.txt", Some (6432869891895L, 6467290479134L)
+            }

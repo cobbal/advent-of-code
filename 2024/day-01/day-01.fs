@@ -24,7 +24,11 @@ let solvePart1 (input : string list) : int64 =
     let scores = List.map (fun x -> x * defaultArg (Map.tryFind x occurrences) 0L) left
     List.sum scores
 
-let day01 =
-    Day.day 01 solvePart0 solvePart1
-    |> Day.addInput "input-ex0.txt" (Some (11, 31))
-    |> Day.addInput "input-real0.txt" (Some (765748, 27732508))
+type ThisDay() =
+    interface IDay with
+        member this.day () =
+            Day.create 01 solvePart0 solvePart1
+            <| seq {
+                "input-ex0.txt", Some (11, 31)
+                "input-real0.txt", Some (765748, 27732508)
+            }

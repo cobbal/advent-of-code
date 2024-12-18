@@ -79,7 +79,11 @@ let solvePart1 (input : string list) : int64 =
 
     travel Set.empty Set.empty start Dir.N |> Set.count |> int64
 
-let day06 =
-    Day.day 06 solvePart0 solvePart1
-    |> Day.addInput "input-ex0.txt" (Some (41, 6))
-    |> Day.addInput "input-real0.txt" (Some (4967, 1789))
+type ThisDay() =
+    interface IDay with
+        member this.day () =
+            Day.create 06 solvePart0 solvePart1
+            <| seq {
+                "input-ex0.txt", Some (41, 6)
+                "input-real0.txt", Some (4967, 1789)
+            }

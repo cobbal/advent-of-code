@@ -9,46 +9,32 @@ open FSharpx.IO
 open FSharpx.Collections
 
 let allDays =
-    [
-        Day01.day01
-        Day02.day02
-        Day03.day03
-        Day04.day04
-        Day05.day05
-        Day06.day06
-        Day07.day07
-        Day08.day08
-        Day09.day09
-        Day10.day10
-        Day11.day11
-        Day12.day12
-        Day13.day13
-        Day14.day14
-        Day15.day15
-        Day16.day16
-        Day17.day17
-    ]
+    typeof<IDay>.Assembly.GetTypes ()
+    |> Seq.filter (fun x -> not x.IsInterface && typeof<IDay>.IsAssignableFrom x)
+    |> Seq.map (fun x -> (Activator.CreateInstance x :?> IDay).day ())
+    |> Array.ofSeq
+    |> Array.sortBy _.dayNumber
 
 let days =
-    let dayArgs = Environment.GetCommandLineArgs () |> Array.skip 1 |> List.ofArray
+    let dayArgs = Environment.GetCommandLineArgs () |> Array.skip 1
 
     let getDay : string -> Day option =
         let dayMap =
             allDays
-            |> List.map (fun day -> (day.dayNumber, day))
-            |> List.cons (-1, List.last allDays)
-            |> Map.ofList
+            |> Array.map (fun day -> (day.dayNumber, day))
+            |> Map.ofArray
+            |> Map.add -1 (Array.last allDays)
 
         FSharpOption.ParseInt >=> flip Map.tryFind dayMap
 
-    if List.isEmpty dayArgs then
+    if Array.isEmpty dayArgs then
         allDays
     else
-        let (good, bad) =
-            List.map (fun x -> getDay x |> Choice.ofOption x) dayArgs
-            |> List.partitionChoices
+        let good, bad =
+            Array.map (fun x -> getDay x |> Choice.ofOption x) dayArgs
+            |> Array.partitionChoices
 
-        if List.isEmpty bad then
+        if Array.isEmpty bad then
             good
         else
             printfn $"Unknown days requested: %A{bad}"
@@ -56,14 +42,17 @@ let days =
 
 let main () =
     let all () =
-        flip List.map days
+        flip Array.map days
         <| fun day ->
             let dayPath = $"day-%02d{day.dayNumber}"
             printfn $"=== %s{dayPath} ==="
 
-            timerf (fun ms -> printfn $"time: %d{ms}ms"; printfn "")
+            timerf (fun ms ->
+                printfn $"time: %d{ms}ms"
+                printfn ""
+            )
             <| fun () ->
-                flip List.map day.inputs
+                flip Seq.map day.inputs
                 <| fun (inputFile, expected) ->
                     let lines = readFile $"%s{dayPath}/%s{inputFile}" |> List.ofSeq
                     printf $"%s{inputFile}: "
@@ -83,14 +72,19 @@ let main () =
                     | None ->
                         printfn ""
                         true
+                |> List.ofSeq
                 |> List.forall id
         |> (fun successes ->
-            if not (List.forall id successes) then
+            if not (Array.forall id successes) then
                 (printfn ""
                  printfn "\u274c Exiting due to earlier errors"
                  exit 1)
         )
-    if List.length days > 1 then timer "Total time" all else all ()
+
+    if Array.length days > 1 then
+        timer "Total time" all
+    else
+        all ()
 
 if false then
     let workerThread = Thread (main, Int32.MaxValue / 32 * 32)

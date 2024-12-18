@@ -37,8 +37,12 @@ let solvePart1 (input : string list) : int64 =
         (true, 0L)
     |> snd
 
-let day03 =
-    Day.day 03 solvePart0 solvePart1
-    |> Day.addInput "input-ex0.txt" (Some (161, 161))
-    |> Day.addInput "input-ex1.txt" (Some (161, 48))
-    |> Day.addInput "input-real0.txt" (Some (174103751, 100411201))
+type ThisDay() =
+    interface IDay with
+        member this.day () =
+            Day.create 03 solvePart0 solvePart1
+            <| seq {
+                "input-ex0.txt", Some (161, 161)
+                "input-ex1.txt", Some (161, 48)
+                "input-real0.txt", Some (174103751, 100411201)
+            }

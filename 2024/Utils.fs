@@ -130,3 +130,14 @@ module Values =
             match Map.tryFind k table with
             | Some v -> v
             | None -> f k |>! (fun v -> table <- Map.add k v table)
+
+    let memoFix (top : 'v) (f : 'K -> 'v) : 'K -> 'v =
+        let mutable table = Map.empty
+        fun k ->
+            match Map.tryFind k table with
+            | Some v -> v
+            | None ->
+                table <- Map.add k top table
+                let v = f k
+                table <- Map.add k v table
+                v

@@ -70,7 +70,11 @@ let solvePart1 (input : string list) : int64 =
     |> List.map (fun (_, region) -> int64 (List.length region) * int64 (discountPerimiter grid region))
     |> List.sum
 
-let day12 =
-    Day.day 12 solvePart0 solvePart1
-    |> Day.addInput "input-ex0.txt" (Some (1930, 1206))
-    |> Day.addInput "input-real0.txt" (Some (1494342, 893676))
+type ThisDay() =
+    interface IDay with
+        member this.day () =
+            Day.create 12 solvePart0 solvePart1
+            <| seq {
+                "input-ex0.txt", Some (1930, 1206)
+                "input-real0.txt", Some (1494342, 893676)
+            }

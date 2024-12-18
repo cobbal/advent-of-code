@@ -18,6 +18,7 @@ let parse (input : string list) : (XY * XY) list =
 
 let display width height (robots : XY seq) =
     let grid = Array.init height (fun _ -> Array.create width '.')
+
     for p in robots do
         grid[p.Y][p.X] <- 'X'
 
@@ -52,8 +53,13 @@ let moves width height (arr : struct (XY * XY) array) =
         let struct (p, v) = arr[i]
         let p' = XY ((p.X + v.X) %! width, (p.Y + v.Y) %! height)
         arr[i] <- struct (p', v)
+
 type StrongestDatum =
-    { Index : int; RowWeight: int; ColWeight: int }
+    {
+        Index : int
+        RowWeight : int
+        ColWeight : int
+    }
 
 let solvePart1 (input : string list) : int64 =
     let (w, h) = if List.length input > 30 then (101, 103) else (11, 7)
@@ -61,23 +67,32 @@ let solvePart1 (input : string list) : int64 =
 
     let strongestRowsAndColumns =
         seq {
-            for n in 1..(max w h) do
+            for n in 1 .. (max w h) do
                 let result = Array.map (move w h n) arr
+
                 let find (fn : XY -> int) =
-                    Array.groupBy fn result
-                    |> Array.map (snd >> Array.length)
-                    |> Array.max
-                { Index = n; RowWeight = find _.X; ColWeight = find _.Y }
+                    Array.groupBy fn result |> Array.map (snd >> Array.length) |> Array.max
+
+                {
+                    Index = n
+                    RowWeight = find _.X
+                    ColWeight = find _.Y
+                }
         }
         |> Array.ofSeq
+
     let remX = Array.maxBy _.RowWeight strongestRowsAndColumns |> _.Index |> flip (%!) w
     let remY = Array.maxBy _.ColWeight strongestRowsAndColumns |> _.Index |> flip (%!) h
 
-    chineseRemainderTheorem [(remX, w); (remY, h)]
+    chineseRemainderTheorem [ (remX, w) ; (remY, h) ]
     // |> tee (fun n -> Array.map (move w h n) arr |> display w h)
     |> int64
 
-let day14 =
-    Day.day 14 solvePart0 solvePart1
-    |> Day.addInput "input-ex0.txt" (Some (12, 31))
-    |> Day.addInput "input-real0.txt" (Some (222208000, 7623))
+type ThisDay() =
+    interface IDay with
+        member this.day () =
+            Day.create 14 solvePart0 solvePart1
+            <| seq {
+                "input-ex0.txt", Some (12, 31)
+                "input-real0.txt", Some (222208000, 7623)
+            }

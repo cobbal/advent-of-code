@@ -60,7 +60,11 @@ let solvePart1 (input : string list) : int64 =
 
     Seq.allPairs { 0 .. width - 3 } { 0 .. height - 3 } |> Seq.count (isXMas grid)
 
-let day04 =
-    Day.day 04 solvePart0 solvePart1
-    |> Day.addInput "input-ex0.txt" (Some (18, 9))
-    |> Day.addInput "input-real0.txt" (Some (2654, 1990))
+type ThisDay() =
+    interface IDay with
+        member this.day () =
+            Day.create 04 solvePart0 solvePart1
+            <| seq {
+                "input-ex0.txt", Some (18, 9)
+                "input-real0.txt", Some (2654, 1990)
+            }

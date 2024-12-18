@@ -42,7 +42,11 @@ let solvePart0 (input : string list) : int64 =
 let solvePart1 (input : string list) : int64 =
     parse input |> trace (Monoid.sum ()) (fun _ -> 1) |> Seq.sum |> int64
 
-let day10 =
-    Day.day 10 solvePart0 solvePart1
-    |> Day.addInput "input-ex0.txt" (Some (36, 81))
-    |> Day.addInput "input-real0.txt" (Some (512, 1045))
+type ThisDay() =
+    interface IDay with
+        member this.day () =
+            Day.create 10 solvePart0 solvePart1
+            <| seq {
+                "input-ex0.txt", Some (36, 81)
+                "input-real0.txt", Some (512, 1045)
+            }

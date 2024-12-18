@@ -91,7 +91,11 @@ let solvePart1 (input : string list) : int64 =
 
     solveNibble 0 (Array.map (konst 0) program)
 
-let day17 =
-    Day.day 17 solvePart0 solvePart1
-    |> Day.addInput "input-ex0.txt" (Some (4635635210L, -1L))
-    |> Day.addInput "input-real0.txt" (Some (150520135L, 236581108670061L))
+type ThisDay() =
+    interface IDay with
+        member this.day () =
+            Day.create 17 solvePart0 solvePart1
+            <| seq {
+                "input-ex0.txt", Some (4635635210L, -1L)
+                "input-real0.txt", Some (150520135L, 236581108670061L)
+            }

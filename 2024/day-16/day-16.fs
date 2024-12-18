@@ -53,7 +53,8 @@ module PriorityQueue =
 
 
 let solve =
-    memo <| fun (grid : Grid) ->
+    memo
+    <| fun (grid : Grid) ->
         let start = (grid.FindIndicesOf 'S' |> Seq.head, E)
         let stop = grid.FindIndicesOf 'E' |> Seq.head
 
@@ -84,6 +85,7 @@ let solvePart0 (input : string list) : int64 = parse input |> solve |> fst |> in
 let solvePart1 (input : string list) : int64 =
     let grid = parse input
     let dist, map = solve grid
+
     let rec findSeats (pos, dir) dist =
         Set.monoid {
             if Map.tryFind (pos, dir) map = Some dist then
@@ -92,11 +94,16 @@ let solvePart1 (input : string list) : int64 =
                 yield findSeats (pos, Dir.clockwise dir) (dist - 1000)
                 yield findSeats (pos, Dir.counterClockwise dir) (dist - 1000)
         }
+
     let start = (grid.FindIndicesOf 'S' |> Seq.head, E)
     findSeats start dist |> Set.count |> int64
 
-let day16 =
-    Day.day 16 solvePart0 solvePart1
-    |> Day.addInput "input-ex0.txt" (Some (7036, 45))
-    |> Day.addInput "input-ex1.txt" (Some (11048, 64))
-    |> Day.addInput "input-real0.txt" (Some (95444, 513))
+type ThisDay() =
+    interface IDay with
+        member this.day () =
+            Day.create 16 solvePart0 solvePart1
+            <| seq {
+                "input-ex0.txt", Some (7036, 45)
+                "input-ex1.txt", Some (11048, 64)
+                "input-real0.txt", Some (95444, 513)
+            }

@@ -31,7 +31,11 @@ let solvePart1 (input : string list) : int64 =
 
     List.count (List.exists isSafe << removeOnes) levels
 
-let day02 =
-    Day.day 02 solvePart0 solvePart1
-    |> Day.addInput "input-ex0.txt" (Some (2, 4))
-    |> Day.addInput "input-real0.txt" (Some (686, 717))
+type ThisDay() =
+    interface IDay with
+        member this.day () =
+            Day.create 02 solvePart0 solvePart1
+            <| seq {
+                "input-ex0.txt", Some (2, 4)
+                "input-real0.txt", Some (686, 717)
+            }
