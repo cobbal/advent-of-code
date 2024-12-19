@@ -16,7 +16,11 @@ let solvePart0 (input : string list) : int64 =
 let solvePart1 (input : string list) : int64 =
     -1
 
-let day00 =
-    Day.day 00 solvePart0 solvePart1
-    |> Day.addInput "input-ex0.txt" None
-    // |> Day.addInput "input-real0.txt" None
+type ThisDay() =
+    interface IDay with
+        member this.day () =
+            Day.create 00 solvePart0 solvePart1
+            <| seq {
+                "input-ex0.txt", None
+                // "input-real0.txt", None
+            }

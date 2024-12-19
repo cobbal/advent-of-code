@@ -124,20 +124,16 @@ module Values =
 
         gcd' (abs x) (abs y)
 
-    let memo (f : 'K -> 'v) : 'K -> 'v =
+    let recMemo (f : ('K -> 'v) -> 'K -> 'v) : 'K -> 'v =
         let mutable table = Map.empty
-        fun k ->
+        let rec memoized k =
             match Map.tryFind k table with
             | Some v -> v
-            | None -> f k |>! (fun v -> table <- Map.add k v table)
+            | None -> f memoized k |>! (fun v -> table <- Map.add k v table)
+        memoized
 
-    let memoFix (top : 'v) (f : 'K -> 'v) : 'K -> 'v =
-        let mutable table = Map.empty
-        fun k ->
-            match Map.tryFind k table with
-            | Some v -> v
-            | None ->
-                table <- Map.add k top table
-                let v = f k
-                table <- Map.add k v table
-                v
+    let memo (f : 'K -> 'v) : 'K -> 'v =
+        recMemo (konst f)
+
+    let memo2 (f : 'K0 -> 'K1 -> 'v) : 'K0 -> 'K1 -> 'v =
+        curry (memo (uncurry f))
