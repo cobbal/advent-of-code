@@ -47,6 +47,9 @@ module List =
         | [] -> l2
         | x :: xs -> revAppend xs (x :: l2)
 
+module Map =
+    let singleton k v = Map.add k v Map.empty
+
 type MultiMap<'K, 'V> when 'K : comparison and 'V : comparison = Map<'K, Set<'V>>
 
 module MultiMap =
