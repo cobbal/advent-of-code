@@ -10,10 +10,10 @@ let parse (input : string list) : int64 list list =
     |> List.filter (not << Strings.isNullOrEmpty)
     |> List.map (Strings.split ' ' >> List.ofArray >> List.map int64)
 
-let solvePart0 (input : string list) : int64 =
+let solvePart0 (input : string list) =
     -1
 
-let solvePart1 (input : string list) : int64 =
+let solvePart1 (input : string list) =
     -1
 
 type ThisDay() =

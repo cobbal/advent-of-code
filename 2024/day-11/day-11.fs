@@ -26,25 +26,6 @@ let multiblink i =
         }
     | _ -> seq { 2024L * i }
 
-type MultiSet<'T when 'T : comparison> = Map<'T, int64>
-
-module MultiSet =
-    let of1Seq<'T when 'T : comparison> : 'T seq -> MultiSet<'T> =
-        Seq.fold (fun m k -> Map.change k (fun v -> defaultArg v 0L + 1L |> Some) m) Map.empty
-
-    let ofSeq<'T when 'T : comparison> : ('T * int64) seq -> MultiSet<'T> =
-        Seq.fold (fun m (k, count) -> Map.change k (fun v -> defaultArg v 0L + count |> Some) m) Map.empty
-
-    let collect (mapping : 'T -> 'U seq) (set : MultiSet<'T>) : MultiSet<'U> =
-        seq {
-            for kv in set do
-                for k in mapping kv.Key do
-                    yield (k, kv.Value)
-        }
-        |> ofSeq
-
-    let count = Map.fold (fun acc _ count -> acc + count) 0L
-
 let solve blinks input =
     let rocks = MultiSet.of1Seq input
 

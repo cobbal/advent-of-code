@@ -73,6 +73,38 @@ module MultiMap =
     let inverse (m : MultiMap<'K, 'V>) : MultiMap<'V, 'K> =
         m |> toSeq |> Seq.map (fun (k, v) -> (v, k)) |> ofSeq
 
+type MultiSet<'T when 'T : comparison> = Map<'T, int64>
+
+module MultiSet =
+    let of1Seq<'T when 'T : comparison> : 'T seq -> MultiSet<'T> =
+        Seq.fold (fun m k -> Map.change k (fun v -> defaultArg v 0L + 1L |> Some) m) Map.empty
+
+    let ofSeq<'T when 'T : comparison> : ('T * int64) seq -> MultiSet<'T> =
+        Seq.fold (fun m (k, count) -> Map.change k (fun v -> defaultArg v 0L + count |> Some) m) Map.empty
+
+    let collect (mapping : 'T -> 'U seq) (set : MultiSet<'T>) : MultiSet<'U> =
+        seq {
+            for kv in set do
+                for k in mapping kv.Key do
+                    yield (k, kv.Value)
+        }
+        |> ofSeq
+
+    let bind<'T, 'U when 'T : comparison and 'U : comparison>
+        (mapping : 'T -> MultiSet<'U>)
+        (set : MultiSet<'T>)
+        : MultiSet<'U>
+        =
+        seq {
+            for KeyValue (t, outerCount) in set do
+                for KeyValue (u, innerCount) in mapping t do
+                    yield (u, outerCount * innerCount)
+        }
+        |> ofSeq
+
+    let count (set : MultiSet<'a>) =
+        Map.fold (fun acc _ count -> acc + count) 0L set
+
 module Strings =
     let int64sIn : string -> int64 seq =
         let rx = Regex @"-?\d+"
@@ -129,14 +161,19 @@ module Values =
 
     let recMemo (f : ('K -> 'v) -> 'K -> 'v) : 'K -> 'v =
         let mutable table = Map.empty
+
         let rec memoized k =
             match Map.tryFind k table with
             | Some v -> v
             | None -> f memoized k |>! (fun v -> table <- Map.add k v table)
+
         memoized
 
-    let memo (f : 'K -> 'v) : 'K -> 'v =
-        recMemo (konst f)
+    let memo (f : 'K -> 'v) : 'K -> 'v = recMemo (konst f)
 
-    let memo2 (f : 'K0 -> 'K1 -> 'v) : 'K0 -> 'K1 -> 'v =
-        curry (memo (uncurry f))
+    let memo2 (f : 'K0 -> 'K1 -> 'v) : 'K0 -> 'K1 -> 'v = curry (memo (uncurry f))
+
+    let rec repeatedly n (f : 'a -> 'a) (x : 'a) =
+        match n with
+        | 0 -> x
+        | _ -> repeatedly (n - 1) f (f x)
