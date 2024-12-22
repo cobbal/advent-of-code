@@ -147,5 +147,5 @@ type Grid(grid : byte array, width : int, height : int) =
             compare (this.AsTuple ()) (other.AsTuple ())
 
     interface System.IComparable with
-        member this.CompareTo (other) =
+        member this.CompareTo other =
             compare (this.AsTuple ()) ((other :?> Grid).AsTuple ())
