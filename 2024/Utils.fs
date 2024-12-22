@@ -9,6 +9,12 @@ module Array =
     let tryGet (n : int) (xs : 'T array) : 'T option =
         if 0 <= n && n < xs.Length then Some (xs[n]) else None
 
+    let pairwise4 (array: 'T array) =
+        if array.Length < 4 then
+            Array.empty
+        else
+            Array.init (array.Length - 3) (fun i -> array[i], array[i + 1], array[i + 2], array[i + 3])
+
 module Seq =
     let assertPairs (xs : 'T seq) : 'T * 'T =
         let arr = Seq.toArray xs in
