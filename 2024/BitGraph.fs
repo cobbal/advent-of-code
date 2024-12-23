@@ -1,18 +1,57 @@
 ﻿module BitGraph
 
 open System.Collections
+open System.Numerics
 open Utils
 open FSharpx
 open FSharpx.Collections
 
+[<Struct>]
+type BitArray(count : int, limbs : uint64 array) =
+    member this.Length = count
+    member this.Limbs = limbs
+
+    new(count) = BitArray (count, Array.zeroCreate ((count + 63) / 64))
+
+    member this.Item
+        with get i = limbs[i / 64] &&& (1uL <<< i % 64) <> 0uL
+        and set i newValue =
+            let mask = 1uL <<< i % 64
+
+            limbs[i / 64] <-
+                if newValue then
+                    limbs[i / 64] ||| mask
+                else
+                    limbs[i / 64] &&& ~~~mask
+
+    member this.Not () =
+        Array.map (~~~) this.Limbs |> curry BitArray count
+
+    member this.Or (other : BitArray) =
+        Array.map2 (|||) this.Limbs other.Limbs |> curry BitArray count
+
+    member this.And (other : BitArray) =
+        Array.map2 (&&&) this.Limbs other.Limbs |> curry BitArray count
+
+    member this.HasAnySet () = Array.exists ((<>) 0uL) this.Limbs
+
+    member this.Set i newValue =
+        let mutable result = BitArray (count, Array.copy limbs)
+        result[i] <- newValue
+        result
+
+[<Struct>]
 type BitSet(storage : BitArray) =
     member private this.Storage = storage
+
     override this.ToString () =
+        let storage = this.Storage
+
         Array.init storage.Length (fun i -> if storage[i] then '#' else '.')
         |> System.String
 
     static member ofSeq (universeSize : int) (sequence : int seq) : BitSet =
-        let storage = BitArray universeSize
+        let mutable storage = BitArray universeSize
 
         for element in sequence do
             storage[element] <- true
@@ -21,28 +60,26 @@ type BitSet(storage : BitArray) =
 
     static member toSeq (bitset : BitSet) =
         seq {
-            // TODO: faster
-            for i in 0 .. bitset.Storage.Length - 1 do
-                if bitset.Storage[i] then
-                    yield i
+            for limbIndex in 0 .. bitset.Storage.Limbs.Length - 1 do
+                let mutable workingLimb = bitset.Storage.Limbs[limbIndex]
+                while workingLimb <> 0uL do
+                    let bit = BitOperations.TrailingZeroCount workingLimb
+                    workingLimb <- workingLimb &&& ~~~ (1uL <<< bit)
+                    yield 64 * limbIndex + bit
         }
 
     static member contains element (bitset : BitSet) = bitset.Storage[element]
 
     static member difference (set0 : BitSet) (set1 : BitSet) =
         assert (set0.Storage.Length = set1.Storage.Length)
-        ((BitArray set1.Storage).Not ()).And set0.Storage |> BitSet
+        (set1.Storage.Not ()).And set0.Storage |> BitSet
 
-    static member intersect (set0 : BitSet) (set1 : BitSet) =
-        (BitArray set0.Storage).And set1.Storage |> BitSet
+    static member intersect (set0 : BitSet) (set1 : BitSet) = set0.Storage.And set1.Storage |> BitSet
 
     static member add element (bitset : BitSet) =
-        let result = BitArray bitset.Storage
-        result[element] <- true
-        BitSet result
+        bitset.Storage.Set element true |> BitSet
 
-    static member isEmpty (bitset : BitSet) =
-        not (bitset.Storage.HasAnySet ())
+    static member isEmpty (bitset : BitSet) = not (bitset.Storage.HasAnySet ())
 
     interface Generic.IEnumerable<int> with
         member this.GetEnumerator () : Generic.IEnumerator<int> = (BitSet.toSeq this).GetEnumerator ()
