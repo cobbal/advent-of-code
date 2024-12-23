@@ -9,6 +9,7 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="Utils.fs"/>
+        <Compile Include="BitGraph.fs" />
         <Compile Include="Grid.fs" />
         <Compile Include="Day.fs"/>
         <Compile Include="day-*/*.fs"/>

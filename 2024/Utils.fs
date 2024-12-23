@@ -15,6 +15,9 @@ module Array =
     let fivewise (a : 'T array) =
         Array.init (max 0 (a.Length - 4)) (fun i -> a[i], a[i + 1], a[i + 2], a[i + 3], a[i + 4])
 
+    let tryTake n (xs : 'T array) =
+        Array.take (min n xs.Length) xs
+
 module Seq =
     let assertPairs (xs : 'T seq) : 'T * 'T =
         let arr = Seq.toArray xs in

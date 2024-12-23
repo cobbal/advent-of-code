@@ -1,64 +1,65 @@
 ﻿module Day23
 
-open FSharpx.Collections
 open FSharpx.Text
 open FSharpx
 open Utils
+open BitGraph
 
 let parse (input : string list) =
     input
     |> List.filter (not << Strings.isNullOrEmpty)
     |> List.map (Strings.split '-' >> Seq.assertPairs)
-    |> fun pairs -> MultiMap.ofSeq (pairs @ List.map swap pairs)
+    |> (fun pairs -> pairs @ List.map swap pairs)
+    |> BitGraph.ofSeq
 
+let cliquesOf3 (graph : BitGraph<string>) =
+    seq {
+        for a in BitGraph.unlabeledNodes graph do
+            for b in graph.Edges[a] do
+                if a < b then
+                    for c in BitSet.intersect graph.Edges[a] graph.Edges[b] do
+                        if b < c && a < c then
+                            yield [| a ; b ; c |] |> BitSet.ofSeq graph.Labels.Length
+    }
+    |> Array.ofSeq
 
-let cliquesOf (graph : MultiMap<string, string>) : int -> Set<string> array =
-    let rec loop =
-        memo <|
-        function
-        | 3 ->
-            seq {
-                for KeyValue (a, ac) in graph do
-                    for b in ac do
-                        for c in Set.intersect ac graph[b] do
-                            yield [| a ; b ; c |] |> Set.ofArray
-            }
-            |> Seq.distinct
-            |> Array.ofSeq
-        | n when n > 3 ->
-            printfn $"looking for size %d{n}"
-            seq {
-                for clique in loop (n - 1) do
-                    for candidate in graph.Keys do
-                        if
-                            not (Set.contains candidate clique)
-                            && Set.isEmpty (Set.difference clique graph[candidate])
-                        then
-                            yield Set.add candidate clique
-            }
-            |> Seq.distinct
-            |> Array.ofSeq
-            |>! (printfn "cliquesOf %d, found %d" n << Array.length)
-    loop
+let biggerCliques (graph : BitGraph<string>) (smallerCliques : BitSet array) : BitSet array =
+    seq {
+        for clique in smallerCliques do
+            for candidate in Seq.max clique + 1 .. graph.Labels.Length - 1 do
+                if
+                    not (BitSet.contains candidate clique)
+                    && BitSet.isEmpty (BitSet.difference clique graph.Edges[candidate])
+                then
+                    yield BitSet.add candidate clique
+    }
+    |> Array.ofSeq
 
 let solvePart0 (input : string list) =
-    let cliquesOf = parse input |> cliquesOf
-    cliquesOf 3 |> Seq.count (Set.exists (String.startsWith "t"))
+    let graph = parse input
+
+    graph
+    |> cliquesOf3
+    |> Seq.count (Seq.exists (fun i -> String.startsWith "t" graph.Labels[i]))
 
 let solvePart1 (input : string list) =
-    let cliquesOf = parse input |> cliquesOf
-    let rec search i =
-        match cliquesOf i with
-        | [| |] -> failwith "not unique"
-        | [| theOne |] -> String.concat "," theOne
-        | _ -> search (i + 1)
-    search 3
+    let graph = parse input
+
+    let rec search i cliques =
+        // printfn $"%d{i}-cliques: %d{Array.length cliques}"
+        match cliques with
+        | [||] -> failwith "not unique"
+        | [| theOne |] -> theOne |> Seq.map (fun i -> graph.Labels[i]) |> String.concat ","
+        | _ -> search (i + 1) (biggerCliques graph cliques)
+
+    search 3 (cliquesOf3 graph)
 
 type ThisDay() =
     interface IDay with
         member this.day () =
             Day.create 23 solvePart0 solvePart1
             <| seq {
-                "input-ex0.txt", None
-                "input-real0.txt", None
+                "input-ex0.txt", Some (7, "co,de,ka,ta")
+                "input-ex1.txt", Some (14, "co,de,ja,ka,ta,za")
+                "input-real0.txt", Some (1215, "bm,by,dv,ep,ia,ja,jb,ks,lv,ol,oy,uz,yt")
             }
