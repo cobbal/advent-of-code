@@ -9,17 +9,16 @@ let parse (input : string list) =
     input
     |> List.filter (not << Strings.isNullOrEmpty)
     |> List.map (Strings.split '-' >> Seq.assertPairs)
+    // |> List.map (fun (x, y) -> if x < y then (x, y) else (y, x))
     |> (fun pairs -> pairs @ List.map swap pairs)
     |> BitGraph.ofSeq
 
 let cliquesOf3 (graph : BitGraph<string>) =
     seq {
         for a in BitGraph.unlabeledNodes graph do
-            for b in graph.Edges[a] do
-                if a < b then
-                    for c in BitSet.intersect graph.Edges[a] graph.Edges[b] do
-                        if b < c && a < c then
-                            yield [| a ; b ; c |] |> BitSet.ofSeq graph.Labels.Length
+            for b in graph.AscendingEdges[a] do
+                for c in BitSet.intersect graph.AscendingEdges[a] graph.AscendingEdges[b] do
+                    yield [| a ; b ; c |] |> BitSet.ofSeq graph.Labels.Length
     }
     |> Array.ofSeq
 
@@ -28,8 +27,7 @@ let biggerCliques (graph : BitGraph<string>) (smallerCliques : BitSet array) : B
         for clique in smallerCliques do
             for candidate in Seq.max clique + 1 .. graph.Labels.Length - 1 do
                 if
-                    not (BitSet.contains candidate clique)
-                    && BitSet.isEmpty (BitSet.difference clique graph.Edges[candidate])
+                    BitSet.isEmpty (BitSet.difference clique graph.Edges[candidate])
                 then
                     yield BitSet.add candidate clique
     }

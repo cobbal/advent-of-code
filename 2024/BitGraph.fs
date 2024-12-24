@@ -27,11 +27,14 @@ type BitArray(count : int, limbs : uint64 array) =
     member this.Not () =
         Array.map (~~~) this.Limbs |> curry BitArray count
 
-    member this.Or (other : BitArray) =
-        Array.map2 (|||) this.Limbs other.Limbs |> curry BitArray count
+    member this.LimbBinOp (op : uint64 -> uint64 -> uint64) (other : BitArray) =
+        Array.map2 op this.Limbs other.Limbs |> curry BitArray count
 
-    member this.And (other : BitArray) =
-        Array.map2 (&&&) this.Limbs other.Limbs |> curry BitArray count
+    member this.Or other = this.LimbBinOp (|||) other
+    member this.And other = this.LimbBinOp (&&&) other
+
+    member this.Difference other =
+        this.LimbBinOp (fun x y -> x &&& ~~~y) other
 
     member this.HasAnySet () = Array.exists ((<>) 0uL) this.Limbs
 
@@ -62,17 +65,20 @@ type BitSet(storage : BitArray) =
         seq {
             for limbIndex in 0 .. bitset.Storage.Limbs.Length - 1 do
                 let mutable workingLimb = bitset.Storage.Limbs[limbIndex]
+
                 while workingLimb <> 0uL do
                     let bit = BitOperations.TrailingZeroCount workingLimb
-                    workingLimb <- workingLimb &&& ~~~ (1uL <<< bit)
+                    workingLimb <- workingLimb &&& ~~~(1uL <<< bit)
                     yield 64 * limbIndex + bit
         }
 
     static member contains element (bitset : BitSet) = bitset.Storage[element]
 
     static member difference (set0 : BitSet) (set1 : BitSet) =
-        assert (set0.Storage.Length = set1.Storage.Length)
-        (set1.Storage.Not ()).And set0.Storage |> BitSet
+        set0.Storage.Difference set1.Storage |> BitSet
+
+    static member differenceIsEmpty (set0 : BitSet) (set1 : BitSet) =
+        Seq.forall2 (fun x y -> x &&& ~~~ y = 0uL) set0.Storage.Limbs set1.Storage.Limbs
 
     static member intersect (set0 : BitSet) (set1 : BitSet) = set0.Storage.And set1.Storage |> BitSet
 
@@ -90,6 +96,7 @@ type BitGraph<'T when 'T : comparison> =
         Labels : 'T array
         LabelMap : Map<'T, int>
         Edges : BitSet array
+        AscendingEdges : BitSet array
     }
 
 module BitGraph =
@@ -103,20 +110,27 @@ module BitGraph =
             |> Array.ofSeq
 
         let labelMap = Array.indexed labels |> Array.map swap |> Map.ofArray
-        let multimap = MultiMap.ofSeq pairs
+
+        let multimap =
+            pairs
+            |> Seq.map (fun (x, y) -> Map.find x labelMap, Map.find y labelMap)
+            |> MultiMap.ofSeq
+
+        let edges =
+            Array.init labels.Length (fun i -> BitSet.ofSeq labels.Length (Map.findOrDefault i Set.empty multimap))
+
+        let ascendingEdges =
+            Array.init
+                labels.Length
+                (fun i ->
+                    BitSet.ofSeq labels.Length (Map.findOrDefault i Set.empty multimap |> Seq.filter (fun x -> i < x))
+                )
 
         {
             Labels = labels
             LabelMap = labelMap
-            Edges =
-                Array.init
-                    labels.Length
-                    (fun i ->
-                        BitSet.ofSeq
-                            labels.Length
-                            (Map.findOrDefault labels[i] Set.empty multimap
-                             |> Set.map (flip Map.find labelMap))
-                    )
+            Edges = edges
+            AscendingEdges = ascendingEdges
         }
 
     let unlabeledNodes (g : BitGraph<'T>) = { 0 .. g.Labels.Length - 1 }
