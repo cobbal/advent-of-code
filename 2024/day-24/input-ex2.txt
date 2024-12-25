@@ -1,0 +1,12 @@
+x00: 1
+x01: 0
+y00: 1
+y01: 1
+
+x00 XOR y00 -> z00
+x00 AND y00 -> c00
+x01 XOR y01 -> i01
+i01 XOR c00 -> z01
+i01 AND c00 -> k01
+x01 AND y01 -> j01
+j01 OR k01 -> z02
