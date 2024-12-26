@@ -58,6 +58,10 @@ module List =
 
 module Map =
     let singleton k v = Map.add k v Map.empty
+    let invert<'K, 'V when 'K: comparison and 'V: comparison> (m : Map<'K, 'V>): Map<'V, 'K> =
+        let result = m |> Map.toSeq |> Seq.map swap |> Map.ofSeq
+        assert (Map.count m = Map.count result)
+        result
 
 type MultiMap<'K, 'V> when 'K : comparison and 'V : comparison = Map<'K, Set<'V>>
 

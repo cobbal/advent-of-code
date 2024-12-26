@@ -22,6 +22,17 @@ let gateAnd wire0 wire1 = And (min wire0 wire1, max wire0 wire1)
 let gateOr wire0 wire1 = Or (min wire0 wire1, max wire0 wire1)
 let gateXor wire0 wire1 = Xor (min wire0 wire1, max wire0 wire1)
 
+type Tree =
+    | Input of string
+    | Gate of Op * Tree * Tree
+
+let opStr = function Op.And -> "&" | Op.Or -> "|" | Op.Xor -> "^"
+
+let rec treeStr t =
+    match t with
+    | Input s -> s
+    | Gate (op, t0, t1) -> $"({treeStr t0} {opStr op} {treeStr t1})"
+
 let op =
     function
     | Const _ -> failwith "gate has no op"
@@ -76,12 +87,13 @@ let solvePart0 (input : string list) =
     |> Seq.map (eval circuit)
     |> Seq.fold (fun x y -> 2L * x + if y then 1L else 0L) 0L
 
-
 let generateAdder (xs : string list) (ys : string list) (zs : string list) : Map<string, Gate> =
     let mutable counter = 0
+
     let gensym () =
         counter <- counter + 1
         $"i%d{counter - 1}"
+
     let rec loop acc carry xs ys zs =
         match xs, ys, zs with
         | [], [], [ zout ] -> (zout, carry) :: acc |> Map.ofList
@@ -99,79 +111,45 @@ let generateAdder (xs : string list) (ys : string list) (zs : string list) : Map
             loop acc (gateOr j k) xs ys zs
         | _ -> failwith "uneven circuit"
 
-    let (x, xs), (y, ys), (z, zs) = List.uncons xs, List.uncons ys, List.uncons zs
-    loop [ (z, gateXor x y) ] (gateAnd x y) xs ys zs
+    let startingGates =
+        seq {
+            for x in xs do
+                yield (x, Const false)
 
-let oddnessOf circuit refCircuit xs ys zs without =
-    let circuit =
-        Option.fold
-            (fun circuit key ->
-                let gate = Map.find key circuit
-                Map.remove key circuit |> Map.add $"{key}_disconnected" gate
-            )
-            circuit
-            without
-
-    let mutable refsForActs = xs @ ys @ zs |> Seq.map (fun x -> x, x) |> Map.ofSeq
-    let mutable discrepancies = [||]
-
-    let mutable queue =
-        Map.toSeq circuit
-        |> Seq.filter (
-            function
-            | _, Const _ -> false
-            | _ -> true
-        )
-        |> Deque.ofSeq
-
-    let refMatches (out, gate) =
-        let ref0 = Map.tryFind (in0 gate) refsForActs
-        let ref1 = Map.tryFind (in1 gate) refsForActs
-        let refOut = Map.tryFind out refsForActs
-
-        let optMatches =
-            curry (
-                function
-                | None, _ -> true
-                | Some x, y -> x = y
-            )
-
-        refCircuit
-        |> Map.toSeq
-        |> Seq.filter (
-            function
-            | o, g ->
-                op g = op gate
-                && optMatches ref0 (in0 g)
-                && optMatches ref1 (in1 g)
-                && optMatches refOut o
-        )
+            for y in ys do
+                yield (y, Const false)
+        }
         |> List.ofSeq
 
-    let mutable stepsWithoutProgress = 0
+    let (x, xs), (y, ys), (z, zs) = List.uncons xs, List.uncons ys, List.uncons zs
+    loop ((z, gateXor x y) :: startingGates) (gateAnd x y) xs ys zs
 
-    while not (Deque.isEmpty queue) && stepsWithoutProgress <= Deque.length queue do
-        let (out, gate), queue' = Deque.uncons queue
-        queue <- queue'
+module Map =
+    let swapKeys k0 k1 map =
+        map |> Map.add k0 (Map.find k0 map) |> Map.add k0 (Map.find k1 map)
 
-        match refMatches (out, gate) with
-        | [ (refOut, refGate) ] ->
-            seq {
-                refOut, out
-                in0 refGate, in0 gate
-                in1 refGate, in1 gate
-            }
-            |> Seq.iter (fun (ref, act) -> refsForActs <- Map.add act ref refsForActs)
+let rec treeCount =
+    function
+    | Input _ -> 1
+    | Gate (_, t0, t1) -> 1 + treeCount t0 + treeCount t1
 
-            stepsWithoutProgress <- 0
-        | [] ->
-            discrepancies <- Array.append discrepancies [| (out, gate) |]
-            stepsWithoutProgress <- 0
-        | _ ->
-            queue <- Deque.conj (out, gate) queue
-            stepsWithoutProgress <- stepsWithoutProgress + 1
+let canon : Tree -> Tree =
+    recMemo
+    <| fun recur t ->
+        match t with
+        | Input _ -> t
+        | Gate (op, t0, t1) ->
+            let t0, t1 = recur t0, recur t1
+            Gate (op, min t0 t1, max t0 t1)
 
-    discrepancies.Length + Deque.length queue
+let rectify circuit : string -> Tree =
+    recMemo
+    <| fun recur wire ->
+        match Map.tryFind wire circuit with
+        | None
+        | Some (Const _) -> Input wire
+        | Some gate -> Gate (op gate, recur (in0 gate), recur (in1 gate))
+        |> canon
 
 let solvePart1 (input : string list) =
     let circuit = parse input
@@ -186,32 +164,64 @@ let solvePart1 (input : string list) =
     let xs, ys, zs = (vars "x", vars "y", vars "z")
     let refCircuit = generateAdder xs ys zs
 
-    let reduceOddness circuit =
-        let others =
-            Map.keySet circuit
-            |> Set.filter (fun k -> not (String.startsWith "x" k || String.startsWith "y" k || String.startsWith "z" k))
+    let refTreeMap =
+        Seq.map (fun w -> (w, rectify refCircuit w)) (Map.keys refCircuit) |> Map.ofSeq
 
-        Seq.minBy (oddnessOf circuit refCircuit xs ys zs << Some) others
-        |>! (fun odd ->
-            printfn
-                "%A: %d -> %d"
-                odd
-                (oddnessOf circuit refCircuit xs ys zs None)
-                (oddnessOf circuit refCircuit xs ys zs (Some odd))
-        )
-        |> flip Map.remove circuit
+    let refTreeCoMap = Map.invert refTreeMap
 
     printfn ""
 
+    let findSwap circuit =
+        let treeMap =
+            Seq.map (fun w -> (w, rectify circuit w)) (Map.keys circuit) |> Map.ofSeq
+
+        let treeCoMap = Map.invert treeMap
+
+        let wrongOut =
+            Map.values refTreeMap
+            |> Seq.sortBy (fun t -> treeCount t, t)
+            |> Seq.filter (not << flip Map.containsKey treeCoMap)
+            |> Seq.cache
+            |>! (Seq.map treeCount >> printfn "%A")
+            |> Seq.head
+            |> flip Map.find refTreeCoMap
+
+        let missedCircuit = Map.find wrongOut refCircuit
+        let o = op missedCircuit
+        let tree0 = in0 missedCircuit |> flip Map.find refTreeMap
+        let tree1 = in1 missedCircuit |> flip Map.find refTreeMap
+        let i0 = Map.find tree0 treeCoMap
+        let i1 = Map.find tree1 treeCoMap
+
+        circuit
+        |> Seq.choose (
+            function
+            | KeyValue(_, Const _) -> None
+            | KeyValue(_, g) when op g <> o -> None
+            | KeyValue(k, g) when i0 = in0 g -> Some (k, i0, i1, in1 g)
+            | KeyValue(k, g) when i1 = in0 g -> Some (k, i1, i0, in1 g)
+            | KeyValue(k, g) when i0 = in1 g -> Some (k, i0, i1, in0 g)
+            | KeyValue(k, g) when i1 = in1 g -> Some (k, i1, i0, in0 g)
+            | _ -> None
+        )
+        |> Array.ofSeq
+        |> function
+            | [| (k, good, x, y) |] ->
+                let describeWire = treeStr << canon << flip Map.find treeMap
+                printfn "%s good: %s <-> %s" good x y
+                printfn "%A" ^ treeStr ^ canon (Map.find x treeMap)
+                printfn "%A" ^ treeStr ^ canon (Map.find y treeMap)
+                printfn "%s" ^ treeStr ^ canon ^ Gate (o, Map.find good treeMap, Map.find x treeMap)
+                printfn "%s" ^ treeStr ^ Map.find wrongOut refTreeMap
+                printfn "%s" ^ treeStr ^ canon ^ rectify (Map.swapKeys x y circuit) k
+                (x, y)
+            | _ -> failwith "not one"
+
     circuit
-    |> reduceOddness
-    |> reduceOddness
-    |> reduceOddness
-    |> reduceOddness
-    |> reduceOddness
-    |> reduceOddness
-    |> reduceOddness
-    |> reduceOddness
+    |> (fun c -> uncurry Map.swapKeys (findSwap c) c)
+    |> (fun c -> uncurry Map.swapKeys (findSwap c) c)
+    |> (fun c -> uncurry Map.swapKeys (findSwap c) c)
+    |> (fun c -> uncurry Map.swapKeys (findSwap c) c)
     |> ignore
 
 type ThisDay() =
