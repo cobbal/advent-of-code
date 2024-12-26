@@ -27,6 +27,15 @@ module Seq =
         else
             failwith $"bad length, expected 2 got %d{arr.Length}"
 
+    let assertOne (xs : 'T seq) : 'T =
+        let arr = Seq.toArray xs in
+
+        if arr.Length = 1 then
+            arr[0]
+        else
+            failwith $"bad length, expected 1 got %d{arr.Length}"
+
+
     let count (predicate : 'a -> bool) : 'a seq -> int64 =
         Seq.fold (fun acc x -> acc + if predicate x then 1L else 0L) 0L
 
@@ -62,6 +71,12 @@ module Map =
         let result = m |> Map.toSeq |> Seq.map swap |> Map.ofSeq
         assert (Map.count m = Map.count result)
         result
+
+module Option =
+    let unzip =
+        function
+        | None -> (None, None)
+        | Some (a, b) -> (Some a, Some b)
 
 type MultiMap<'K, 'V> when 'K : comparison and 'V : comparison = Map<'K, Set<'V>>
 
