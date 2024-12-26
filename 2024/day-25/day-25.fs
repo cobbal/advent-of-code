@@ -37,13 +37,13 @@ let solvePart0 (input : string list) =
     let keys, locks = parse input
     Seq.allPairs keys locks |> Seq.count (uncurry keyFitsLock)
 
-let solvePart1 (input : string list) = -1
+let solvePart1 (input : string list) = "freebie"
 
 type ThisDay() =
     interface IDay with
         member this.day () =
             Day.create 25 solvePart0 solvePart1
             <| seq {
-                "input-ex0.txt", None
-                "input-real0.txt", None
+                "input-ex0.txt", Some (3, "freebie")
+                "input-real0.txt", Some (3307, "freebie")
             }
