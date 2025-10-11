@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/time.h>
 
 void checkImpl(bool b, char *expr, char *file, int line) {
     if (!b) {
@@ -11,11 +12,10 @@ void checkImpl(bool b, char *expr, char *file, int line) {
     }
 }
 
-void dayHeader(int dayNumber) {
-    printf("=== day-%02d ===\n", dayNumber);
+int64_t dayStart(int dayNumber) {
 }
 
-void checkInputInt(char *path, partSolverInt part0, int64_t expected0, partSolverInt part1, int64_t expected1) {
+int checkInputInt(char *path, partSolverInt part0, int64_t expected0, partSolverInt part1, int64_t expected1) {
     printf("%22s: ", path);
     FILE *f = fopen(path, "r");
     check(f);
@@ -27,7 +27,9 @@ void checkInputInt(char *path, partSolverInt part0, int64_t expected0, partSolve
     check(!fclose(f));
     if (result0 == expected0 && result1 == expected1) {
         printf("  good\n");
+        return 0;
     } else {
         printf("   bad\n");
+        return 1;
     }
 }

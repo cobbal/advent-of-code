@@ -31,9 +31,10 @@ static int64_t solvePart1(FILE *f) {
     return -1;
 }
 
-static constexpr int dayNumber = 1;
-static void dayMain() {
-    dayHeader(dayNumber);
-    checkInputInt("day-01/input-real0.txt", solvePart0, 280, solvePart1, 1797);
+static int dayMain() {
+    int failed = 0;
+    failed += checkInputInt("day-01/input-real0.txt", solvePart0, 280, solvePart1, 1797);
+    return failed;
 }
-daySolver day01 = { dayNumber, dayMain };
+
+daySolver day01 = {1, dayMain};
