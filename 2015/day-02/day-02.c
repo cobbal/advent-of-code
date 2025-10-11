@@ -1,0 +1,31 @@
+#include "day-02.h"
+
+static int64_t solvePart0(FILE *f) {
+    int64_t total = 0;
+    int l, w, h;
+    while (fscanf(f, "%dx%dx%d\n", &l, &w, &h) == 3) {
+        total += 2 * l * w + 2 * w * h + 2 * h * l;
+        total += min(l * w, min(w * h, h * l));
+    }
+    return total;
+}
+
+static int64_t solvePart1(FILE *f) {
+    int64_t total = 0;
+    int l, w, h;
+    while (fscanf(f, "%dx%dx%d\n", &l, &w, &h) == 3) {
+        total += 2 * min(l + w, min(w + h, h + l));
+        total += w * l * h;
+    }
+    return total;
+}
+
+static constexpr int dayNumber = 2;
+
+static void dayMain() {
+    dayHeader(dayNumber);
+    checkInputInt("day-02/input-ex0.txt", solvePart0, 101, solvePart1, 48);
+    checkInputInt("day-02/input-real0.txt", solvePart0, 1606483, solvePart1, 3842356);
+}
+
+daySolver day02 = {dayNumber, dayMain};
