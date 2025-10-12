@@ -10,6 +10,7 @@ _2015 = executable(
     'day-02/day-02.c',
     'day-03/day-03.c',
     'day-04/day-04.c',
+    'day-05/day-05.c',
     'common.c',
     'set.c',
     'md5.c',

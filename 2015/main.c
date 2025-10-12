@@ -6,7 +6,7 @@ extern daySolver day01;
 extern daySolver day02;
 extern daySolver day03;
 extern daySolver day04;
-daySolver day05;
+extern daySolver day05;
 daySolver day06;
 daySolver day07;
 daySolver day08;
