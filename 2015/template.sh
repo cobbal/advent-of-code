@@ -7,16 +7,8 @@ sday=$(printf "%02d" "$iday")
 echo "temmplating day-$sday"
 mkdir -p "day-$sday"
 
-cat >"day-$sday/day-$sday.h" <<EOF
-#pragma once
-
-#include "../common.h"
-
-extern daySolver day$sday;
-EOF
-
 cat >"day-$sday/day-$sday.c" <<EOF
-#include "day-$sday.h"
+#include "common.h"
 
 static int64_t solvePart0(FILE *f) {
     (void)f;
@@ -34,7 +26,7 @@ static int dayMain() {
     // failed += checkInputInt("day-$sday/input-real0.txt", solvePart0, -1, solvePart1, -1);
     return failed;
 }
-daySolver day$sday = { $iday, dayMain };
+daySolver day$sday = { $iday, dayMain, true };
 EOF
 
 touch "day-$sday/input-ex0.txt"

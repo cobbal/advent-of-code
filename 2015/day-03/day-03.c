@@ -1,4 +1,4 @@
-#include "day-03.h"
+#include "common.h"
 
 #include "set.h"
 
@@ -57,4 +57,4 @@ static int dayMain() {
     return failed;
 }
 
-daySolver day03 = {3, dayMain};
+daySolver day03 = {3, dayMain, true};

@@ -1,4 +1,4 @@
-#include "day-02.h"
+#include "common.h"
 
 static int64_t solvePart0(FILE *f) {
     int64_t total = 0;
@@ -27,4 +27,4 @@ static int dayMain() {
     return failed;
 }
 
-daySolver day02 = {2, dayMain};
+daySolver day02 = {2, dayMain, true};

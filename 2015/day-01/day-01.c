@@ -1,4 +1,4 @@
-#include "day-01.h"
+#include "common.h"
 
 static int64_t solvePart0(FILE *f) {
     int64_t floor = 0;
@@ -37,4 +37,4 @@ static int dayMain() {
     return failed;
 }
 
-daySolver day01 = {1, dayMain};
+daySolver day01 = {1, dayMain, true};
