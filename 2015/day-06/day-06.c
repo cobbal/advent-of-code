@@ -17,11 +17,11 @@ command getCommand(FILE *f) {
     }
     switch (buf[6]) {
         case 'n': // turn on
-            fread(buf, 1, 1, f);
+            fscanf(f, " ");
             ret.op = on;
             break;
         case 'f': // turn off
-            fread(buf, 1, 2, f);
+            fscanf(f, "f ");
             ret.op = off;
             break;
         case ' ': // toggle

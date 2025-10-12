@@ -3,6 +3,7 @@
 #include <stdio.h>
 
 #define check(b) checkImpl((b), #b, __FILE__, __LINE__)
+void checkImpl(bool b, char *expr, char *file, int line);
 
 typedef struct {
     int number;

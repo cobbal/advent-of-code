@@ -41,15 +41,15 @@ int checkInputInt(char *path, partSolverInt part0, int64_t expected0, partSolver
 ssize_t getUntilDelimiter(char **s, ssize_t *n, int delim, FILE *fp) {
     ssize_t pos = 0;
     int c = fgetc(fp);
-    if (c == EOF) {
-        return -1;
-    }
     while (true) {
         if (pos == *n) {
             *s = (char *) realloc(*s, *n = (*n) * 3 / 2 + 16);
         }
         if (c == delim || c == EOF) {
             (*s)[pos] = '\0';
+            if (c == EOF && pos == 0) {
+                return -1;
+            }
             return pos;
         }
         (*s)[pos++] = (char) c;
