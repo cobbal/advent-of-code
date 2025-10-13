@@ -69,7 +69,7 @@ static int64_t solvePart0(Arena arena, FILE *f) {
     return tsp(readMap(arena, f), 0, 0);
 }
 
-static int64_t solvePart1([[maybe_unused]] Arena arena, FILE *f) {
+static int64_t solvePart1(Arena arena, FILE *f) {
     Map m = readMap(arena, f);
     for (int i = 0; i < m.n * m.n; i++) {
         m.dists[i] *= -1;

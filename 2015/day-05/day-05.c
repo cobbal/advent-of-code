@@ -10,25 +10,26 @@ static int64_t solvePart0([[maybe_unused]] Arena arena, FILE *f) {
     while (true) {
         int prev = c;
         switch (c = fgetc(f)) {
-            case EOF:
-                nice += vowels > 2 && forbidden == 0 && doubles > 0;
-                return nice;
-            case '\n':
-                nice += vowels > 2 && forbidden == 0 && doubles > 0;
-                vowels = forbidden = doubles = 0;
-                continue;
-            case 'a':
-            case 'e':
-            case 'i':
-            case 'o':
-            case 'u':
-                vowels++;
-            default:
-                if (prev == c) { doubles++; }
-                if (prev == 'a' && c == 'b') { forbidden++; }
-                if (prev == 'c' && c == 'd') { forbidden++; }
-                if (prev == 'p' && c == 'q') { forbidden++; }
-                if (prev == 'x' && c == 'y') { forbidden++; }
+        case EOF:
+            nice += vowels > 2 && forbidden == 0 && doubles > 0;
+            return nice;
+        case '\n':
+            nice += vowels > 2 && forbidden == 0 && doubles > 0;
+            vowels = forbidden = doubles = 0;
+            continue;
+        case 'a':
+        case 'e':
+        case 'i':
+        case 'o':
+        case 'u':
+            vowels++;
+            [[fallthrough]];
+        default:
+            if (prev == c) { doubles++; }
+            if (prev == 'a' && c == 'b') { forbidden++; }
+            if (prev == 'c' && c == 'd') { forbidden++; }
+            if (prev == 'p' && c == 'q') { forbidden++; }
+            if (prev == 'x' && c == 'y') { forbidden++; }
         }
     }
 }
@@ -42,23 +43,23 @@ static int64_t solvePart1([[maybe_unused]] Arena arena, FILE *f) {
         int prev2 = prev;
         prev = c;
         switch (c = fgetc(f)) {
-            case EOF:
-            case '\n':
-                nice += memchr(pairs, 2, sizeof(pairs)) != nullptr && hasGap;
-                hasGap = false;
-                prevIdx = prev = 0;
-                memset(pairs, 0, sizeof(pairs));
-                if (c == EOF) { return nice; }
+        case EOF:
+        case '\n':
+            nice += memchr(pairs, 2, sizeof(pairs)) != nullptr && hasGap;
+            hasGap = false;
+            prevIdx = prev = 0;
+            memset(pairs, 0, sizeof(pairs));
+            if (c == EOF) { return nice; }
+            continue;
+        default:
+            if (prev2 == c) { hasGap = 1; }
+            int idx = 256 * prev + c;
+            if (prevIdx == idx) {
+                prevIdx = 0;
                 continue;
-            default:
-                if (prev2 == c) { hasGap = 1; }
-                int idx = 256 * prev + c;
-                if (prevIdx == idx) {
-                    prevIdx = 0;
-                    continue;
-                }
-                prevIdx = idx;
-                pairs[idx] = min(2, pairs[idx] + 1);
+            }
+            prevIdx = idx;
+            pairs[idx] = min(2, pairs[idx] + 1);
         }
     }
 }

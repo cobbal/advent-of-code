@@ -129,11 +129,12 @@ static void printWire(FILE *f, wire wire) {
     }
 }
 
+[[maybe_unused]]
 static void printGate(FILE *f, gate g) {
-    printWire(stderr, g.in0);
-    fprintf(stderr, " %s ", (char *[]){"eof", "??0", "CONST", "NOT", "AND", "OR", "LSHIFT", "RSHIFT"}[g.tag + 1]);
-    printWire(stderr, g.in1);
-    fprintf(stderr, " -> %s\n", (char *) &g.out);
+    printWire(f, g.in0);
+    fprintf(f, " %s ", (char *[]){"eof", "??0", "CONST", "NOT", "AND", "OR", "LSHIFT", "RSHIFT"}[g.tag + 1]);
+    printWire(f, g.in1);
+    fprintf(f, " -> %s\n", (char *) &g.out);
 }
 
 static void solveCommon(Arena arena, FILE *f, vec_gate *gatesPtr, vec_gate *gatesByOutputPtr) {
@@ -163,13 +164,13 @@ static void solveCommon(Arena arena, FILE *f, vec_gate *gatesPtr, vec_gate *gate
     }
 }
 
-static int64_t solvePart0([[maybe_unused]] Arena arena, FILE *f) {
+static int64_t solvePart0(Arena arena, FILE *f) {
     vec_gate gates, gatesByOutput;
     solveCommon(arena, f, &gates, &gatesByOutput);
     return compute(gatesByOutput->elements, (wire){.isConstant = false, .wire = 'a'});
 }
 
-static int64_t solvePart1([[maybe_unused]] Arena arena, FILE *f) {
+static int64_t solvePart1(Arena arena, FILE *f) {
     vec_gate gates, gatesByOutput;
     solveCommon(arena, f, &gates, &gatesByOutput);
 

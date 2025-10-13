@@ -1,7 +1,7 @@
 #include "common/common.h"
 #include "common/set.h"
 
-static int64_t solvePart0([[maybe_unused]] Arena arena, FILE *f) {
+static int64_t solvePart0(Arena arena, FILE *f) {
     int c, x = 0, y = 0;
     int64Set visited = int64SetCreate(arena);
     int64SetInsert(visited, 0);
@@ -23,7 +23,7 @@ static int64_t solvePart0([[maybe_unused]] Arena arena, FILE *f) {
     return (int64_t)result;
 }
 
-static int64_t solvePart1([[maybe_unused]] Arena arena, FILE *f) {
+static int64_t solvePart1(Arena arena, FILE *f) {
     int c, x[2] = {0, 0}, y[2] = {0, 0};
     int64Set visited = int64SetCreate(arena);
     int64SetInsert(visited, 0);

@@ -19,8 +19,8 @@ static int64_t solveCommon(Arena arena, FILE *f, uint8_t mask) {
     }
 }
 
-static int64_t solvePart0([[maybe_unused]] Arena arena, FILE *f) { return solveCommon(arena, f, 0xf0); }
-static int64_t solvePart1([[maybe_unused]] Arena arena, FILE *f) { return solveCommon(arena, f, 0xff); }
+static int64_t solvePart0(Arena arena, FILE *f) { return solveCommon(arena, f, 0xf0); }
+static int64_t solvePart1(Arena arena, FILE *f) { return solveCommon(arena, f, 0xff); }
 
 static int dayMain() {
     int failed = 0;
