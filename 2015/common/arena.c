@@ -67,3 +67,10 @@ void *arenaRealloc(Arena arena, const void *ptr, size_t oldN, size_t newN, size_
     memcpy(newPtr, ptr, oldN * size);
     return newPtr;
 }
+
+char *arenaStrdup(Arena arena, const char *str) {
+    size_t len = strlen(str);
+    char *result = arenaAlloc(arena, len + 1, 1);
+    memcpy(result, str, len + 1);
+    return result;
+}

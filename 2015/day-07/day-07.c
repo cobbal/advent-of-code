@@ -91,34 +91,49 @@ gate getGate(Arena arena, FILE *f, char **buf, ssize_t *bufLen) {
 uint16_t compute(gate *gates, wire wire) {
     if (wire.isConstant) { return wire.constant; }
     gate g = gates[wire.wire];
-    if (g.out != (uint32_t)-1) { return g.out; }
+    if (g.out != -1) { return g.out; }
     uint16_t result;
     switch (g.tag) {
-        case CONST:
-            result = compute(gates, g.in0);
-            break;
-        case NOT:
-            result = ~compute(gates, g.in0);
-            break;
-        case AND:
-            result = compute(gates, g.in0) & compute(gates, g.in1);
-            break;
-        case OR:
-            result = compute(gates, g.in0) | compute(gates, g.in1);
-            break;
-        case LSHIFT:
-            result = compute(gates, g.in0) << compute(gates, g.in1);
-            break;
-        case RSHIFT:
-            result = compute(gates, g.in0) >> compute(gates, g.in1);
-            break;
-        case eof:
-        default:
-            fprintf(stderr, "internal error on wire %s\n", (char *) &wire);
-            exit(1);
+    case CONST:
+        result = compute(gates, g.in0);
+        break;
+    case NOT:
+        result = ~compute(gates, g.in0);
+        break;
+    case AND:
+        result = compute(gates, g.in0) & compute(gates, g.in1);
+        break;
+    case OR:
+        result = compute(gates, g.in0) | compute(gates, g.in1);
+        break;
+    case LSHIFT:
+        result = compute(gates, g.in0) << compute(gates, g.in1);
+        break;
+    case RSHIFT:
+        result = compute(gates, g.in0) >> compute(gates, g.in1);
+        break;
+    case eof:
+    default:
+        fprintf(stderr, "internal error on wire %s\n", (char *) &wire);
+        exit(1);
     }
     gates[wire.wire].out = result;
     return result;
+}
+
+static void printWire(FILE *f, wire wire) {
+    if (wire.isConstant) {
+        fprintf(f, "%d", wire.constant);
+    } else {
+        fprintf(f, "%s", (char *) &wire.wire);
+    }
+}
+
+static void printGate(FILE *f, gate g) {
+    printWire(stderr, g.in0);
+    fprintf(stderr, " %s ", (char *[]){"eof", "??0", "CONST", "NOT", "AND", "OR", "LSHIFT", "RSHIFT"}[g.tag + 1]);
+    printWire(stderr, g.in1);
+    fprintf(stderr, " -> %s\n", (char *) &g.out);
 }
 
 static void solveCommon(Arena arena, FILE *f, vec_gate *gatesPtr, vec_gate *gatesByOutputPtr) {
@@ -127,7 +142,7 @@ static void solveCommon(Arena arena, FILE *f, vec_gate *gatesPtr, vec_gate *gate
     vec_gate gates = vec_gate_create(arena);
     *gatesPtr = gates;
     for (gate g; (g = getGate(arena, f, &buf, &bufLength)).tag != eof;) {
-        // fprintf(stderr, "%s %d %d/%s -> %s\n", &g.in0, g.tag, g.imm, &g.in1, &g.out);
+        // printGate(stderr, g);
         vec_gate_push(gates, g);
     }
     int64_t maxGate = 'b';

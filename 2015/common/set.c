@@ -1,10 +1,7 @@
 #include "set.h"
+#include "vec_common.h"
 
 #include <stdlib.h>
-
-#define VEC_ELEMENT_TYPE int64_t
-#include "vec_impl.c"
-#undef VEC_ELEMENT_TYPE
 
 // TODO: this is the dumbest implementation
 
