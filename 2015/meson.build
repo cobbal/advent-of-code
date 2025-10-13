@@ -31,9 +31,9 @@ _2015 = executable(
 #    'day-23/day-23.c',
 #    'day-24/day-24.c',
 #    'day-25/day-25.c',
-    'common.c',
-    'set.c',
-    'md5.c',
+    'common/common.c',
+    'common/set.c',
+    'common/md5.c',
     'main.c',
     install : false
 )

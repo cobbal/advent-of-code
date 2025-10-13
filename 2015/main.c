@@ -1,6 +1,6 @@
 #include <sys/time.h>
 
-#include "common.h"
+#include "common/common.h"
 
 extern daySolver day01;
 extern daySolver day02;

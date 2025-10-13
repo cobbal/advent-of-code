@@ -1,9 +1,7 @@
-#include "common.h"
-
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "md5.h"
+#include "common/common.h"
+#include "common/md5.h"
 
 static int64_t solveCommon(FILE *f, uint8_t mask) {
     ssize_t lineLen = 0;

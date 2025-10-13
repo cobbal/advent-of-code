@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "common.h"
+#include "../common/common.h"
 
 typedef struct {
     bool isConstant;
@@ -26,7 +26,7 @@ typedef struct {
 } gate;
 
 #define VEC_ELEMENT_TYPE gate
-#include "vec_impl.c"
+#include "common/vec_impl.c"
 #undef VEC_ELEMENT_TYPE
 
 wire getWire(char *buf) {

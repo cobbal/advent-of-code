@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-#include "common.h"
+#include "../common/common.h"
 
 typedef struct {
     enum { eof = -2, on = 1, off = -1, toggle = 2 } op;

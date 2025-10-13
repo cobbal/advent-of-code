@@ -1,6 +1,5 @@
-#include "common.h"
-
-#include "set.h"
+#include "common/common.h"
+#include "common/set.h"
 
 static int64_t solvePart0(FILE *f) {
     int c, x = 0, y = 0;

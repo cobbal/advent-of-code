@@ -1,4 +1,4 @@
-#include "common.h"
+#include "common/common.h"
 
 static int64_t solvePart0(FILE *f) {
     int64_t total = 0;

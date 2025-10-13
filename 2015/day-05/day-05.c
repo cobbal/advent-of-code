@@ -1,6 +1,5 @@
 #include <string.h>
-
-#include "common.h"
+#include "common/common.h"
 
 static int64_t solvePart0(FILE *f) {
     int64_t nice = 0;
@@ -38,7 +37,7 @@ static int64_t solvePart1(FILE *f) {
     int64_t nice = 0;
     int prevIdx = 0, prev = 0, c = 0;
     int hasGap = 0;
-    uint8_t pairs[256 * 256] = { 0 };
+    uint8_t pairs[256 * 256] = {0};
     while (true) {
         int prev2 = prev;
         prev = c;
