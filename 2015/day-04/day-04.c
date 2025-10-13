@@ -3,32 +3,24 @@
 #include "common/common.h"
 #include "common/md5.h"
 
-static int64_t solveCommon(FILE *f, uint8_t mask) {
+static int64_t solveCommon(Arena arena, FILE *f, uint8_t mask) {
     ssize_t lineLen = 0;
     char *line = nullptr;
-    lineLen = getUntilDelimiter(&line, &lineLen, '\n', f);
+    lineLen = getUntilDelimiter(arena, &line, &lineLen, '\n', f);
     if (lineLen < 0) { return 0; }
-    void *tmp = line;
-    if ((line = realloc(line, lineLen + 128)) == nullptr) {
-        free(tmp);
-        return 0;
-    }
+    line = arenaRealloc(arena, line, lineLen, lineLen + 128, 1);
 
-    int result;
-    for (result = 1;; result++) {
+    for (int result = 1;; result++) {
         int added = sprintf(line + lineLen, "%d", result);
         MD5Digest digest = md5(line, lineLen + added);
         if (digest.digest[0] == 0x00 && digest.digest[1] == 0x00 && (digest.digest[2] & mask) == 0x00) {
-            break;
+            return result;
         }
     }
-
-    free(line);
-    return result;
 }
 
-static int64_t solvePart0(FILE *f) { return solveCommon(f, 0xf0); }
-static int64_t solvePart1(FILE *f) { return solveCommon(f, 0xff); }
+static int64_t solvePart0([[maybe_unused]] Arena arena, FILE *f) { return solveCommon(arena, f, 0xf0); }
+static int64_t solvePart1([[maybe_unused]] Arena arena, FILE *f) { return solveCommon(arena, f, 0xff); }
 
 static int dayMain() {
     int failed = 0;

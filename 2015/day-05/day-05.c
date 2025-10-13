@@ -1,7 +1,7 @@
 #include <string.h>
 #include "common/common.h"
 
-static int64_t solvePart0(FILE *f) {
+static int64_t solvePart0([[maybe_unused]] Arena arena, FILE *f) {
     int64_t nice = 0;
     int c = 0;
     int vowels = 0;
@@ -33,7 +33,7 @@ static int64_t solvePart0(FILE *f) {
     }
 }
 
-static int64_t solvePart1(FILE *f) {
+static int64_t solvePart1([[maybe_unused]] Arena arena, FILE *f) {
     int64_t nice = 0;
     int prevIdx = 0, prev = 0, c = 0;
     int hasGap = 0;

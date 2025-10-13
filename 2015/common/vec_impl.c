@@ -13,34 +13,28 @@
 #define __VEC_IMPL_TYPE __VEC_IMPL_PASTE(vec_, VEC_ELEMENT_TYPE)
 
 typedef struct {
+    Arena arena;
     size_t count;
     size_t capacity;
     VEC_ELEMENT_TYPE *elements;
 } *__VEC_IMPL_TYPE;
 
-__VEC_IMPL_TYPE __VEC_IMPL_PASTE(__VEC_IMPL_TYPE, _create)() {
-    __VEC_IMPL_TYPE ret = calloc(1, sizeof(*ret));
+__VEC_IMPL_TYPE __VEC_IMPL_PASTE(__VEC_IMPL_TYPE, _create)(Arena arena) {
+    __VEC_IMPL_TYPE ret = arenaAlloc(arena, 1, sizeof(*ret));
+    ret->arena = arena;
     return ret;
 }
 
-__VEC_IMPL_TYPE __VEC_IMPL_PASTE(__VEC_IMPL_TYPE, _createAndFill)(size_t count, VEC_ELEMENT_TYPE fill) {
-    __VEC_IMPL_TYPE ret = calloc(1, sizeof(*ret));
+__VEC_IMPL_TYPE __VEC_IMPL_PASTE(__VEC_IMPL_TYPE, _createAndFill)(Arena arena, size_t count, VEC_ELEMENT_TYPE fill) {
+    __VEC_IMPL_TYPE ret = arenaAlloc(arena, 1, sizeof(*ret));
+    ret->arena = arena;
     ret->count = count;
     ret->capacity = count;
-    ret->elements = calloc(count, sizeof(*ret->elements));
-    for (int i = 0; i < count; i++) {
+    ret->elements = arenaAlloc(arena, count, sizeof(*ret->elements));
+    for (size_t i = 0; i < count; i++) {
         ret->elements[i] = fill;
     }
     return ret;
-}
-
-void __VEC_IMPL_PASTE(__VEC_IMPL_TYPE, _destroy)(
-    __VEC_IMPL_TYPE vec
-) {
-    if (vec != nullptr) {
-        free(vec->elements);
-    }
-    free(vec);
 }
 
 void __VEC_IMPL_PASTE(__VEC_IMPL_TYPE, _setCapacity)(
@@ -48,7 +42,7 @@ void __VEC_IMPL_PASTE(__VEC_IMPL_TYPE, _setCapacity)(
     size_t newCapacity
 ) {
     if (vec->capacity != newCapacity) {
-        vec->elements = realloc(vec->elements, newCapacity * sizeof(*vec->elements));
+        vec->elements = arenaRealloc(vec->arena, vec->elements, vec->capacity, newCapacity, sizeof(*vec->elements));
         check(vec->elements != nullptr);
         vec->count = min(vec->count, newCapacity);
         vec->capacity = newCapacity;

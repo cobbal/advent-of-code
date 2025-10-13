@@ -1,6 +1,6 @@
 #include "common/common.h"
 
-static int64_t solvePart0(FILE *f) {
+static int64_t solvePart0([[maybe_unused]] Arena arena, FILE *f) {
     int64_t floor = 0;
     int c;
     while ((c = fgetc(f)) != EOF) {
@@ -13,7 +13,7 @@ static int64_t solvePart0(FILE *f) {
     return floor;
 }
 
-static int64_t solvePart1(FILE *f) {
+static int64_t solvePart1([[maybe_unused]] Arena arena, FILE *f) {
     int64_t floor = 0;
     int64_t pos = 0;
     int c;

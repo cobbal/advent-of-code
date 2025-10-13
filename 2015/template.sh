@@ -10,12 +10,12 @@ mkdir -p "day-$sday"
 cat >"day-$sday/day-$sday.c" <<EOF
 #include "common/common.h"
 
-static int64_t solvePart0(FILE *f) {
+static int64_t solvePart0(([[maybe_unused]] Arena arena, FILE *f) {
     (void)f;
     return 0;
 }
 
-static int64_t solvePart1(FILE *f) {
+static int64_t solvePart1(([[maybe_unused]] Arena arena, FILE *f) {
     (void)f;
     return 0;
 }

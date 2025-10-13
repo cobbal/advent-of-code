@@ -37,8 +37,8 @@ command getCommand(FILE *f) {
     return ret;
 }
 
-static int64_t solvePart0(FILE *f) {
-    bool *lights = calloc(1000 * 1000, sizeof(*lights));
+static int64_t solvePart0([[maybe_unused]] Arena arena, FILE *f) {
+    bool *lights = arenaAlloc(arena, 1000 * 1000, sizeof(*lights));
     command c;
     while ((c = getCommand(f)).op != eof) {
         for (int x = c.x0; x <= c.x1; x++) {
@@ -57,12 +57,11 @@ static int64_t solvePart0(FILE *f) {
     for (int i = 0; i < 1000 * 1000; i++) {
         lightCount += lights[i];
     }
-    free(lights);
     return lightCount;
 }
 
-static int64_t solvePart1(FILE *f) {
-    int *lights = calloc(1000 * 1000, sizeof(*lights));
+static int64_t solvePart1([[maybe_unused]] Arena arena, FILE *f) {
+    int *lights = arenaAlloc(arena, 1000 * 1000, sizeof(*lights));
     command c;
     while ((c = getCommand(f)).op != eof) {
         for (int x = c.x0; x <= c.x1; x++) {
@@ -75,7 +74,6 @@ static int64_t solvePart1(FILE *f) {
     for (int i = 0; i < 1000 * 1000; i++) {
         lightCount += lights[i];
     }
-    free(lights);
     return lightCount;
 }
 

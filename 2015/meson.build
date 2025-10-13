@@ -1,7 +1,7 @@
 project(
     '2015', 'c',
     version : '1.0.0',
-    default_options : ['warning_level=3', 'c_std=c23']
+    default_options : ['warning_level=2', 'c_std=gnu2x']
 )
 
 _2015 = executable(
@@ -31,9 +31,10 @@ _2015 = executable(
 #    'day-23/day-23.c',
 #    'day-24/day-24.c',
 #    'day-25/day-25.c',
+    'common/arena.c',
     'common/common.c',
-    'common/set.c',
     'common/md5.c',
+    'common/set.c',
     'main.c',
     install : false
 )

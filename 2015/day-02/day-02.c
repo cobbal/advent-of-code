@@ -1,6 +1,6 @@
 #include "common/common.h"
 
-static int64_t solvePart0(FILE *f) {
+static int64_t solvePart0([[maybe_unused]] Arena arena, FILE *f) {
     int64_t total = 0;
     int l, w, h;
     while (fscanf(f, "%dx%dx%d\n", &l, &w, &h) == 3) {
@@ -10,7 +10,7 @@ static int64_t solvePart0(FILE *f) {
     return total;
 }
 
-static int64_t solvePart1(FILE *f) {
+static int64_t solvePart1([[maybe_unused]] Arena arena, FILE *f) {
     int64_t total = 0;
     int l, w, h;
     while (fscanf(f, "%dx%dx%d\n", &l, &w, &h) == 3) {

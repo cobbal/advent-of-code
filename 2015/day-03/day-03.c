@@ -1,9 +1,9 @@
 #include "common/common.h"
 #include "common/set.h"
 
-static int64_t solvePart0(FILE *f) {
+static int64_t solvePart0([[maybe_unused]] Arena arena, FILE *f) {
     int c, x = 0, y = 0;
-    int64Set visited = int64SetCreate();
+    int64Set visited = int64SetCreate(arena);
     int64SetInsert(visited, 0);
     while ((c = fgetc(f)) != EOF) {
         if (c == '^') {
@@ -20,13 +20,12 @@ static int64_t solvePart0(FILE *f) {
         int64SetInsert(visited, (int64_t)(uint32_t)x << 32 | (int64_t)(uint32_t)y);
     }
     size_t result = int64SetCount(visited);
-    int64SetDestroy(visited);
     return (int64_t)result;
 }
 
-static int64_t solvePart1(FILE *f) {
+static int64_t solvePart1([[maybe_unused]] Arena arena, FILE *f) {
     int c, x[2] = {0, 0}, y[2] = {0, 0};
-    int64Set visited = int64SetCreate();
+    int64Set visited = int64SetCreate(arena);
     int64SetInsert(visited, 0);
     for (int i = 0; (c = fgetc(f)) != EOF; i = !i) {
         if (c == '^') {
@@ -43,7 +42,6 @@ static int64_t solvePart1(FILE *f) {
         int64SetInsert(visited, (int64_t)(uint32_t)x[i] << 32 | (int64_t)(uint32_t)y[i]);
     }
     size_t result = int64SetCount(visited);
-    int64SetDestroy(visited);
     return (int64_t)result;
 }
 
