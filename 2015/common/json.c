@@ -76,8 +76,7 @@ static JSONObject parseObject(Arena arena, ParseState *state) {
         eat(state, ':');
         auto value = parseValue(arena, state);
         vec_JSONKeyValuePair_push(pairs, (JSONKeyValuePair){.key = key, .value = value});
-        int c;
-        switch (c = peek(state)) {
+        switch (peek(state)) {
         case ',':
             eat(state, ',');
         case '}':
@@ -268,7 +267,7 @@ static JSONValue parseValue(Arena arena, ParseState *state) {
     case 'n':
         parseNull(state);
         eatWhitespace(state);
-        return (JSONValue){JSON_NULL};
+        return (JSONValue){JSON_NULL, {}};
     default:
         if (c == '-' || isdigit(c)) {
             double number = parseNumber(state);
@@ -279,7 +278,6 @@ static JSONValue parseValue(Arena arena, ParseState *state) {
         exit(1);
     }
 }
-
 
 JSONValue load(Arena arena, FILE *f) {
     ParseState state = {.file = f, .peeked = -1};

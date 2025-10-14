@@ -4,21 +4,22 @@
 #include "common/vec_common.h"
 
 typedef struct {
-    int city0, city1, dist;
+    size_t city0, city1;
+    int dist;
 } Distance;
 
 #define VEC_ELEMENT_TYPE Distance
 #include "common/vec_impl.c"
 #undef VEC_ELEMENT_TYPE
 
-static int cityIndex(vec_string cities, char *city) {
+static size_t cityIndex(vec_string cities, const char *city) {
     for (size_t i = 0; i < cities->count; i++) {
         if (strcmp(cities->elements[i], city) == 0) {
             return i;
         }
     }
     vec_string_push(cities, arenaStrdup(cities->arena, city));
-    return (int) cities->count - 1;
+    return cities->count - 1;
 }
 
 typedef struct {
