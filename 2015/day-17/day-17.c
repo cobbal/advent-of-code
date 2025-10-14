@@ -29,7 +29,7 @@ static int64_t solvePart1L(Arena arena, FILE *f, int liters) {
         vec_int64_push(capacities, cap);
     }
     for (int i = 1;; i++) {
-        int solutions = count(liters, capacities->count, capacities->elements, i);
+        auto solutions = count(liters, capacities->count, capacities->elements, i);
         if (solutions > 0) {
             return solutions;
         }
