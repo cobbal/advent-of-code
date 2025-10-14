@@ -18,7 +18,7 @@ extern daySolver day13;
 extern daySolver day14;
 extern daySolver day15;
 extern daySolver day16;
-daySolver day17;
+extern daySolver day17;
 daySolver day18;
 daySolver day19;
 daySolver day20;
