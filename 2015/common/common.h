@@ -13,9 +13,13 @@ typedef struct {
 } daySolver;
 
 typedef int64_t (*partSolverInt)(Arena, FILE *);
+typedef char *(*partSolverStr)(Arena, FILE *);
 
 [[nodiscard]]
 int checkInputInt(char *path, partSolverInt part0, int64_t expected0, partSolverInt part1, int64_t expected1);
+
+[[nodiscard]]
+int checkInputStr(char *path, partSolverStr part0, char *expected0, partSolverStr part1, char *expected1);
 
 ssize_t getUntilDelimiter(Arena arena, char **s, ssize_t *n, int delim, FILE *fp);
 

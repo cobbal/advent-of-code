@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 void checkImpl(bool b, char *expr, char *file, int line) {
     if (!b) {
@@ -15,34 +16,50 @@ int checkInputInt(char *path, partSolverInt part0, int64_t expected0, partSolver
     printf("%22s: ", path);
     FILE *f = fopen(path, "r");
     check(f);
-    
+
     Arena arena = arenaCreate();
     int64_t result0 = part0(arena, f);
-    arenaDestroy(arena);
     printf("%20lld ", result0);
-    
+    bool part0Correct = result0 == expected0;
+    arenaDestroy(arena);
+
     fseek(f, 0, SEEK_SET);
-    
+
     arena = arenaCreate();
     int64_t result1 = part1(arena, f);
-    arenaDestroy(arena);
     printf("%20lld ", result1);
-    
+    bool part1Correct = result1 == expected1;
+    arenaDestroy(arena);
+
     check(!fclose(f));
-    int result = 0;
-    if (result0 == expected0) {
-        printf("  good");
-    } else {
-        printf("   bad");
-        result = 1;
-    }
-    if (result1 == expected1) {
-        printf(" good\n");
-    } else {
-        printf("  bad\n");
-        result = 1;
-    }
-    return result;
+    printf(part0Correct ? "  good" : "   bad");
+    printf(part1Correct ? "  good\n" : "   bad\n");
+    return part0Correct && part1Correct;
+}
+
+int checkInputStr(char *path, partSolverStr part0, char *expected0, partSolverStr part1, char *expected1) {
+    printf("%22s: ", path);
+    FILE *f = fopen(path, "r");
+    check(f);
+
+    Arena arena = arenaCreate();
+    char *result0 = part0(arena, f);
+    printf("%20s ", result0);
+    bool part0Correct = strcmp(result0, expected0) == 0;
+    arenaDestroy(arena);
+
+    fseek(f, 0, SEEK_SET);
+
+    arena = arenaCreate();
+    char *result1 = part1(arena, f);
+    printf("%20s ", result1);
+    bool part1Correct = strcmp(result1, expected1) == 0;
+    arenaDestroy(arena);
+
+    check(!fclose(f));
+    printf(part0Correct ? "  good" : "   bad");
+    printf(part1Correct ? "  good\n" : "   bad\n");
+    return part0Correct && part1Correct;
 }
 
 // https://www.reddit.com/r/C_Programming/comments/m5nzl7/comment/gr19nfn
