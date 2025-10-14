@@ -51,7 +51,7 @@ void *arenaAlloc(Arena arena, size_t n, size_t size) {
         arena->currentPage->parent = specialPage;
         return specialPage->memory;
     }
-    if (bytesNeeded < defaultPageSize - arena->currentPage->used) {
+    if (bytesNeeded > defaultPageSize - arena->currentPage->used) {
         // Allocate a new page at head of list
         Page *page = allocPage(arena->currentPage, defaultPageSize);
         arena->currentPage = page;

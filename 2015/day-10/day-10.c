@@ -125,7 +125,7 @@ static uint8_t atomicNumber(const char *name) {
 }
 
 static Decay decayCreate(Arena arena) {
-    Decay decay = {0};
+    Decay decay = {};
     for (int i = 0; i < nElements; i++) {
         char *decayStr = arenaStrdup(arena, periodicTable[i].decayProducts);
         char *dot;
@@ -175,13 +175,13 @@ static int64_t solve(Arena arena, FILE *f, int n) {
     char *buf = nullptr;
     ssize_t bufLen = 0;
     check(getUntilDelimiter(arena, &buf, &bufLen, '\n', f) > 0);
-    Molecule seq = {0};
+    Molecule seq = {};
     int match;
     while ((match = consumeLongestMatch(&buf))) {
         seq.counts[match]++;
     }
     for (int iter = 0; iter < n; iter++) {
-        Molecule next = {0};
+        Molecule next = {};
         for (int fuel = 1; fuel < nElements; fuel++) {
             if (seq.counts[fuel] == 0) { continue; }
             Molecule decay = decays.decays[fuel];

@@ -9,8 +9,8 @@ typedef struct {
 } command;
 
 command getCommand(FILE *f) {
-    char buf[8] = {0};
-    command ret = {0};
+    char buf[8] = {};
+    command ret = {};
     if (fread(buf, 1, 7, f) != 7) {
         ret.op = eof;
         return ret;

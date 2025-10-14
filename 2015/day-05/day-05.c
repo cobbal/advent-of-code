@@ -38,7 +38,7 @@ static int64_t solvePart1([[maybe_unused]] Arena arena, FILE *f) {
     int64_t nice = 0;
     int prevIdx = 0, prev = 0, c = 0;
     int hasGap = 0;
-    uint8_t pairs[256 * 256] = {0};
+    uint8_t pairs[256 * 256] = {};
     while (true) {
         int prev2 = prev;
         prev = c;

@@ -34,7 +34,7 @@ int checkInputInt(char *path, partSolverInt part0, int64_t expected0, partSolver
     check(!fclose(f));
     printf(part0Correct ? "  good" : "   bad");
     printf(part1Correct ? "  good\n" : "   bad\n");
-    return part0Correct && part1Correct;
+    return !(part0Correct && part1Correct);
 }
 
 int checkInputStr(char *path, partSolverStr part0, char *expected0, partSolverStr part1, char *expected1) {
@@ -59,7 +59,7 @@ int checkInputStr(char *path, partSolverStr part0, char *expected0, partSolverSt
     check(!fclose(f));
     printf(part0Correct ? "  good" : "   bad");
     printf(part1Correct ? "  good\n" : "   bad\n");
-    return part0Correct && part1Correct;
+    return !(part0Correct && part1Correct);
 }
 
 // https://www.reddit.com/r/C_Programming/comments/m5nzl7/comment/gr19nfn

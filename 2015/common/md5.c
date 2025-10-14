@@ -52,7 +52,7 @@ MD5Digest md5(char *msg, size_t len) {
     };
     size_t spilloverLen = len % 64;
     size_t chunkCount = (len - spilloverLen) / 64;
-    char lastChunks[128] = {0};
+    char lastChunks[128] = {};
     memcpy(lastChunks, msg + 64 * chunkCount, spilloverLen);
     lastChunks[spilloverLen] = (char)0x80;
     size_t lastChunkCount = spilloverLen < 56 ? 1 : 2;

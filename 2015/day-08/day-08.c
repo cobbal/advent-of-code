@@ -15,7 +15,7 @@ typedef struct {
 } Action;
 
 static int64_t solvePart0([[maybe_unused]] Arena arena, FILE *f) {
-    Action transitions[LexStateMax][256] = {0};
+    Action transitions[LexStateMax][256] = {};
     for (int i = 0; i < 256; i++) {
         transitions[NORMAL][i] = (Action){NORMAL, 0};
         transitions[STRING][i] = (Action){STRING, 1};

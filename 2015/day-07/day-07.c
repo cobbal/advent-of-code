@@ -30,7 +30,7 @@ typedef struct {
 #undef VEC_ELEMENT_TYPE
 
 wire getWire(char *buf) {
-    wire ret = {0};
+    wire ret = {};
     if ('a' <= *buf && *buf <= 'z') {
         ret.isConstant = false;
         strncpy((char *) &ret.wire, buf, 7);
@@ -46,7 +46,7 @@ wire getWire(char *buf) {
 }
 
 gate getGate(Arena arena, FILE *f, char **buf, ssize_t *bufLen) {
-    gate ret = {0};
+    gate ret = {};
     if (getUntilDelimiter(arena, buf, bufLen, ' ', f) <= 0) {
         ret.tag = eof;
         return ret;
@@ -154,7 +154,7 @@ static void solveCommon(Arena arena, FILE *f, vec_gate *gatesPtr, vec_gate *gate
         }
     }
     // TODO: stupidly sparse
-    vec_gate gatesByOutput = vec_gate_createAndFill(arena, maxGate + 1, (gate){.tag = eof, {0}});
+    vec_gate gatesByOutput = vec_gate_createAndFill(arena, maxGate + 1, (gate){.tag = eof});
     *gatesByOutputPtr = gatesByOutput;
     for (size_t i = 0; i < gates->count; i++) {
         gate g = gates->elements[i];
