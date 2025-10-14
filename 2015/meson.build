@@ -21,7 +21,7 @@ _2015 = executable(
     'day-13/day-13.c',
     'day-14/day-14.c',
     'day-15/day-15.c',
-#    'day-16/day-16.c',
+    'day-16/day-16.c',
 #    'day-17/day-17.c',
 #    'day-18/day-18.c',
 #    'day-19/day-19.c',
