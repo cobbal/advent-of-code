@@ -172,12 +172,10 @@ static int consumeLongestMatch(char **seq) {
 
 static int64_t solve(Arena arena, FILE *f, int n) {
     Decay decays = decayCreate(arena);
-    char *buf = nullptr;
-    ssize_t bufLen = 0;
-    check(getUntilDelimiter(arena, &buf, &bufLen, '\n', f) > 0);
+    char *line = readLine(arena, f);
     Molecule seq = {};
     int match;
-    while ((match = consumeLongestMatch(&buf))) {
+    while ((match = consumeLongestMatch(&line))) {
         seq.counts[match]++;
     }
     for (int iter = 0; iter < n; iter++) {
@@ -193,7 +191,7 @@ static int64_t solve(Arena arena, FILE *f, int n) {
     }
     int64_t total = 0;
     for (int i = 1; i < nElements; i++) {
-        total += seq.counts[i] * strlen(periodicTable[i].pattern);
+        total += seq.counts[i] * (int64_t)strlen(periodicTable[i].pattern);
     }
     return total;
 }

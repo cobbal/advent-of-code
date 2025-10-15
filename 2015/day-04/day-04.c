@@ -1,13 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+
 #include "common/common.h"
 #include "common/md5.h"
 
 static int64_t solveCommon(Arena arena, FILE *f, uint8_t mask) {
-    ssize_t lineLen = 0;
-    char *line = nullptr;
-    lineLen = getUntilDelimiter(arena, &line, &lineLen, '\n', f);
-    if (lineLen < 0) { return 0; }
+    char *line = readLine(arena, f);
+    check(line);
+    size_t lineLen = strlen(line);
     line = arenaRealloc(arena, line, lineLen, lineLen + 128, 1);
 
     for (int result = 1;; result++) {

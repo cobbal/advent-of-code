@@ -47,34 +47,30 @@ static bool valid(const char *fub) {
     return hasIncrSeq && overlap1 > 0;
 }
 
-static char *solvePart0([[maybe_unused]] Arena arena, FILE *f) {
-    char *buf = nullptr;
-    ssize_t bufLen = 0;
-    getUntilDelimiter(arena, &buf, &bufLen, '\n', f);
-    strrev(buf);
-    incr0(buf);
-    while(!valid(buf)) {
-        incr(buf);
+static char *solvePart0(Arena arena, FILE *f) {
+    char *line = readLine(arena, f);
+    strrev(line);
+    incr0(line);
+    while(!valid(line)) {
+        incr(line);
     } 
-    strrev(buf);
-    return buf;
+    strrev(line);
+    return line;
 }
 
-static char *solvePart1([[maybe_unused]] Arena arena, FILE *f) {
-    char *buf = nullptr;
-    ssize_t bufLen = 0;
-    getUntilDelimiter(arena, &buf, &bufLen, '\n', f);
-    strrev(buf);
-    incr0(buf);
-    while(!valid(buf)) {
-        incr(buf);
+static char *solvePart1(Arena arena, FILE *f) {
+    char *line = readLine(arena, f);
+    strrev(line);
+    incr0(line);
+    while(!valid(line)) {
+        incr(line);
     } 
-    incr0(buf);
-    while(!valid(buf)) {
-        incr(buf);
+    incr0(line);
+    while(!valid(line)) {
+        incr(line);
     } 
-    strrev(buf);
-    return buf;
+    strrev(line);
+    return line;
 }
 
 static int dayMain() {

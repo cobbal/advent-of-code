@@ -85,12 +85,18 @@ ssize_t getUntilDelimiter(Arena arena, char **s, ssize_t *n, int delim, FILE *fp
     }
 }
 
-vec_string readLineWords(Arena arena, FILE *fp) {
+char *readLine(Arena arena, FILE *fp) {
     char *line = nullptr;
     ssize_t lineLen = 0;
     if (getUntilDelimiter(arena, &line, &lineLen, '\n', fp) == EOF) {
         return nullptr;
     }
+    return line;
+}
+
+vec_string readLineWords(Arena arena, FILE *fp) {
+    char *line = readLine(arena, fp);
+    if (!line) { return nullptr; }
     char *space;
     auto res = vec_string_create(arena);
     while ((space = strchr(line, ' '))) {
