@@ -1,8 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "common/vec_common.h"
 #include "common/common.h"
+#include "common/vec.h"
 
 typedef enum {
     children, cats, samoyeds, pomeranians, akitas,
@@ -15,9 +15,7 @@ typedef struct {
     int8_t things[nThings];
 } Sue;
 
-#define VEC_ELEMENT_TYPE Sue
-#include "common/vec_impl.c"
-#undef VEC_ELEMENT_TYPE
+typedef VEC(Sue) VecSue;
 
 static Thing thingOfString(char *s) {
     if (strcmp(s, "children:") == 0) { return children; }
@@ -34,21 +32,22 @@ static Thing thingOfString(char *s) {
     exit(1);
 }
 
-static vec_Sue readSues(Arena arena, FILE *f) {
-    vec_string words;
-    vec_Sue result = vec_Sue_create(arena);
-    while (((words = readLineWords(arena, f))) && words->count > 1) {
+static VecSue readSues(Arena arena, FILE *f) {
+    VecString words;
+    VecSue result;
+    VEC_INIT(&result, arena);
+    while (readLineWords(arena, f, &words) && VEC_COUNT(words) > 1) {
         Sue sue = {};
         for (int i = 0; i < nThings; i++) {
             sue.things[i] = -1;
         }
         // NOLINTNEXTLINE(cert-err34-c)
-        sue.n = atoi(words->elements[1]);
-        for (int i = 2; i + 1 < words->count; i += 2) {
+        sue.n = atoi(VEC_ELEMS(words)[1]);
+        for (size_t i = 2; i + 1 < VEC_COUNT(words); i += 2) {
             // NOLINTNEXTLINE(cert-err34-c)
-            sue.things[thingOfString(words->elements[i])] = (int8_t) atoi(words->elements[i + 1]);
+            sue.things[thingOfString(VEC_ELEMS(words)[i])] = (int8_t)atoi(VEC_ELEMS(words)[i + 1]);
         }
-        vec_Sue_push(result, sue);
+        VEC_PUSH(result, sue);
     }
     return result;
 }
@@ -57,10 +56,10 @@ static bool suesMatch(Sue target, Sue memory, const int cmp[nThings]) {
     for (Thing i = 0; i < nThings; i++) {
         if (memory.things[i] < 0) { continue; }
         bool match = cmp[i] < 0
-                         ? target.things[i] > memory.things[i]
-                         : cmp[i] > 0
-                               ? target.things[i] < memory.things[i]
-                               : target.things[i] == memory.things[i];
+            ? target.things[i] > memory.things[i]
+            : cmp[i] > 0
+            ? target.things[i] < memory.things[i]
+            : target.things[i] == memory.things[i];
         if (!match) {
             return false;
         }
@@ -73,9 +72,9 @@ static Sue targetSue = {0, {3, 7, 2, 3, 0, 0, 5, 3, 2, 1}};
 static int64_t solvePart0(Arena arena, FILE *f) {
     auto sues = readSues(arena, f);
     int cmp[nThings] = {};
-    for (size_t i = 0; i < sues->count; i++) {
-        if (suesMatch(targetSue, sues->elements[i], cmp)) {
-            return sues->elements[i].n;
+    VEC_FOR(sue, sues) {
+        if (suesMatch(targetSue, *sue, cmp)) {
+            return sue->n;
         }
     }
     return 0;
@@ -86,9 +85,9 @@ static int64_t solvePart1(Arena arena, FILE *f) {
     int cmp[nThings] = {};
     cmp[cats] = cmp[trees] = 1;
     cmp[pomeranians] = cmp[goldfish] = -1;
-    for (size_t i = 0; i < sues->count; i++) {
-        if (suesMatch(targetSue, sues->elements[i], cmp)) {
-            return sues->elements[i].n;
+    VEC_FOR(sue, sues) {
+        if (suesMatch(targetSue, *sue, cmp)) {
+            return sue->n;
         }
     }
     return 0;

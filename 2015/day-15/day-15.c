@@ -1,31 +1,30 @@
+#include <stdlib.h>
+
 #include "common/common.h"
-#include "common/vec_common.h"
 
 typedef struct {
     char *name;
     int64_t capacity, durability, flavor, texture, calories;
 } Ingredient;
+typedef VEC(Ingredient) VecIngredient;
 
-#define VEC_ELEMENT_TYPE Ingredient
-#include "common/vec_impl.c"
-#undef VEC_ELEMENT_TYPE
-
-vec_Ingredient readIngredients(Arena arena, FILE *f) {
-    vec_string words;
-    auto ingredients = vec_Ingredient_create(arena);
-    while (((words = readLineWords(arena, f))) && words->count == 11) {
-        auto w = words->elements;
+VecIngredient readIngredients(Arena arena, FILE *f) {
+    VecString words;
+    VecIngredient ingredients;
+    VEC_INIT(&ingredients, arena);
+    while (readLineWords(arena, f, &words) && VEC_COUNT(words) == 11) {
+        auto w = VEC_ELEMS(words);
         // NOLINTNEXTLINE(cert-err34-c)
         Ingredient ingr = {w[0], atoi(w[2]), atoi(w[4]), atoi(w[6]), atoi(w[8]), atoi(w[10])};
-        vec_Ingredient_push(ingredients, ingr);
+        VEC_PUSH(ingredients, ingr);
     }
     return ingredients;
 }
 
-static int64_t score(vec_Ingredient ingredients, const int *quantities, int64_t exactCalories) {
+static int64_t score(VecIngredient ingredients, const int *quantities, int64_t exactCalories) {
     Ingredient total = {};
-    for (size_t i = 0; i < ingredients->count; i++) {
-        Ingredient ingr = ingredients->elements[i];
+    for (size_t i = 0; i < VEC_COUNT(ingredients); i++) {
+        Ingredient ingr = VEC_ELEMS(ingredients)[i];
         total.capacity += quantities[i] * ingr.capacity;
         total.durability += quantities[i] * ingr.durability;
         total.flavor += quantities[i] * ingr.flavor;
@@ -60,23 +59,23 @@ static bool incrementPartition(size_t buckets, int *allocations) {
 
 static int64_t solvePart0(Arena arena, FILE *f) {
     auto ingredients = readIngredients(arena, f);
-    int *quantities = arenaAlloc(arena, ingredients->count, sizeof(*quantities));
-    quantities[ingredients->count - 1] = 100;
+    int *quantities = arenaAlloc(arena, VEC_COUNT(ingredients), sizeof(*quantities));
+    quantities[VEC_COUNT(ingredients) - 1] = 100;
     int64_t bestScore = 0;
     do {
         bestScore = max(bestScore, score(ingredients, quantities, 0));
-    } while(incrementPartition(ingredients->count, quantities));
+    } while(incrementPartition(VEC_COUNT(ingredients), quantities));
     return bestScore;
 }
 
 static int64_t solvePart1([[maybe_unused]] Arena arena, FILE *f) {
     auto ingredients = readIngredients(arena, f);
-    int *quantities = arenaAlloc(arena, ingredients->count, sizeof(*quantities));
-    quantities[ingredients->count - 1] = 100;
+    int *quantities = arenaAlloc(arena, VEC_COUNT(ingredients), sizeof(*quantities));
+    quantities[VEC_COUNT(ingredients) - 1] = 100;
     int64_t bestScore = 0;
     do {
         bestScore = max(bestScore, score(ingredients, quantities, 500));
-    } while(incrementPartition(ingredients->count, quantities));
+    } while(incrementPartition(VEC_COUNT(ingredients), quantities));
     return bestScore;
 }
 

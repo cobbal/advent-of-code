@@ -1,26 +1,24 @@
 #include <iso646.h>
 
 #include "common/common.h"
-#include "common/vec_common.h"
+#include "common/vec.h"
 
 typedef struct {
     int speed, flightTime, restTime;
 } Stats;
+typedef VEC(Stats) VecStats;
 
-#define VEC_ELEMENT_TYPE Stats
-#include "common/vec_impl.c"
-#undef VEC_ELEMENT_TYPE
-
-static vec_Stats readStats(Arena arena, FILE *f) {
+static VecStats readStats(Arena arena, FILE *f) {
     char *buf = nullptr;
     ssize_t bufLen = 0;
-    auto stats = vec_Stats_create(arena);
+    VecStats stats;
+    VEC_INIT(&stats, arena);
     while (getUntilDelimiter(arena, &buf, &bufLen, ' ', f) != EOF) {
         // NOLINTNEXTLINE(cert-err34-c)
         Stats s;
         check(fscanf(f, "can fly %d km/s for %d seconds, but then must rest for %d seconds.\n",
             &s.speed, &s.flightTime, &s.restTime ) == 3);
-        vec_Stats_push(stats, s);
+        VEC_PUSH(stats, s);
     }
     return stats;
 }
@@ -28,8 +26,8 @@ static vec_Stats readStats(Arena arena, FILE *f) {
 static int64_t solvePart0N(Arena arena, FILE *f, int duration) {
     auto stats = readStats(arena, f);
     int64_t winner = 0;
-    for (size_t i = 0; i < stats->count; i++) {
-        Stats s = stats->elements[i];
+    for (size_t i = 0; i < VEC_COUNT(stats); i++) {
+        Stats s = VEC_ELEMS(stats)[i];
         int completeLapCount = duration / (s.flightTime + s.restTime);
         int finalLapLength = duration % (s.flightTime + s.restTime);
         int distance = s.speed * (s.flightTime * completeLapCount + min(finalLapLength, s.flightTime));
@@ -40,14 +38,14 @@ static int64_t solvePart0N(Arena arena, FILE *f, int duration) {
 
 static int64_t solvePart1N(Arena arena, FILE *f, int duration) {
     auto stats = readStats(arena, f);
-    bool *isFlying = arenaAlloc(arena, stats->count, sizeof(*isFlying));
-    int *timeLeft = arenaAlloc(arena, stats->count, sizeof(*timeLeft));
-    int *distance = arenaAlloc(arena, stats->count, sizeof(*distance)); 
-    int *points = arenaAlloc(arena, stats->count, sizeof(*points));
+    bool *isFlying = arenaAlloc(arena, VEC_COUNT(stats), sizeof(*isFlying));
+    int *timeLeft = arenaAlloc(arena, VEC_COUNT(stats), sizeof(*timeLeft));
+    int *distance = arenaAlloc(arena, VEC_COUNT(stats), sizeof(*distance)); 
+    int *points = arenaAlloc(arena, VEC_COUNT(stats), sizeof(*points));
     
     for (int t = 0; t < duration; t++) {
-        for (size_t i = 0; i < stats->count; i++) {
-            Stats s = stats->elements[i];
+        for (size_t i = 0; i < VEC_COUNT(stats); i++) {
+            Stats s = VEC_ELEMS(stats)[i];
             if (timeLeft[i] == 0) {
                 isFlying[i] ^= 1;
                 timeLeft[i] = isFlying[i] ? s.flightTime : s.restTime;
@@ -58,10 +56,10 @@ static int64_t solvePart1N(Arena arena, FILE *f, int duration) {
             }
         }
         int bestDist = 0;
-        for (size_t i = 0; i < stats->count; i++) {
+        for (size_t i = 0; i < VEC_COUNT(stats); i++) {
             bestDist = max(bestDist, distance[i]);
         }
-        for (size_t i = 0; i < stats->count; i++) {
+        for (size_t i = 0; i < VEC_COUNT(stats); i++) {
             if (distance[i] == bestDist) {
                 points[i]++;
             }
@@ -69,7 +67,7 @@ static int64_t solvePart1N(Arena arena, FILE *f, int duration) {
     }
     
     int64_t winner = 0;
-    for (size_t i = 0; i < stats->count; i++) {
+    for (size_t i = 0; i < VEC_COUNT(stats); i++) {
         winner = max(winner, points[i]);
     }
     return winner;

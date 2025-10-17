@@ -1,39 +1,39 @@
+#include <limits.h>
 #include <string.h>
 
 #include "common/common.h"
-#include "common/vec_common.h"
+#include "common/vec.h"
 
 typedef struct {
     size_t person0, person1;
     int happy;
 } Relationship;
+typedef VEC(Relationship) VecRelationship;
 
-#define VEC_ELEMENT_TYPE Relationship
-#include "common/vec_impl.c"
-#undef VEC_ELEMENT_TYPE
-
-static size_t personIndex(vec_string people, const char *person) {
-    for (size_t i = 0; i < people->count; i++) {
-        if (strcmp(people->elements[i], person) == 0) {
+static size_t personIndex(VecString people, const char *person) {
+    for (size_t i = 0; i < VEC_COUNT(people); i++) {
+        if (strcmp(VEC_ELEMS(people)[i], person) == 0) {
             return i;
         }
     }
-    vec_string_push(people, arenaStrdup(people->arena, person));
-    return people->count - 1;
+    VEC_PUSH(people, arenaStrdup(VEC_ARENA(people), person));
+    return VEC_COUNT(people) - 1;
 }
 
 typedef struct {
     int n;
-    vec_string personNames;
+    VecString personNames;
     int *relationshipMatrix;
 } Minefield;
 
 static Minefield readMinefield(Arena arena, FILE *f, bool includeSelf) {
-    vec_string people = vec_string_create(arena);
+    VecString people;
+    VEC_INIT(&people, arena);
     if (includeSelf) {
-        vec_string_push(people, "<me>");
+        VEC_PUSH(people, "<me>");
     }
-    vec_Relationship relationships = vec_Relationship_create(arena);
+    VecRelationship relationships;
+    VEC_INIT(&relationships, arena);
     char *buf = nullptr;
     ssize_t buflen = 0;
     while (getUntilDelimiter(arena, &buf, &buflen, ' ', f) > 0) {
@@ -51,12 +51,12 @@ static Minefield readMinefield(Arena arena, FILE *f, bool includeSelf) {
         check(getUntilDelimiter(arena, &buf, &buflen, '.', f) > 0);
         auto person1 = personIndex(people, buf);
         fscanf(f, "\n");
-        vec_Relationship_push(relationships, (Relationship){person0, person1, dist});
+        VEC_PUSH(relationships, ((Relationship){person0, person1, dist}));
     }
-    int count = (int) people->count;
+    int count = (int)VEC_COUNT(people);
     Minefield minefield = {count, people, arenaAlloc(arena, count * count, sizeof(*minefield.relationshipMatrix))};
-    for (size_t i = 0; i < relationships->count; i++) {
-        Relationship d = relationships->elements[i];
+    for (size_t i = 0; i < VEC_COUNT(relationships); i++) {
+        Relationship d = VEC_ELEMS(relationships)[i];
         minefield.relationshipMatrix[d.person0 * count + d.person1] = d.happy;
     }
     return minefield;

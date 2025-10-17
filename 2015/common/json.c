@@ -5,15 +5,7 @@
 #include <stdlib.h>
 
 #include "common.h"
-#include "vec_common.h"
-
-#define VEC_ELEMENT_TYPE JSONValue
-#include "vec_impl.c"
-#undef VEC_ELEMENT_TYPE
-
-#define VEC_ELEMENT_TYPE JSONKeyValuePair
-#include "vec_impl.c"
-#undef VEC_ELEMENT_TYPE
+#include "vec.h"
 
 typedef struct {
     FILE *file;
@@ -68,14 +60,15 @@ static void eatWhitespace(ParseState *state) {
 static JSONObject parseObject(Arena arena, ParseState *state) {
     eat(state, '{');
     eatWhitespace(state);
-    auto pairs = vec_JSONKeyValuePair_create(arena);
+    VEC(JSONKeyValuePair) pairs;
+    VEC_INIT(&pairs, arena);
     while (peek(state) != '}') {
         eatWhitespace(state);
         char *key = parseString(arena, state);
         eatWhitespace(state);
         eat(state, ':');
         auto value = parseValue(arena, state);
-        vec_JSONKeyValuePair_push(pairs, (JSONKeyValuePair){.key = key, .value = value});
+        VEC_PUSH(pairs, ((JSONKeyValuePair){.key = key, .value = value}));
         switch (peek(state)) {
         case ',':
             eat(state, ',');
@@ -87,16 +80,17 @@ static JSONObject parseObject(Arena arena, ParseState *state) {
         }
     }
     eat(state, '}');
-    return (JSONObject){.count = pairs->count, .pairs = pairs->elements};
+    return (JSONObject){.count = VEC_COUNT(pairs), .pairs = VEC_ELEMS(pairs)};
 }
 
 static JSONArray parseArray(Arena arena, ParseState *state) {
     eat(state, '[');
     eatWhitespace(state);
-    auto elements = vec_JSONValue_create(arena);
+    VEC(JSONValue) elements;
+    VEC_INIT(&elements, arena);
     while (peek(state) != ']') {
         auto value = parseValue(arena, state);
-        vec_JSONValue_push(elements, value);
+        VEC_PUSH(elements, value);
         int c;
         switch (c = peek(state)) {
         case ',':
@@ -109,39 +103,40 @@ static JSONArray parseArray(Arena arena, ParseState *state) {
         }
     }
     eat(state, ']');
-    return (JSONArray){.count = elements->count, .elements = elements->elements};
+    return (JSONArray){.count = VEC_COUNT(elements), .elements = VEC_ELEMS(elements)};
 }
 
 static char *parseString(Arena arena, ParseState *state) {
     eat(state, '"');
-    vec_char result = vec_char_create(arena);
+    VecChar result;
+    VEC_INIT(&result, arena);
     int c;
     while ((c = get(state)) != '"') {
         if (c != '\\') {
             // TODO: control chars? unicode?
-            vec_char_push(result, c);
+            VEC_PUSH(result, c);
             continue;
         }
         switch (c = get(state)) {
         case '"':
         case '\\':
         case '/':
-            vec_char_push(result, c);
+            VEC_PUSH(result, c);
             break;
         case 'b':
-            vec_char_push(result, '\b');
+            VEC_PUSH(result, '\b');
             break;
         case 'f':
-            vec_char_push(result, '\f');
+            VEC_PUSH(result, '\f');
             break;
         case 'n':
-            vec_char_push(result, '\n');
+            VEC_PUSH(result, '\n');
             break;
         case 'r':
-            vec_char_push(result, '\r');
+            VEC_PUSH(result, '\r');
             break;
         case 't':
-            vec_char_push(result, '\t');
+            VEC_PUSH(result, '\t');
             break;
         case 'u':
             // TODO: unicode
@@ -150,7 +145,7 @@ static char *parseString(Arena arena, ParseState *state) {
             exit(1);
         }
     }
-    return result->elements;
+    return VEC_ELEMS(result);
 }
 
 static double parseNumber(ParseState *state) {

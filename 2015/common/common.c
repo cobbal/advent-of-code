@@ -1,16 +1,13 @@
 #include "common.h"
-#include "vec_common.h"
 
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-void checkImpl(bool b, char *expr, char *file, int line) {
-    if (!b) {
-        fprintf(stderr, "\nERROR %s:%d: check failure: %s\n\n", file, line, expr);
-        exit(1);
-    }
+void checkFail(char *expr, char *file, int line) {
+    fprintf(stderr, "\nERROR %s:%d: check failure: %s\n\n", file, line, expr);
+    exit(1);
 }
 
 int checkInputInt(char *path, partSolverInt part0, int64_t expected0, partSolverInt part1, int64_t expected1) {
@@ -94,16 +91,18 @@ char *readLine(Arena arena, FILE *fp) {
     return line;
 }
 
-vec_string readLineWords(Arena arena, FILE *fp) {
+bool readLineWords(Arena arena, FILE *fp, VecString *outWords) {
     char *line = readLine(arena, fp);
-    if (!line) { return nullptr; }
+    if (!line) { return false; }
     char *space;
-    auto res = vec_string_create(arena);
+    VecString res;
+    VEC_INIT(&res, arena);
     while ((space = strchr(line, ' '))) {
         *space = '\0';
-        vec_string_push(res, line);
+        VEC_PUSH(res, line);
         line = space + 1;
     }
-    vec_string_push(res, line);
-    return res;
+    VEC_PUSH(res, line);
+    *outWords = res;
+    return true;
 }

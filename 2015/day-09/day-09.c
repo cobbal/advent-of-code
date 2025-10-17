@@ -1,53 +1,50 @@
+#include <limits.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "common/common.h"
-#include "common/vec_common.h"
 
 typedef struct {
     size_t city0, city1;
     int dist;
 } Distance;
 
-#define VEC_ELEMENT_TYPE Distance
-#include "common/vec_impl.c"
-#undef VEC_ELEMENT_TYPE
+typedef VEC(Distance) VecDistance;
 
-static size_t cityIndex(vec_string cities, const char *city) {
-    for (size_t i = 0; i < cities->count; i++) {
-        if (strcmp(cities->elements[i], city) == 0) {
+static size_t cityIndex(VecString cities, const char *city) {
+    for (size_t i = 0; i < VEC_COUNT(cities); i++) {
+        if (strcmp(VEC_ELEMS(cities)[i], city) == 0) {
             return i;
         }
     }
-    vec_string_push(cities, arenaStrdup(cities->arena, city));
-    return cities->count - 1;
+    VEC_PUSH(cities, arenaStrdup(VEC_ARENA(cities), city));
+    return VEC_COUNT(cities) - 1;
 }
 
 typedef struct {
     int n;
-    vec_string cityNames;
+    VecString cityNames;
     int *dists;
 } Map;
 
 static Map readMap(Arena arena, FILE *f) {
-    vec_string cities = vec_string_create(arena);
-    vec_string_push(cities, "START");
-    vec_Distance distances = vec_Distance_create(arena);
-    char *buf = nullptr;
-    ssize_t buflen = 0;
-    while (getUntilDelimiter(arena, &buf, &buflen, ' ', f) > 0) {
-        auto city0 = cityIndex(cities, buf);
-        fscanf(f, " to ");
-        check(getUntilDelimiter(arena, &buf, &buflen, ' ', f) > 0);
-        auto city1 = cityIndex(cities, buf);
-        int dist;
+    VecString cities;
+    VEC_INIT(&cities, arena);
+    VEC_PUSH(cities, "START");
+    VecDistance distances;
+    VEC_INIT(&distances, arena);
+    VecString words;
+    while (readLineWords(arena, f, &words) && VEC_COUNT(words) == 5) {
+        size_t city0 = cityIndex(cities, VEC_ELEMS(words)[0]);
+        auto city1 = cityIndex(cities, VEC_ELEMS(words)[2]);
         // NOLINTNEXTLINE(cert-err34-c)
-        check(fscanf(f, " = %d\n", &dist) > 0);
-        vec_Distance_push(distances, (Distance){city0, city1, dist});
+        int dist = atoi(VEC_ELEMS(words)[4]);
+        VEC_PUSH(distances, ((Distance){city0, city1, dist}));
     }
-    int count = (int) cities->count;
+    int count = (int)VEC_COUNT(cities);
     Map map = {count, cities, arenaAlloc(arena, count * count, sizeof(*map.dists))};
-    for (size_t i = 0; i < distances->count; i++) {
-        Distance d = distances->elements[i];
+    for (size_t i = 0; i < VEC_COUNT(distances); i++) {
+        Distance d = VEC_ELEMS(distances)[i];
         map.dists[d.city0 * count + d.city1] = d.dist;
         map.dists[d.city1 * count + d.city0] = d.dist;
     }

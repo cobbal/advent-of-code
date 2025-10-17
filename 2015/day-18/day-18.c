@@ -1,7 +1,7 @@
 #include <string.h>
 
 #include "common/common.h"
-#include "common/vec_common.h"
+#include "common/vec.h"
 
 #define IX(n, y, x) (((y) + 1) * ((n) + 2) + (x) + 1)
 
@@ -44,21 +44,22 @@ static void step(Grid *grid) {
 }
 
 static Grid readGrid(Arena arena, FILE *f) {
-    vec_string lines = vec_string_create(arena);
+    VecString lines;
+    VEC_INIT(&lines, arena);
     char *line;
     while ((line = readLine(arena, f))) {
-        vec_string_push(lines, line);
+        VEC_PUSH(lines, line);
     }
     Grid grid = {};
-    grid.n = lines->count;
+    grid.n = VEC_COUNT(lines);
     for (size_t i = 0; i < grid.n; i++) {
-        check(strlen(lines->elements[i]) == grid.n);
+        check(strlen(VEC_ELEMS(lines)[i]) == grid.n);
     }
     grid.grid = arenaAlloc(arena, (grid.n + 2) * (grid.n + 2), 1);
     grid.scratch = arenaAlloc(arena, (grid.n + 2) * (grid.n + 2), 1);
     for (size_t y = 0; y < grid.n; y++) {
         for (size_t x = 0; x < grid.n; x++) {
-            grid.grid[IX(grid.n, y, x)] = lines->elements[y][x] == '#';
+            grid.grid[IX(grid.n, y, x)] = VEC_ELEMS(lines)[y][x] == '#';
         }
     }
     return grid;
