@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdio.h>
 
 #include "arena.h"
 
@@ -35,7 +36,29 @@ void _vecPush(struct _vec_impl *vec, const void *elem);
 #define VEC_CAPCITY(vec) ((vec)._vec->capacity)
 #define VEC_ELEMS(vec) ((__typeof((vec)._payload))((vec)._vec->storage))
 #define VEC_FOR(var, vec) for (auto var = VEC_ELEMS(vec); var < VEC_ELEMS(vec) + VEC_COUNT(vec); var++)
+#define VEC_FORI(var, vec) for (\
+    struct { size_t i; __typeof((vec)._payload) ptr; } var = { 0, VEC_ELEMS(vec) }; \
+    var.i < VEC_COUNT(vec); \
+    var.i++, var.ptr++ \
+)
+#define VEC_OF_PTR(vectype, ptr) ((vectype){ ._vec = ptr })
+#define PTR_OF_VEC(ptr) ((void *)((ptr)._vec))
+#define VEC_DEBUG(var, vec, format, ...) ({ \
+    fprintf(stderr, "["); \
+    VEC_FOR(var, vec) { \
+        if (var != VEC_ELEMS(vec)) { fprintf(stderr, ", "); } \
+        fprintf(stderr, format, __VA_ARGS__); \
+    } \
+    fprintf(stderr, "]\n"); \
+})
+
 
 typedef VEC(char) VecChar;
+
 typedef VEC(char *) VecString;
+
 typedef VEC(int64_t) VecI64;
+
+typedef VEC(intptr_t) VecIntptr;
+
+typedef VEC(VecIntptr) VecVecIntptr;

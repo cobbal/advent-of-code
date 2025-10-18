@@ -13,8 +13,7 @@ gvec _vecCreate(Arena arena, size_t elementSize) {
 }
 
 gvec _vecCreateAndFill(Arena arena, size_t count, size_t elementSize, const void *fill) {
-    gvec ret = arenaAlloc(arena, 1, sizeof(*ret));
-    ret->arena = arena;
+    gvec ret = _vecCreate(arena, elementSize);
     ret->count = count;
     ret->capacity = count;
     ret->storage = arenaAlloc(arena, count, elementSize);

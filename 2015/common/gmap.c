@@ -179,10 +179,11 @@ static void fillElements(CTree tree, GKeyValue **destination, size_t *space) {
     fillElements(tree->right, destination, space);
 }
 
-GKeyValue *gmapElements(GMap map) {
+VecGKeyValue gmapElements(GMap map) {
     size_t space = map->count;
-    GKeyValue *result = arenaAlloc(map->arena, space, sizeof(*result));
-    GKeyValue *fill = result;
+    VecGKeyValue result;
+    VEC_INIT_AND_FILL(&result, map->arena, space, (GKeyValue){});
+    GKeyValue *fill = VEC_ELEMS(result);
     fillElements(map->tree, &fill, &space);
     check(space == 0);
     return result;

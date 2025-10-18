@@ -11,6 +11,17 @@ typedef VEC(GrammarSymbol) VecGrammarSymbol;
 
 typedef struct Grammar_impl *Grammar;
 
-Grammar grammarGreate(Arena arena);
-void grammarAddRule(Grammar grammar, const char *nonTerminal, VecGrammarSymbol production);
-bool parse(Grammar grammar, const char **tokens);
+typedef struct ParseTreeImpl *ParseTree;
+
+typedef VEC(ParseTree) ParseForest;
+
+struct ParseTreeImpl {
+    const char *symbol;
+    bool isTerminal;
+    ParseForest forest;
+};
+
+Grammar grammarCreate(Arena arena);
+void grammarAddRule(Grammar grammar, const char *nonTerminalStr, VecGrammarSymbol production);
+void printGrammar(Grammar grammar);
+ParseForest parse(Grammar grammar, const char *startSymbol, VecString tokenStrings);

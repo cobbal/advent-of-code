@@ -11,6 +11,8 @@ typedef struct {
     void *value;
 } GKeyValue;
 
+typedef VEC(GKeyValue) VecGKeyValue;
+
 GMap gmapEmpty(Arena arena, int (*cmp)(const void *, const void *));
 
 size_t gmapCount(GMap map);
@@ -33,4 +35,4 @@ struct GMapInsertResult {
 // [[nodiscard]]
 // GMap gmapPop(GMap map, const void **outKey, void **outValue);
 
-GKeyValue *gmapElements(GMap map);
+VecGKeyValue gmapElements(GMap map);

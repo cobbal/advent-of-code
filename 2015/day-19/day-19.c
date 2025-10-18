@@ -1,9 +1,10 @@
-#include <assert.h>
 #include <ctype.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "common/common.h"
 #include "common/gmap.h"
+#include "common/parser.h"
 #include "common/vec.h"
 
 static char *replace(Arena arena, size_t pos, size_t len, const char *text, size_t textLen, const char *replacement) {
@@ -27,7 +28,7 @@ static int64_t solvePart0(Arena arena, FILE *f) {
     }
 
     // skip the blank line
-    (void) words;
+    (void)words;
 
     check(readLineWords(arena, f, &words) && VEC_COUNT(words) == 1);
     char *text = VEC_ELEMS(words)[0];
@@ -46,126 +47,69 @@ static int64_t solvePart0(Arena arena, FILE *f) {
         }
     }
 
-    return (int64_t) gmapCount(seen);
+    return (int64_t)gmapCount(seen);
 }
 
-static VecString tokenize(Arena arena, const char *str) {
-    VecString tokens;
+static VecGrammarSymbol tokenize(Arena arena, const char *str) {
+    VecGrammarSymbol tokens;
     VEC_INIT(&tokens, arena);
     while (*str) {
+        char token[3] = {0};
         if (islower(str[1])) {
-            char token[] = {str[0], str[1], 0};
-            VEC_PUSH(tokens, arenaStrdup(arena, token));
+            token[0] = str[0];
+            token[1] = str[1];
             str += 2;
         } else {
-            char token[] = {str[0], 0};
-            VEC_PUSH(tokens, arenaStrdup(arena, token));
+            token[0] = str[0];
             str += 1;
         }
+        VEC_PUSH(tokens, ((GrammarSymbol){.name=arenaStrdup(arena, token), .isTerminal = false}));
     }
     return tokens;
 }
 
-typedef struct State_impl {
-    char *left;
-    VecString production;
-    int pos;
-    int origin;
-} *State;
-static State mkState(Arena arena, char *left, VecString production, int pos, int origin)
-{
-    State ret = arenaAlloc(arena, 1, sizeof(*ret));
-    ret->left = left;
-    ret->production = production;
-    ret->pos = pos;
-    ret->origin = origin;
-    return ret;
-}
-
-// static int stateCmp(void *lhs, void *rhs);
-//
-// static VecGMap initStates(VecString tokens) {
-//     VecGMap states;
-//     VEC_INIT(&states, VEC_ARENA(tokens));
-//     for (int k = 0; k <= VEC_COUNT(tokens); k++) {
-//         VEC_PUSH(states, gmapEmpty(VEC_ARENA(tokens), stateCmp));
-//     }
-// }
-//
-/*
-static void earleyParse(VecString tokens, vec_vec_string grammar, char *startToken) {
-    Arena arena = tokens->arena;
-    vec_GMap states = initStates(tokens);
-    VecString startProduction = vec_string_create(arena);
-    VEC_PUSH(startProduction, startToken);
-    states->elements[0] = gmapInsert(states->elements[0], mkState(arena, "", startProduction, 0, 0), nullptr).map;
-    for (int k = 0; k <= tokens->count; k++) {
-        for each state in S[k] do  // S[k] can expand during this loop
-            if not FINISHED(state) then
-                if NEXT_ELEMENT_OF(state) is a nonterminal then
-                    PREDICTOR(state, k, grammar)         // non_terminal
-                else do
-                    SCANNER(state, k, words)             // terminal
-            else do
-                COMPLETER(state, k)
-        end
-    end
-    return chart
-
-procedure PREDICTOR((A → α•Bβ, j), k, grammar)
-    for each (B → γ) in GRAMMAR_RULES_FOR(B, grammar) do
-        ADD_TO_SET((B → •γ, k), S[k])
-    end
-
-procedure SCANNER((A → α•aβ, j), k, words)
-    if j < LENGTH(words) and a ⊂ PARTS_OF_SPEECH(words[k]) then
-        ADD_TO_SET((A → αa•β, j), S[k+1])
-    end
-
-procedure COMPLETER((B → γ•, x), k)
-    for each (A → α•Bβ, j) in S[x] do
-        ADD_TO_SET((A → αB•β, j), S[k])
-    end
-
-
-
-
-
-
-
-
-
-
-
-
-static void parse(GMap grammar, const char **text, int tokenBudget) {
-    if (tokenBudget < 0) { return; }
-    if (*text == 
-}
-
 static int64_t solvePart1(Arena arena, FILE *f) {
+    Grammar g = grammarCreate(arena);
+
     VecString words;
-    GMap grammar = gmapEmpty(arena, strcmp_void);
-    while (((words = readLineWords(arena, f))) && words->count == 3) {
-        char *key = words->elements[0];
-        VecString production = tokenize(arena, words->elements[2]);
-        vec_vec_string productions = gmapLookup(grammar, key).value ?: vec_vec_string_create(arena);
-        vec_vec_string_push(productions, production);
-        grammar = gmapInsert(grammar, key, productions).map;
+    GMap seenNonTerminals = gmapEmpty(arena, strcmp_void);
+    while (readLineWords(arena, f, &words) && VEC_COUNT(words) == 3) {
+        char *nonTerm = VEC_ELEMS(words)[0];
+        seenNonTerminals = gmapInsert(seenNonTerminals, nonTerm, nullptr).map;
+        VecGrammarSymbol productions;
+        VEC_INIT(&productions, arena);
+        VecGrammarSymbol tokens = tokenize(arena, VEC_ELEMS(words)[2]);
+        grammarAddRule(g, nonTerm, tokens);
+        VEC_FOR(tokenPtr, tokens) {
+            seenNonTerminals = gmapInsert(seenNonTerminals, tokenPtr->name, nullptr).map;
+        }
+    }
+
+    VecGKeyValue kvs = gmapElements(seenNonTerminals);
+    VEC_FOR(kvPtr, kvs) {
+        VecGrammarSymbol singleTerminal;
+        VEC_INIT(&singleTerminal, arena);
+        VEC_PUSH(singleTerminal, ((GrammarSymbol){ .name = kvPtr->key, .isTerminal = true }));
+        grammarAddRule(g, kvPtr->key, singleTerminal);
     }
 
     // skip the blank line
-    (void) words;
+    (void)words;
 
-    check(((words = readLineWords(arena, f))) && words->count == 1);
-    VecString text = tokenize(arena, words->elements[0]);
-    VEC_PUSH(text, nullptr);
+    check(readLineWords(arena, f, &words) && VEC_COUNT(words) == 1);
+    VecGrammarSymbol text = tokenize(arena, VEC_ELEMS(words)[0]);
+    VecString textStrings;
+    VEC_INIT_AND_FILL(&textStrings, arena, VEC_COUNT(text), nullptr);
+    VEC_FORI(e, text) {
+        VEC_ELEMS(textStrings)[e.i] = (char *)e.ptr->name;
+    }
 
-    return 0;
+    printGrammar(g);
+    VEC_DEBUG(sym, text, "%s", sym->name);
+    parse(g, "e", textStrings);
+
+    return 42;
 }
-*/
-
-static int64_t solvePart1(Arena arena, FILE *f) {}
 
 static int dayMain() {
     int failed = 0;
