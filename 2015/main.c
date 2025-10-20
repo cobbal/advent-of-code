@@ -22,11 +22,11 @@ extern daySolver day17;
 extern daySolver day18;
 extern daySolver day19;
 extern daySolver day20;
-daySolver day21;
-daySolver day22;
-daySolver day23;
-daySolver day24;
-daySolver day25;
+extern daySolver day21;
+extern daySolver day22;
+extern daySolver day23;
+extern daySolver day24;
+extern daySolver day25;
 
 int main(void) {
     daySolver days[] = {
