@@ -35,6 +35,8 @@ void _vecPush(struct _vec_impl *vec, const void *elem);
 #define VEC_COUNT(vec) ((vec)._vec->count)
 #define VEC_CAPCITY(vec) ((vec)._vec->capacity)
 #define VEC_ELEMS(vec) ((__typeof((vec)._payload))((vec)._vec->storage))
+#define VEC_END(vec) ({ auto _vec = vec; &VEC_ELEMS(_vec)[VEC_COUNT(_vec)]; })
+#define VEC_CLEAR(vec) ((vec)._vec->count = 0, (void)0)
 #define VEC_FOR(var, vec) for (auto var = VEC_ELEMS(vec); var < VEC_ELEMS(vec) + VEC_COUNT(vec); var++)
 #define VEC_FORI(var, vec) for (\
     struct { size_t i; __typeof((vec)._payload) ptr; } var = { 0, VEC_ELEMS(vec) }; \
