@@ -35,6 +35,7 @@ _2015 = executable(
     'common/common.c',
     'common/gmap.c',
     'common/json.c',
+    'common/list.c',
     'common/md5.c',
     'common/parser.c',
     'common/set.c',

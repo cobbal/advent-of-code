@@ -5,282 +5,372 @@
 
 #include "common/common.h"
 #include "common/gmap.h"
+#include "common/list.h"
 #include "common/vec.h"
 
-struct Grammar_impl {
-    Arena arena;
-    VecGrammarSymbol symbols;
-    GMap terminalsByName; // char* -> intptr_t
-    GMap nonTerminalsByName; // char* -> intptr_t
-    VecVecIntptr productions;
-};
+// Based on https://joshuagrams.github.io/pep
+
+typedef struct {
+    Rule rule;
+    size_t dot;
+} LR0;
+
+static char *nextSymbol(LR0 lr0) {
+    return lr0.dot < VEC_COUNT(lr0.rule->production)
+        ? VEC_ELEMS(lr0.rule->production)[lr0.dot]
+        : nullptr;
+}
+
+typedef struct {
+    bool isLR0;
+
+    union {
+        char *symbol;
+        LR0 lr0;
+    };
+} Tag;
+
+static Tag advance(LR0 lr0) {
+    if (lr0.dot + 1 == VEC_COUNT(lr0.rule->production)) {
+        return (Tag){.isLR0 = false, {.symbol = lr0.rule->symbol}};
+    }
+    return (Tag){.isLR0 = true, {.lr0 = {lr0.rule, lr0.dot + 1}}};
+}
+
+typedef VEC(struct EarleyItem_impl *) VecEarleyItem;
+
+typedef struct {
+    Grammar grammar;
+    size_t position; // index into the input sequence
+    VecEarleyItem items; // items for iteration/processing
+    GMap idx; // IdxKey -> EarleyItem: items by tag and start for uniqueness
+    GMap wants; // string -> VecEarleyItem: incomplete items by next symbol
+} *EarleySet;
+
+static int icmp(uintptr_t l, uintptr_t r) { return l < r ? -1 : l > r ? 1 : 0; }
+
+static int tagCmp(Tag l, Tag r) {
+    if (!l.isLR0 && !r.isLR0) {
+        return strcmp(l.symbol, r.symbol);
+    }
+    if (l.isLR0 && r.isLR0) {
+        return icmp((uintptr_t)l.lr0.rule, (uintptr_t)r.lr0.rule)
+            ? : icmp(l.lr0.dot, r.lr0.dot);
+    }
+    return icmp(l.isLR0, r.isLR0);
+}
 
 static int strcmpVoid(const void *a, const void *b) { return strcmp(a, b); }
 
-Grammar grammarCreate(Arena arena) {
-    Grammar grammar = arenaAlloc(arena, 1, sizeof(*grammar));
-    grammar->arena = arena;
-    VEC_INIT(&grammar->symbols, arena);
-    grammar->terminalsByName = gmapEmpty(arena, strcmpVoid);
-    grammar->nonTerminalsByName = gmapEmpty(arena, strcmpVoid);
-    VEC_INIT(&grammar->productions, arena);
-    return grammar;
+typedef struct EarleyItem_impl *EarleyItem;
+typedef struct DerivationList_impl *DerivationList;
+
+struct DerivationList_impl {
+    EarleyItem left, down;
+    DerivationList next;
+    Rule rule;
+};
+
+struct EarleyItem_impl {
+    Tag tag;
+    EarleySet start;
+    EarleySet end;
+    DerivationList derivations;
+};
+
+[[maybe_unused]]
+static void printEarleyItem(EarleyItem item);
+[[maybe_unused]]
+static void printEarleySet(EarleySet set);
+
+static int itemCmp(const void *l, const void *r) {
+    const struct EarleyItem_impl *il = l, *ir = r;
+    return tagCmp(il->tag, ir->tag)
+        ? : icmp((uintptr_t)il->start, (uintptr_t)ir->start)
+        ? : icmp((uintptr_t)il->end, (uintptr_t)ir->end);
 }
 
-static intptr_t lookup(Grammar grammar, const char *name, bool isTerminal) {
-    GMap *map = isTerminal ? &grammar->terminalsByName : &grammar->nonTerminalsByName;
-    auto lookup = gmapLookup(*map, name);
-    intptr_t result = (intptr_t)lookup.value;
-    if (!lookup.found) {
-        result = (intptr_t)VEC_COUNT(grammar->symbols);
-        *map = gmapInsert(*map, name, (void *)result).map;
-        VEC_PUSH(grammar->symbols, ((GrammarSymbol){ isTerminal, name }));
-    }
-    return result;
+static EarleyItem mkEarleyItem(Tag tag, EarleySet start, EarleySet end) {
+    EarleyItem item = arenaAlloc(start->grammar->arena, 1, sizeof(*item));
+    item->tag = tag;
+    item->start = start;
+    item->end = end;
+    return item;
 }
 
-void grammarAddRule(Grammar grammar, const char *nonTerminalStr, VecGrammarSymbol production) {
-    intptr_t nonTerminal = lookup(grammar, nonTerminalStr, false);
-    VecIntptr productionVec;
-    VEC_INIT(&productionVec, grammar->arena);
-    VEC_PUSH(productionVec, nonTerminal);
-    VEC_FOR(symbol, production) {
-        VEC_PUSH(productionVec, lookup(grammar, symbol->name, symbol->isTerminal));
+static EarleySet mkEarleySet(Grammar grammar, size_t position) {
+    EarleySet set = arenaAlloc(grammar->arena, 1, sizeof(*set));
+    set->grammar = grammar;
+    set->position = position;
+    VEC_INIT(&set->items, grammar->arena);
+    set->idx = gmapEmpty(grammar->arena, itemCmp);
+    set->wants = gmapEmpty(grammar->arena, strcmpVoid);
+    return set;
+}
+
+static EarleyItem appendItem(EarleyItem item) {
+    Tag tag = item->tag;
+    EarleySet start = item->start;
+    EarleySet end = item->end;
+    VEC_PUSH(end->items, item);
+    end->idx = gmapInsert(end->idx, mkEarleyItem(tag, start, end), item).map;
+    if (tag.isLR0) {
+        VecEarleyItem wants;
+        char *next = nextSymbol(tag.lr0);
+        auto lookupRes = gmapLookup(end->wants, next);
+        if (lookupRes.found) {
+            wants = VEC_OF_PTR(VecEarleyItem, lookupRes.value);
+        } else {
+            VEC_INIT(&wants, start->grammar->arena);
+            end->wants = gmapInsert(end->wants, next, PTR_OF_VEC(wants)).map;
+        }
+        VEC_PUSH(wants, item);
     }
-    VEC_PUSH(grammar->productions, productionVec);
+    return item;
+}
+
+static void printRule(Rule rule, size_t dot);
+
+static EarleyItem addItem(Tag tag, EarleySet start, EarleySet end) {
+    EarleyItem item = mkEarleyItem(tag, start, end);
+    auto lookupRes = gmapLookup(end->idx, item);
+    return lookupRes.found ? lookupRes.value : appendItem(item);
+}
+
+void addDerivation(EarleyItem item, EarleyItem left, EarleyItem down, Rule rule) {
+    Arena arena = item->end->grammar->arena;
+    for (DerivationList search = item->derivations; search; search = search->next) {
+        if (left == search->left && down == search->down && rule == search->rule) {
+            return;
+        }
+    }
+    DerivationList deriv = arenaAlloc(arena, 1, sizeof(*deriv));
+    deriv->left = left;
+    deriv->down = down;
+    deriv->rule = rule;
+    deriv->next = item->derivations;
+    item->derivations = deriv;
+}
+
+static EarleySet predict(EarleySet set, const char *nonTerminal);
+static void complete(EarleyItem completed);
+static EarleySet scan(EarleySet set1, char *terminal);
+static EarleySet process(EarleySet set);
+
+ParseForest collectForest(Arena arena, GMap *cache, EarleyItem item);
+void vizItem(Arena arena, EarleyItem item);
+
+struct Parse_impl {
+    Arena arena;
+    EarleyItem root;
+};
+
+Parse parse(Grammar grammar, VecString tokenStrings) {
+    EarleySet s0 = process(predict(mkEarleySet(grammar, 0), grammar->start));
+    EarleySet s = s0;
+    VEC_FOR(tokenPtr, tokenStrings) {
+        s = process(scan(s, *tokenPtr));
+    }
+
+    auto res = gmapLookup(s->idx, mkEarleyItem((Tag){.isLR0 = false, .symbol = grammar->start}, s0, s));
+    if (res.found) {
+        Parse result = arenaAlloc(grammar->arena, 1, sizeof(*result));
+        result->arena = grammar->arena;
+        result->root = res.value;
+        return result;
+    }
+    return nullptr;
+}
+
+ParseForest parseForest(Parse parse) {
+    GMap cache = gmapEmpty(parse->arena, itemCmp);
+    return collectForest(parse->arena, &cache, parse->root);
+}
+
+static EarleySet predict(EarleySet set, const char *nonTerminal) {
+    VEC_FOR(rulePtr, set->grammar->rules) {
+        if (strcmp((*rulePtr)->symbol, nonTerminal) != 0) { continue; }
+        if (VEC_COUNT((*rulePtr)->production) > 0) {
+            addItem((Tag){.isLR0 = true, .lr0 = {*rulePtr, 0}}, set, set);
+        } else {
+            // completed nullable rule
+            auto item = addItem((Tag){.isLR0 = false, .symbol = (*rulePtr)->symbol}, set, set);
+            addDerivation(item, nullptr, nullptr, *rulePtr);
+        }
+    }
+    return set;
+}
+
+static void complete(EarleyItem completed) {
+    check(!completed->tag.isLR0);
+    auto wantsPtr = gmapLookup(completed->start->wants, completed->tag.symbol).value;
+    if (!wantsPtr) { return; }
+    auto wants = VEC_OF_PTR(VecEarleyItem, wantsPtr);
+    for (size_t i = 0; i < VEC_COUNT(wants); i++) {
+        EarleyItem item = VEC_ELEMS(wants)[i];
+        check(item->tag.isLR0);
+        EarleyItem added = addItem(advance(item->tag.lr0), item->start, completed->end);
+        addDerivation(added, item, completed, item->tag.lr0.rule);
+    }
+}
+
+static EarleySet scan(EarleySet set1, char *terminal) {
+    auto set2 = mkEarleySet(set1->grammar, set1->position + 1);
+    addItem((Tag){.isLR0 = false, .symbol = terminal}, set1, set2);
+    return set2;
+}
+
+static EarleySet process(EarleySet set) {
+    size_t old;
+    do {
+        old = VEC_COUNT(set->items);
+        for (size_t k = 0; k < VEC_COUNT(set->items); k++) {
+            auto item = VEC_ELEMS(set->items)[k];
+            if (item->tag.isLR0) {
+                predict(set, nextSymbol(item->tag.lr0));
+            } else {
+                complete(item);
+            }
+        }
+    } while (VEC_COUNT(set->items) > old);
+    return set;
+}
+
+static void printRule(Rule rule, size_t dot) {
+    fprintf(stderr, "%s ::=", rule->symbol);
+    VEC_FORI(e, rule->production) {
+        fprintf(stderr, " %s%s", e.i == dot ? "[] " : "", *e.ptr);
+    }
+    fprintf(stderr, "\n");
 }
 
 void printGrammar(Grammar grammar) {
-    VEC_FOR(production, grammar->productions) {
-        VEC_FORI(prod, *production) {
-            if (prod.i == 0) {
-                GrammarSymbol nonTerminal = VEC_ELEMS(grammar->symbols)[*prod.ptr];
-                fprintf(stderr, "<%s> ::= ", nonTerminal.name);
-            } else {
-                GrammarSymbol prodSym = VEC_ELEMS(grammar->symbols)[*prod.ptr];
-                if (prodSym.isTerminal) {
-                    fprintf(stderr, "\"%s\" ", prodSym.name);
-                } else {
-                    fprintf(stderr, "<%s> ", prodSym.name);
-                }
-            }
-        }
-        fprintf(stderr, "\n");
+    fprintf(stderr, "<START> ::= %s\n", grammar->start);
+    VEC_FOR(rule, grammar->rules) {
+        printRule(*rule, SIZE_MAX);
     }
 }
 
-typedef const struct State_impl {
-    size_t productionIdx;
-    size_t productionPos;
-    size_t origin;
-} *State;
-
-typedef VEC(State) VecState;
-typedef VEC(VecState) VecVecState;
-
-static State mkState(Arena arena, size_t productionIdx, size_t productionPos, size_t origin) {
-    struct State_impl *ret = arenaAlloc(arena, 1, sizeof(*ret));
-    ret->productionIdx = productionIdx;
-    ret->productionPos = productionPos;
-    ret->origin = origin;
-    return ret;
+[[maybe_unused]]
+static void printEarleyItem(EarleyItem item) {
+    fprintf(stderr, "[%llu-%llu]    ", item->start->position, item->end->position);
+    if (item->tag.isLR0) {
+        printRule(item->tag.lr0.rule, item->tag.lr0.dot);
+    } else {
+        fprintf(stderr, "complete(%s)\n", item->tag.symbol);
+    }
 }
 
-static int sizeCmp(size_t l, size_t r) { return l < r ? -1 : l > r ? 1 : 0; }
-
-static int stateCmp(const void *l, const void *r) {
-    State sl = l;
-    State sr = r;
-    return
-        sizeCmp(sl->productionIdx, sr->productionIdx) ? :
-        sizeCmp(sl->productionPos, sr->productionPos) ? :
-        sizeCmp(sl->origin, sr->origin);
+static void printEarleySet(EarleySet set) {
+    fprintf(stderr, "=== %llu ===\n", set->position);
+    VEC_FOR(item, set->items) {
+        printEarleyItem(*item);
+    }
 }
 
-static bool stateFinished(Grammar g, State s) {
-    auto production = VEC_ELEMS(g->productions)[s->productionIdx];
-    return s->productionPos + 1 == VEC_COUNT(production);
-}
+typedef LIST(EarleyItem) ListEarleyItem;
 
-static void debugState(Grammar g, State s) {
-    VecIntptr prod = VEC_ELEMS(g->productions)[s->productionIdx];
-    VEC_FORI(e, prod) {
-        if (e.i == 0) {
-            GrammarSymbol nonTerminal = VEC_ELEMS(g->symbols)[*e.ptr];
-            fprintf(stderr, "(<%s> ::= ", nonTerminal.name);
+typedef struct {
+    Rule rule;
+    ListEarleyItem items;
+} EarleyProduction;
+
+typedef VEC(EarleyProduction) VecEarleyProduction;
+
+VecEarleyProduction getRuleDerivs(EarleyItem item, VecEarleyProduction downs) {
+    Arena arena = item->end->grammar->arena;
+    if (item->tag.isLR0 && item->tag.lr0.dot == 0) {
+        return downs;
+    }
+    VecEarleyProduction results;
+    VEC_INIT(&results, arena);
+    for (DerivationList deriv = item->derivations; deriv; deriv = deriv->next) {
+        if (deriv->left) {
+            VecEarleyProduction newDowns;
+            VEC_INIT_AND_FILL(
+                &newDowns, arena, VEC_COUNT(downs),
+                ((EarleyProduction){ .rule = deriv->rule, .items = LIST_NIL(ListEarleyItem) })
+            );
+            VEC_FORI(d, downs) {
+                check(!d.ptr->rule || deriv->rule == d.ptr->rule);
+                VEC_ELEMS(newDowns)[d.i].items = LIST_CONS(arena, deriv->down, d.ptr->items);
+            }
+            VecEarleyProduction subResults = getRuleDerivs(deriv->left, newDowns);
+            VEC_FOR(subResultPtr, subResults) {
+                VEC_PUSH(results, *subResultPtr);
+            }
         } else {
-            GrammarSymbol prodSym = VEC_ELEMS(g->symbols)[*e.ptr];
-            if (prodSym.isTerminal) {
-                fprintf(stderr, "\"%s\" ", prodSym.name);
-            } else {
-                fprintf(stderr, "<%s> ", prodSym.name);
+            VEC_FOR(subResultPtr, downs) {
+                VEC_PUSH(results, *subResultPtr);
             }
         }
-        if (e.i == s->productionPos) {
-            fprintf(stderr, "[] ");
-        }
     }
-    fprintf(stderr, ", %llu)\n", s->origin);
+    return results;
 }
 
-// based on https://loup-vaillant.fr/tutorials/earley-parsing/parser
-static ParseForest parseForestHelp(Grammar g, VecVecState s, intptr_t nonTerm, size_t start, size_t end) {
-    Arena arena = g->arena;
-    VecState states = VEC_ELEMS(s)[end];
-    VEC_FOR(state, states) {
-        VecIntptr production = VEC_ELEMS(g->productions)[(*state)->productionIdx];
-        if (nonTerm == VEC_ELEMS(production)[0] && start == (*state)->origin) {
-            ParseTree tree = arenaAlloc(g->arena, 1, sizeof(*tree));
-            tree->symbol = VEC_ELEMS(g->symbols)[nonTerm].name;
-            tree->isTerminal = true;
-
-            for (size_t i = 1; i < VEC_COUNT(production); i++) {
-                size_t symIdx = VEC_ELEMS(production)[i];
-                GrammarSymbol sym = VEC_ELEMS(g->symbols)[symIdx];
-            }
-        }
+void vizItem(Arena arena, EarleyItem item) {
+    fprintf(stderr, "<table>\n");
+    if (!item->tag.isLR0) {
+        bool isTerminal = !item->derivations; //!item->rule;
+        fprintf(
+            stderr, "<tr><th colspan=\"%llu\"%s>%s</th></tr>\n",
+            1ULL, //isTerminal ? 1 : VEC_COUNT(item->rule->production),
+            isTerminal ? " style=\"color: red;\"" : "",
+            item->tag.symbol
+        );
     }
+
+    VecEarleyProduction startingDowns;
+    VEC_INIT_AND_FILL(&startingDowns, arena, 1, ((EarleyProduction){.rule=nullptr,.items=LIST_NIL(ListEarleyItem)}));
+    auto parse = getRuleDerivs(item, startingDowns);
+    VEC_FOR(subItems, parse) {
+        fprintf(stderr, "<tr>\n");
+        for (ListEarleyItem l = subItems->items; !LIST_IS_NIL(l); l = LIST_CDR(l)) {
+            fprintf(stderr, "<td>\n");
+            vizItem(arena, LIST_CAR(l));
+            fprintf(stderr, "</td>\n");
+        }
+        fprintf(stderr, "</tr>\n");
+    }
+    fprintf(stderr, "</table>\n");
 }
 
-static ParseForest parseForest(Grammar g, VecGMap s, intptr_t startSymbol) {
-    VecVecState completedStates;
-    VEC_INIT(&completedStates, g->arena);
-    VEC_FOR(e, s) {
-        VecState completed;
-        VEC_INIT(&completed, g->arena);
-        auto kvs = gmapElements(*e);
-        VEC_FOR(kv, kvs) {
-            if (stateFinished(g, kv->key)) {
-                VEC_PUSH(completed, kv->key);
-            }
-        }
-        VEC_PUSH(completedStates, completed);
-    }
-    return parseForestHelp(g, completedStates, startSymbol, 0, VEC_COUNT(s) - 1);
+ParseForest mkForest(Arena arena, char *symbol, bool isTerminal, VecProductionParse productions) {
+    ParseForest forest = arenaAlloc(arena, 1, sizeof(*forest));
+    forest->symbol = symbol;
+    forest->isTerminal = isTerminal;
+    forest->productions = productions;
+    return forest;
 }
 
-// based on https://en.wikipedia.org/w/index.php?title=Earley_parser&oldid=1316088387#Pseudocode
-ParseForest parse(Grammar grammar, const char *startSymbol, VecString tokenStrings) {
-    Arena arena = grammar->arena;
-    VecIntptr tokens;
-    VEC_INIT_AND_FILL(&tokens, arena, VEC_COUNT(tokenStrings), 0);
-    VEC_FORI(tok, tokenStrings) {
-        VEC_ELEMS(tokens)[tok.i] = lookup(grammar, *tok.ptr, true);
+void ind(size_t indent) {
+    for (size_t i = 0; i < indent; i++) { fputc(' ', stderr); }
+}
+
+ParseForest collectForest(Arena arena, GMap *cache, EarleyItem item) {
+    auto lookupRes = gmapLookup(*cache, item);
+    if (lookupRes.found) {
+        return lookupRes.value;
     }
 
-    // function INIT(words)
-    //     S ← CREATE_ARRAY(LENGTH(words) + 1)
-    //     for k ← from 0 to LENGTH(words) do
-    //         S[k] ← EMPTY_ORDERED_SET
-    VecGMap s;
-    VEC_INIT_AND_FILL(&s, arena, VEC_COUNT(tokens) + 1, gmapEmpty(arena, stateCmp));
-
-    // function EARLEY_PARSE(words, grammar)
-    //     INIT(words)
-    check(gmapLookup(grammar->nonTerminalsByName, startSymbol).found);
-    auto startSymbolIdx = (intptr_t)gmapLookup(grammar->nonTerminalsByName, startSymbol).value;
-    VEC_FORI(prod, grammar->productions) {
-        // nullable grammars not currently supported. Detect them and fail.
-        check(VEC_COUNT(*prod.ptr) > 1);
-        //     ADD_TO_SET((γ → •S, 0), S[0])
-        if (VEC_ELEMS(*prod.ptr)[0] == startSymbolIdx) {
-            VEC_ELEMS(s)[0] = gmapInsert(VEC_ELEMS(s)[0], mkState(arena, prod.i, 0, 0), nullptr).map;
+    check(!item->tag.isLR0);
+    VecProductionParse productions;
+    VEC_INIT(&productions, arena);
+    VecEarleyProduction startingDowns;
+    VEC_INIT_AND_FILL(&startingDowns, arena, 1, ((EarleyProduction){ .rule=nullptr, .items=LIST_NIL(ListEarleyItem) }));
+    auto parse = getRuleDerivs(item, startingDowns);
+    VEC_FORI(alternate, parse) {
+        ProductionParse prods = arenaAlloc(arena, 1, sizeof(*prods));
+        prods->rule = alternate.ptr->rule;
+        VEC_INIT(&prods->sequence, arena);
+        for (ListEarleyItem items = alternate.ptr->items; !LIST_IS_NIL(items); items = LIST_CDR(items)) {
+            EarleyItem z = LIST_CAR(items);
+            VEC_PUSH(prods->sequence, collectForest(arena, cache, z));
         }
-    }
-    //     for k ← from 0 to LENGTH(words) do
-    for (size_t k = 0; k <= VEC_COUNT(tokens); k++) {
-        //         for each state in S[k] do  // S[k] can expand during this loop
-        VecState skQueue;
-        VEC_INIT_AND_FILL(&skQueue, arena, gmapCount(VEC_ELEMS(s)[k]), nullptr);
-        {
-            VecGKeyValue elements = gmapElements(VEC_ELEMS(s)[k]);
-            VEC_FORI(elem, elements) {
-                VEC_ELEMS(skQueue)[elem.i] = elem.ptr->key;
-            }
-        }
-
-        //         for each state in S[k] do  // S[k] can expand during this loop
-        for (size_t stateIdx = 0; stateIdx < VEC_COUNT(skQueue); stateIdx++) {
-            State state = VEC_ELEMS(skQueue)[stateIdx];
-            VecIntptr production = VEC_ELEMS(grammar->productions)[state->productionIdx];
-            //             if not FINISHED(state) then
-            if (!stateFinished(grammar, state)) {
-                intptr_t nextSymbolIdx = VEC_ELEMS(production)[state->productionPos + 1];
-                GrammarSymbol nextSymbol = VEC_ELEMS(grammar->symbols)[nextSymbolIdx];
-                //                 if NEXT_ELEMENT_OF(state) is a nonterminal then
-                if (!nextSymbol.isTerminal) {
-                    //                     PREDICTOR(state, k, grammar)         // non_terminal
-                    // procedure PREDICTOR((A → α•Bβ, j), k, grammar)
-                    //     for each (B → γ) in GRAMMAR_RULES_FOR(B, grammar) do
-                    VEC_FORI(prod, grammar->productions) {
-                        if (VEC_ELEMS(*prod.ptr)[0] != nextSymbolIdx) { continue; }
-                        //         ADD_TO_SET((B → •γ, k), S[k])
-                        State nextState = mkState(arena, prod.i, 0, k);
-                        auto insertResult = gmapInsert(VEC_ELEMS(s)[k], nextState, nullptr);
-                        VEC_ELEMS(s)[k] = insertResult.map;
-                        if (!insertResult.replaced) {
-                            VEC_PUSH(skQueue, nextState);
-                        }
-                    }
-                } else {
-                    //                 else do
-                    //                     SCANNER(state, k, words)             // terminal
-                    // procedure SCANNER((A → α•aβ, j), k, words)
-                    //     if j < LENGTH(words) and a ⊂ PARTS_OF_SPEECH(words[k]) then
-                    if (state->origin < VEC_COUNT(tokens) && nextSymbolIdx == VEC_ELEMS(tokens)[k]) {
-                        //         ADD_TO_SET((A → αa•β, j), S[k+1])
-                        State nextState = mkState(arena, state->productionIdx, state->productionPos + 1, state->origin);
-                        VEC_ELEMS(s)[k + 1] = gmapInsert(VEC_ELEMS(s)[k + 1], nextState, nullptr).map;
-                    }
-                }
-            } else {
-                //             else do
-                //                 COMPLETER(state, k)
-                // procedure COMPLETER((B → γ•, x), k)
-                //     for each (A → α•Bβ, j) in S[x] do
-                VecGKeyValue originStates = gmapElements(VEC_ELEMS(s)[state->origin]);
-                VEC_FOR(elems, originStates) {
-                    State originState = elems->key;
-                    VecIntptr originProd = VEC_ELEMS(grammar->productions)[originState->productionIdx];
-                    if (
-                        originState->productionPos + 1 < VEC_COUNT(originProd) &&
-                        VEC_ELEMS(originProd)[originState->productionPos + 1] == VEC_ELEMS(production)[0]
-                    ) {
-                        //         ADD_TO_SET((A → αB•β, j), S[k])
-                        State nextState = mkState(
-                            arena, originState->productionIdx, originState->productionPos + 1, originState->origin
-                        );
-                        auto insertResult = gmapInsert(VEC_ELEMS(s)[k], nextState, nullptr);
-                        VEC_ELEMS(s)[k] = insertResult.map;
-                        if (!insertResult.replaced) {
-                            VEC_PUSH(skQueue, nextState);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    for (size_t k = 0; k <= VEC_COUNT(tokens); k++) {
-        fprintf(stderr, "=== %llu ===\n", k);
-        auto elems = gmapElements(VEC_ELEMS(s)[k]);
-        VEC_FOR(e, elems) {
-            if (stateFinished(grammar, e->key)) {
-                debugState(grammar, e->key);
-            }
-        }
+        VEC_PUSH(productions, prods);
     }
 
-    auto elems = gmapElements(VEC_ELEMS(s)[VEC_COUNT(s) - 1]);
-    // VEC_FOR(e, elems) {
-    //     debugState(grammar, e->key);
-    // }
-    VEC_FOR(e, elems) {
-        State state = e->key;
-        VecIntptr prod = VEC_ELEMS(grammar->productions)[state->productionIdx];
-        if (state->origin == 0 && VEC_ELEMS(prod)[0] == startSymbolIdx && stateFinished(grammar, state)) {
-            // debugState(grammar, e->key);
-        }
-    }
-    return VEC_OF_PTR(ParseForest, nullptr);
+    auto result = mkForest(arena, item->tag.symbol, VEC_COUNT(productions) == 0, productions);
+    *cache = gmapInsert(*cache, item, result).map;
+    return result;
 }

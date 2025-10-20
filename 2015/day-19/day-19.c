@@ -50,8 +50,8 @@ static int64_t solvePart0(Arena arena, FILE *f) {
     return (int64_t)gmapCount(seen);
 }
 
-static VecGrammarSymbol tokenize(Arena arena, const char *str) {
-    VecGrammarSymbol tokens;
+static VecString tokenize(Arena arena, const char *str) {
+    VecString tokens;
     VEC_INIT(&tokens, arena);
     while (*str) {
         char token[3] = {0};
@@ -63,58 +63,71 @@ static VecGrammarSymbol tokenize(Arena arena, const char *str) {
             token[0] = str[0];
             str += 1;
         }
-        VEC_PUSH(tokens, ((GrammarSymbol){.name=arenaStrdup(arena, token), .isTerminal = false}));
+        VEC_PUSH(tokens, arenaStrdup(arena, token));
     }
     return tokens;
 }
 
-static int64_t solvePart1(Arena arena, FILE *f) {
-    Grammar g = grammarCreate(arena);
-
-    VecString words;
-    GMap seenNonTerminals = gmapEmpty(arena, strcmp_void);
-    while (readLineWords(arena, f, &words) && VEC_COUNT(words) == 3) {
-        char *nonTerm = VEC_ELEMS(words)[0];
-        seenNonTerminals = gmapInsert(seenNonTerminals, nonTerm, nullptr).map;
-        VecGrammarSymbol productions;
-        VEC_INIT(&productions, arena);
-        VecGrammarSymbol tokens = tokenize(arena, VEC_ELEMS(words)[2]);
-        grammarAddRule(g, nonTerm, tokens);
-        VEC_FOR(tokenPtr, tokens) {
-            seenNonTerminals = gmapInsert(seenNonTerminals, tokenPtr->name, nullptr).map;
-        }
+static intptr_t minExpansions(GMap *cache, ParseForest forest) {
+    if (forest == nullptr) { return INT32_MAX; }
+    if (VEC_COUNT(forest->productions) == 0) { return 0; }
+    auto lookupRes = gmapLookup(*cache, forest);
+    if (lookupRes.found) {
+        return (intptr_t)lookupRes.value;
     }
 
-    VecGKeyValue kvs = gmapElements(seenNonTerminals);
-    VEC_FOR(kvPtr, kvs) {
-        VecGrammarSymbol singleTerminal;
-        VEC_INIT(&singleTerminal, arena);
-        VEC_PUSH(singleTerminal, ((GrammarSymbol){ .name = kvPtr->key, .isTerminal = true }));
-        grammarAddRule(g, kvPtr->key, singleTerminal);
+    intptr_t best = INTPTR_MAX;
+    VEC_FOR(prod, forest->productions) {
+        int64_t prodBest = 1;
+        VEC_FOR(subForest, (*prod)->sequence) {
+            prodBest += minExpansions(cache, *subForest);
+        }
+        best = min(prodBest, best);
+    }
+    *cache = gmapInsert(*cache, forest, (void *)best).map;
+    return best;
+}
+
+int ptrcmp(const void *l, const void *r) {
+    return l < r ? -1 : l > r ? 1 : 0;
+}
+
+static int64_t solvePart1(Arena arena, FILE *f) {
+    Grammar g = arenaAlloc(arena, 1, sizeof(*g));
+    g->arena = arena;
+    VEC_INIT(&g->rules, arena);
+    g->start = "e";
+
+    VecString words;
+    while (readLineWords(arena, f, &words) && VEC_COUNT(words) == 3) {
+        char *nonTerm = VEC_ELEMS(words)[0];
+        Rule rule = arenaAlloc(arena, 1, sizeof(*rule));
+        rule->symbol = nonTerm;
+        VecString tokens = tokenize(arena, VEC_ELEMS(words)[2]);
+        rule->production = tokens;
+        VEC_PUSH(g->rules, rule);
     }
 
     // skip the blank line
     (void)words;
 
     check(readLineWords(arena, f, &words) && VEC_COUNT(words) == 1);
-    VecGrammarSymbol text = tokenize(arena, VEC_ELEMS(words)[0]);
+    VecString text = tokenize(arena, VEC_ELEMS(words)[0]);
     VecString textStrings;
     VEC_INIT_AND_FILL(&textStrings, arena, VEC_COUNT(text), nullptr);
     VEC_FORI(e, text) {
-        VEC_ELEMS(textStrings)[e.i] = (char *)e.ptr->name;
+        VEC_ELEMS(textStrings)[e.i] = *(e.ptr);
     }
 
-    printGrammar(g);
-    VEC_DEBUG(sym, text, "%s", sym->name);
-    parse(g, "e", textStrings);
-
-    return 42;
+    ParseForest forest = parseForest(parse(g, textStrings));
+    GMap cache = gmapEmpty(arena, ptrcmp);
+    return minExpansions(&cache, forest);
 }
 
 static int dayMain() {
     int failed = 0;
     failed += checkInputInt("day-19/input-ex0.txt", solvePart0, 7, solvePart1, 6);
-    failed += checkInputInt("day-19/input-real0.txt", solvePart0, 518, solvePart1, -1);
+    failed += checkInputInt("day-19/input-real0.txt", solvePart0, 518, solvePart1, 200);
     return failed;
 }
 

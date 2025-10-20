@@ -3,25 +3,38 @@
 #include "vec.h"
 
 typedef struct {
+    char *symbol;
+    VecString production;
+} *Rule;
+
+typedef VEC(Rule) VecRule;
+
+typedef struct {
+    Arena arena;
+    char *start;
+    VecRule rules;
+} *Grammar;
+
+typedef struct ProductionParse_impl *ProductionParse;
+
+typedef VEC(ProductionParse) VecProductionParse;
+
+typedef struct {
+    char *symbol;
     bool isTerminal;
-    const char *name;
-} GrammarSymbol;
+    VecProductionParse productions;
+} *ParseForest;
 
-typedef VEC(GrammarSymbol) VecGrammarSymbol;
+typedef VEC(ParseForest) VecParseForest;
 
-typedef struct Grammar_impl *Grammar;
-
-typedef struct ParseTreeImpl *ParseTree;
-
-typedef VEC(ParseTree) ParseForest;
-
-struct ParseTreeImpl {
-    const char *symbol;
-    bool isTerminal;
-    ParseForest forest;
+struct ProductionParse_impl {
+    Rule rule;
+    VecParseForest sequence;
 };
 
-Grammar grammarCreate(Arena arena);
-void grammarAddRule(Grammar grammar, const char *nonTerminalStr, VecGrammarSymbol production);
+typedef struct Parse_impl *Parse;
+Parse parse(Grammar grammar, VecString tokenStrings);
+
+ParseForest parseForest(Parse parse);
+
 void printGrammar(Grammar grammar);
-ParseForest parse(Grammar grammar, const char *startSymbol, VecString tokenStrings);
