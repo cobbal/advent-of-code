@@ -34,6 +34,7 @@ _2015 = executable(
     'common/arena.c',
     'common/common.c',
     'common/gmap.c',
+    'common/heap.c',
     'common/json.c',
     'common/list.c',
     'common/md5.c',

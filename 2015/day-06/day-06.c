@@ -66,7 +66,7 @@ static int64_t solvePart1(Arena arena, FILE *f) {
     while ((c = getCommand(f)).op != eof) {
         for (int x = c.x0; x <= c.x1; x++) {
             for (int y = c.y0; y <= c.y1; y++) {
-                lights[1000 * y + x] = max(0, lights[1000 * y + x] + c.op);
+                lights[1000 * y + x] = MAX(0, lights[1000 * y + x] + c.op);
             }
         }
     }

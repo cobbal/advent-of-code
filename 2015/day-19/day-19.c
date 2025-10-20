@@ -82,7 +82,7 @@ static intptr_t minExpansions(GMap *cache, ParseForest forest) {
         VEC_FOR(subForest, (*prod)->sequence) {
             prodBest += minExpansions(cache, *subForest);
         }
-        best = min(prodBest, best);
+        best = MIN(prodBest, best);
     }
     *cache = gmapInsert(*cache, forest, (void *)best).map;
     return best;

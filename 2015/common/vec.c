@@ -27,7 +27,7 @@ void _vecSetCapacity(gvec vec, size_t newCapacity) {
     if (vec->capacity != newCapacity) {
         vec->storage = arenaRealloc(vec->arena, vec->storage, vec->capacity, newCapacity, vec->elementSize);
         check(vec->storage != nullptr);
-        vec->count = min(vec->count, newCapacity);
+        vec->count = MIN(vec->count, newCapacity);
         vec->capacity = newCapacity;
     }
 }

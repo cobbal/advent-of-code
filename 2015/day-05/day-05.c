@@ -59,7 +59,7 @@ static int64_t solvePart1([[maybe_unused]] Arena arena, FILE *f) {
                 continue;
             }
             prevIdx = idx;
-            pairs[idx] = min(2, pairs[idx] + 1);
+            pairs[idx] = MIN(2, pairs[idx] + 1);
         }
     }
 }

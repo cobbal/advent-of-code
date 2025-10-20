@@ -30,8 +30,8 @@ static int64_t solvePart0N(Arena arena, FILE *f, int duration) {
         Stats s = VEC_ELEMS(stats)[i];
         int completeLapCount = duration / (s.flightTime + s.restTime);
         int finalLapLength = duration % (s.flightTime + s.restTime);
-        int distance = s.speed * (s.flightTime * completeLapCount + min(finalLapLength, s.flightTime));
-        winner = max(winner, distance);
+        int distance = s.speed * (s.flightTime * completeLapCount + MIN(finalLapLength, s.flightTime));
+        winner = MAX(winner, distance);
     }
     return winner;
 }
@@ -57,7 +57,7 @@ static int64_t solvePart1N(Arena arena, FILE *f, int duration) {
         }
         int bestDist = 0;
         for (size_t i = 0; i < VEC_COUNT(stats); i++) {
-            bestDist = max(bestDist, distance[i]);
+            bestDist = MAX(bestDist, distance[i]);
         }
         for (size_t i = 0; i < VEC_COUNT(stats); i++) {
             if (distance[i] == bestDist) {
@@ -68,7 +68,7 @@ static int64_t solvePart1N(Arena arena, FILE *f, int duration) {
     
     int64_t winner = 0;
     for (size_t i = 0; i < VEC_COUNT(stats); i++) {
-        winner = max(winner, points[i]);
+        winner = MAX(winner, points[i]);
     }
     return winner;
 }

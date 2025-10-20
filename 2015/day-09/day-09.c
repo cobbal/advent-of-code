@@ -58,7 +58,7 @@ static int tsp(Map m, int pos, int visited) {
         if (visited & (1 << next)) {
             continue;
         }
-        best = min(best, m.dists[pos * m.n + next] + tsp(m, next, visited));
+        best = MIN(best, m.dists[pos * m.n + next] + tsp(m, next, visited));
     }
     return best == INT_MAX ? 0 : best;
 }

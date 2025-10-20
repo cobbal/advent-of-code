@@ -5,7 +5,7 @@ static int64_t solvePart0([[maybe_unused]] Arena arena, FILE *f) {
     int l, w, h;
     while (fscanf(f, "%dx%dx%d\n", &l, &w, &h) == 3) {
         total += 2 * l * w + 2 * w * h + 2 * h * l;
-        total += min(l * w, min(w * h, h * l));
+        total += MIN(l * w, MIN(w * h, h * l));
     }
     return total;
 }
@@ -14,7 +14,7 @@ static int64_t solvePart1([[maybe_unused]] Arena arena, FILE *f) {
     int64_t total = 0;
     int l, w, h;
     while (fscanf(f, "%dx%dx%d\n", &l, &w, &h) == 3) {
-        total += 2 * min(l + w, min(w + h, h + l));
+        total += 2 * MIN(l + w, MIN(w + h, h + l));
         total += w * l * h;
     }
     return total;

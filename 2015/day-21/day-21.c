@@ -32,9 +32,9 @@ static Equipment addEquip(Equipment l, Equipment r) {
 
 static bool isWin(Equipment equip, int health, Equipment bossEquip, int bossHealth) {
     while (health > 0) {
-        bossHealth -= max(1, equip.damage - bossEquip.armor);
+        bossHealth -= MAX(1, equip.damage - bossEquip.armor);
         if (bossHealth <= 0) { return true; }
-        health -= max(1, bossEquip.damage - equip.armor);
+        health -= MAX(1, bossEquip.damage - equip.armor);
     }
     return false;
 }
@@ -54,7 +54,7 @@ static int64_t solvePart0([[maybe_unused]] Arena arena, FILE *f) {
                     if (ring0 >= 0) { total = addEquip(total, rings[ring0]); }
                     if (ring1 >= 0) { total = addEquip(total, rings[ring1]); }
                     if (isWin(total, 100, bossEquip, bossHp)) {
-                        best = min(best, total.cost);
+                        best = MIN(best, total.cost);
                     }
                 }
             }
@@ -78,7 +78,7 @@ static int64_t solvePart1([[maybe_unused]] Arena arena, FILE *f) {
                     if (ring0 >= 0) { total = addEquip(total, rings[ring0]); }
                     if (ring1 >= 0) { total = addEquip(total, rings[ring1]); }
                     if (!isWin(total, 100, bossEquip, bossHp)) {
-                        best = max(best, total.cost);
+                        best = MAX(best, total.cost);
                     }
                 }
             }
@@ -89,7 +89,7 @@ static int64_t solvePart1([[maybe_unused]] Arena arena, FILE *f) {
 
 static int dayMain() {
     int failed = 0;
-    failed += checkInputInt("day-21/input-real0.txt", solvePart0, 91, solvePart1, -1);
+    failed += checkInputInt("day-21/input-real0.txt", solvePart0, 91, solvePart1, 158);
     return failed;
 }
 

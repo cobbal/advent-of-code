@@ -20,8 +20,8 @@ static void incr(char *revPass) {
 
 static void incr0(char *revPass) {
     char *lastBad = strrchr(revPass, 'i');
-    lastBad = max(lastBad, strrchr(revPass, 'o'));
-    lastBad = max(lastBad, strrchr(revPass, 'l'));
+    lastBad = MAX(lastBad, strrchr(revPass, 'o'));
+    lastBad = MAX(lastBad, strrchr(revPass, 'l'));
     if (lastBad) {
         memset(revPass, 'z', lastBad - revPass);
     }

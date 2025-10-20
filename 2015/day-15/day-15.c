@@ -33,10 +33,10 @@ static int64_t score(VecIngredient ingredients, const int *quantities, int64_t e
     }
     if (exactCalories != 0 && total.calories != exactCalories) { return 0; }
     return
-        max(0, total.capacity) *
-        max(0, total.durability) *
-        max(0, total.flavor) *
-        max(0, total.texture);
+        MAX(0, total.capacity) *
+        MAX(0, total.durability) *
+        MAX(0, total.flavor) *
+        MAX(0, total.texture);
 }
 
 static bool incrementPartition(size_t buckets, int *allocations) {
@@ -63,7 +63,7 @@ static int64_t solvePart0(Arena arena, FILE *f) {
     quantities[VEC_COUNT(ingredients) - 1] = 100;
     int64_t bestScore = 0;
     do {
-        bestScore = max(bestScore, score(ingredients, quantities, 0));
+        bestScore = MAX(bestScore, score(ingredients, quantities, 0));
     } while(incrementPartition(VEC_COUNT(ingredients), quantities));
     return bestScore;
 }
@@ -74,7 +74,7 @@ static int64_t solvePart1([[maybe_unused]] Arena arena, FILE *f) {
     quantities[VEC_COUNT(ingredients) - 1] = 100;
     int64_t bestScore = 0;
     do {
-        bestScore = max(bestScore, score(ingredients, quantities, 500));
+        bestScore = MAX(bestScore, score(ingredients, quantities, 500));
     } while(incrementPartition(VEC_COUNT(ingredients), quantities));
     return bestScore;
 }

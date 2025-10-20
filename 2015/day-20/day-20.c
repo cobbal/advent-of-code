@@ -31,7 +31,8 @@ static VecI64 makeSmallPrimes(Arena arena, size_t n) {
 
 static int64_t divisorSum(VecI64 primes, int64_t n) {
     int64_t product = 1;
-    for (size_t i = 0; i < VEC_COUNT(primes) || pushSmallPrime(primes); i++) {
+    for (size_t i = 0;; i++) {
+        if (i == VEC_COUNT(primes)) { pushSmallPrime(primes); }
         int64_t p = VEC_ELEMS(primes)[i];
         int64_t sum = 0;
         int64_t pow = 1;

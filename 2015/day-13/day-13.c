@@ -69,7 +69,7 @@ static int tsp(Minefield m, int pos, int visited) {
         if (visited & (1 << next)) {
             continue;
         }
-        best = max(best, m.relationshipMatrix[pos * m.n + next] + m.relationshipMatrix[next * m.n + pos] + tsp(m, next, visited));
+        best = MAX(best, m.relationshipMatrix[pos * m.n + next] + m.relationshipMatrix[next * m.n + pos] + tsp(m, next, visited));
     }
     return best == INT_MIN ? m.relationshipMatrix[pos * m.n + 0] + m.relationshipMatrix[0 * m.n + pos] : best;
 }

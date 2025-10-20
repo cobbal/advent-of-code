@@ -147,7 +147,7 @@ static struct SolveCommonResult {
     }
     int64_t maxGate = 'b';
     VEC_FOR(gate, gates) {
-        maxGate = max(maxGate, gate->out);
+        maxGate = MAX(maxGate, gate->out);
         if (maxGate > 0xffff) {
             printf("BIG GATE\n");
         }
