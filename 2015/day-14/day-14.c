@@ -14,8 +14,8 @@ static VecStats readStats(Arena arena, FILE *f) {
     VecStats stats;
     VEC_INIT(&stats, arena);
     while (getUntilDelimiter(arena, &buf, &bufLen, ' ', f) != EOF) {
-        // NOLINTNEXTLINE(cert-err34-c)
         Stats s;
+        // NOLINTNEXTLINE(cert-err34-c)
         check(fscanf(f, "can fly %d km/s for %d seconds, but then must rest for %d seconds.\n",
             &s.speed, &s.flightTime, &s.restTime ) == 3);
         VEC_PUSH(stats, s);

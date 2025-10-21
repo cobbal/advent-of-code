@@ -40,7 +40,7 @@ int main(void) {
     int failed = 0;
     for (int i = 0; i < dayCount; i++) {
         if (days[i].dayMain == nullptr) { continue; }
-        if (!days[i].isQuick) { continue; }
+        // if (!days[i].isQuick) { continue; }
         printf("=== day-%02d ===\n", days[i].number);
         struct timeval startTV, endTV;
         gettimeofday(&startTV, nullptr);
