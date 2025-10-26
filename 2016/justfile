@@ -1,0 +1,14 @@
+day-01: build-wasm
+    wasmtime --dir .::.  build/2016.wasm
+
+debug: build-wasm
+    node --inspect-brk node-run.js
+
+build-wat:
+    mkdir -p build
+    rm -f build/2016.wat
+    cat <(echo '(module') prelude.wat common/*.wat day-*/day-*.wat <(echo ')') > build/2016.wat
+    chmod -w build/2016.wat
+
+build-wasm: build-wat
+    ./wabt/bin/wat2wasm build/2016.wat --enable-all --debug-names -o build/2016.wasm
