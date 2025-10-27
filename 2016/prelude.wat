@@ -112,6 +112,24 @@
         (local.set $num (i32.sub (local.get $num) (i32.const 1)))
         (br $loop)))))
 
+(func $strcmp (param $s0 i32) (param $s1 i32) (result i32)
+  (local $c0 i32)
+  (local $c1 i32)
+  (loop $loop
+    (if
+      (i32.eq
+        (local.tee $c0 (i32.load8_u (local.get $s0)))
+        (local.tee $c1 (i32.load8_u (local.get $s1))))
+      (then
+        (if (local.get $c0)
+          (then
+            (local.set $s0 (i32.add (local.get $s0) (i32.const 1)))
+            (local.set $s1 (i32.add (local.get $s1) (i32.const 1)))
+            (br $loop)))
+        (return (i32.const 0)))))
+  (select (i32.const 1) (i32.const -1)
+    (i32.lt_u (local.get $c0) (local.get $c1))))
+
 (func $print.nl
   (i32.store (i32.const 0x108) (i32.const 0xa))
   (call $printStr (i32.const 0x108)))
@@ -128,26 +146,7 @@
   (call $print.nl))
 
 (func $printI64 (param $i i64) 
-  (local $neg i32)
-  (local $pos i32)
-  (local $ptr i32)
-  (local $digit i32)
-
-  (if (local.tee $neg (i64.lt_s (local.get $i) (i64.const 0)))
-    (then (local.set $i (i64.sub (i64.const 0) (local.get $i)))))
-
-  (memory.fill (i32.const 0x100) (i32.const 0x20 (;' ';)) (i32.const 20))
-  (local.set $ptr (i32.const 0x113))
-  (loop $loop
-    (local.set $digit (i32.wrap_i64 (i64.rem_u (local.get $i) (i64.const 10))))
-    (local.set $i (i64.div_u (local.get $i) (i64.const 10)))
-    (i32.store8 (local.get $ptr) (i32.add (i32.const 0x30 (;'0';)) (local.get $digit)))
-    (local.set $ptr (i32.sub (local.get $ptr) (i32.const 1)))
-    (if (i32.wrap_i64 (local.get $i))
-      (then (br $loop))))
-  (if (local.get $neg)
-    (then (i32.store8 (local.get $ptr) (i32.const 0x2d (;'-';)))))
-
+  (call $formatI64._impl (local.get $i) (i32.const 0x100))
   (i32.store (i32.const 0x120) (i32.const 0x100))
   (i32.store (i32.const 0x124) (i32.const 20))
   (call $assert_not
@@ -156,6 +155,38 @@
       (i32.const 0x120)
       (i32.const 1)
       (i32.const 0x8))))
+
+(func $formatI64 (param $i i64) (result i32)
+  (local $buf i32)
+  (call $formatI64._impl (local.get $i)
+    (local.tee $buf (call $malloc (i32.const 21))))
+  (local.get $buf))
+
+(func $formatI32 (param $i i32) (result i32)
+  (call $formatI64 (i64.extend_i32_s (local.get $i))))
+
+;; $buf should have 21 bytes of space
+(func $formatI64._impl (param $i i64) (param $buf i32)
+  (local $neg i32)
+  (local $pos i32)
+  (local $ptr i32)
+  (local $digit i32)
+
+  (if (local.tee $neg (i64.lt_s (local.get $i) (i64.const 0)))
+    (then (local.set $i (i64.sub (i64.const 0) (local.get $i)))))
+
+  (memory.fill (local.get $buf) (i32.const 0x20 (;' ';)) (i32.const 20))
+  (local.set $ptr (i32.add (local.get $buf) (i32.const 19)))
+  (loop $loop
+    (local.set $digit (i32.wrap_i64 (i64.rem_u (local.get $i) (i64.const 10))))
+    (local.set $i (i64.div_u (local.get $i) (i64.const 10)))
+    (i32.store8 (local.get $ptr) (i32.add (i32.const 0x30 (;'0';)) (local.get $digit)))
+    (local.set $ptr (i32.sub (local.get $ptr) (i32.const 1)))
+    (if (i32.wrap_i64 (local.get $i))
+      (then (br $loop))))
+  (if (local.get $neg)
+    (then (i32.store8 (local.get $ptr) (i32.const 0x2d (;'-';))))))
+
 
 (func $printStr.nl (param $i i32)
   (call $printStr (local.get $i))
@@ -183,11 +214,13 @@
         (br $loop))))
   (local.get $count))
 
-(func $splitDestructively (param $string i32) (param $sep i32) (result i32 i32)
+(func $splitDestructively (param $string i32) (param $sep i32) (param $allowEmpty i32) (result i32 i32)
   (local $strings i32)
+  (local $workingString i32)
+  (local $oldWork i32)
   (local $stringsPtr i32)
   (local $len i32)
-  (local $current i32)
+  (local $c i32)
 
   (local.set $strings
     (call $malloc
@@ -196,19 +229,41 @@
           (local.tee $len
             (i32.add (i32.const 1)
               (call $countChar (local.get $string) (local.get $sep))))))))
-  (i32.store (local.get $strings) (local.get $string))
-  (local.set $stringsPtr (i32.add (local.get $strings) (i32.const 4)))
+  (local.set $stringsPtr (local.get $strings))
+  (local.set $workingString (local.get $string))
 
   (loop $loop
-    (if (local.tee $current (i32.load8_u (local.get $string)))
+    (if (local.tee $c (i32.load8_u (local.get $string)))
       (then
-        (if (i32.eq (local.get $current) (local.get $sep))
+        (if (i32.eq (local.get $c) (local.get $sep))
           (then
             (i32.store8 (local.get $string) (i32.const 0))
-            (i32.store (local.get $stringsPtr) (i32.add (local.get $string) (i32.const 1)))
-            (local.set $stringsPtr (i32.add (local.get $stringsPtr) (i32.const 4)))))
+            (local.set $oldWork (local.get $workingString))
+            (local.set $workingString (i32.add (local.get $string) (i32.const 1)))
+            (block $record
+              (if (i32.eq (local.get $string) (local.get $oldWork))
+                (then 
+                  (if (i32.eqz (local.get $allowEmpty))
+                    (then
+                      (br $record)))))
+              (i32.store (local.get $stringsPtr) (local.get $oldWork))
+              (local.set $stringsPtr (i32.add (local.get $stringsPtr) (i32.const 4))))))
         (local.set $string (i32.add (local.get $string) (i32.const 1)))
         (br $loop))))
+
+  (block $record
+    (if (i32.eq (local.get $string) (local.get $workingString))
+      (then 
+        (if (i32.eqz (local.get $allowEmpty))
+          (then
+            (br $record)))))
+    (i32.store (local.get $stringsPtr) (local.get $workingString))
+    (local.set $stringsPtr (i32.add (local.get $stringsPtr) (i32.const 4))))
+
+  (local.set $len
+    (i32.shr_u
+      (i32.sub (local.get $stringsPtr) (local.get $strings))
+      (i32.const 2)))
     
   (local.get $strings) (local.get $len))
 

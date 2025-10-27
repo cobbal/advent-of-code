@@ -2,8 +2,9 @@
 
 (func (export "_start")
   (local $err i32)
+
   (local.set $err (i32.add (local.get $err) (call $runDay (i32.const 01))))
-  ;; (local.set $err (i32.add (local.get $err) (call $runDay (i32.const 02))))
+  (local.set $err (i32.add (local.get $err) (call $runDay (i32.const 02))))
   ;; (local.set $err (i32.add (local.get $err) (call $runDay (i32.const 03))))
   ;; (local.set $err (i32.add (local.get $err) (call $runDay (i32.const 04))))
   ;; (local.set $err (i32.add (local.get $err) (call $runDay (i32.const 05))))
@@ -32,6 +33,7 @@
 
 (data (i32.const 0x1a_0000) "=== day XX ===")
 (data (i32.const 0x1a_0010) ".XXXs")
+(data (i32.const 0x1a_0020) "|12||4|||5||z")
 
 (func $runDay (param $day i32) (result i32)
   (local $startTime i64)

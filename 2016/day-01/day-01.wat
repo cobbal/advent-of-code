@@ -1,4 +1,3 @@
-(data (i32.const 0x1_0010) "Hello, World!")
 (data (i32.const 0x1_0020) "day-01/input-ex0.txt")
 (data (i32.const 0x1_0040) "day-01/input-ex1.txt")
 (data (i32.const 0x1_0060) "day-01/input-ex2.txt")
@@ -20,7 +19,8 @@
     (local.set $wordsLen
       (call $splitDestructively
         (drop (call $readFile (local.get $filename)))
-        (i32.const 0x20))))
+        (i32.const 0x20)
+        (i32.const 0))))
 
   (local.set $resultPtr
     (local.tee $result

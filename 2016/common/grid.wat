@@ -78,3 +78,15 @@
 (func $grid.get (param $grid i32) (param $y i32) (param $x i32) (result i32)
   (call $grid.check (local.get $grid) (local.get $y) (local.get $x))
   (i32.load8_u (call $grid._ptr (local.get $grid) (local.get $y) (local.get $x))))
+
+(func $grid.getSafe (param $grid i32) (param $y i32) (param $x i32) (param $default i32) (result i32)
+  (local $width i32)
+  (local $height i32)
+  (local.set $height (i32.load (local.get $grid)))
+  (local.set $width (i32.load (i32.add (local.get $grid) (i32.const 4))))
+  (if
+    (i32.and
+      (i32.lt_u (local.get $y) (local.get $height))
+      (i32.lt_u (local.get $x) (local.get $width)))
+      (then (return (i32.load8_u (call $grid._ptr (local.get $grid) (local.get $y) (local.get $x))))))
+  (local.get $default))
