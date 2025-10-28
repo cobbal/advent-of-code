@@ -18,7 +18,7 @@
   ;; printf("%22s: ", path);
   (memory.fill (i32.const 0x200) (i32.const 0x20) (i32.const 0x16))
   (local.set $len (call $i32.min (i32.const 0x16) (call $strlen (local.get $path))))
-  (call $memmove
+  (memory.copy
     (i32.sub (i32.const 0x216) (local.get $len))
     (local.get $path)
     (local.get $len))
@@ -74,7 +74,7 @@
   ;; printf("%22s: ", path);
   (memory.fill (i32.const 0x200) (i32.const 0x20) (i32.const 0x16))
   (local.set $len (call $i32.min (i32.const 0x16) (call $strlen (local.get $path))))
-  (call $memmove
+  (memory.copy
     (i32.sub (i32.const 0x216) (local.get $len))
     (local.get $path)
     (local.get $len))

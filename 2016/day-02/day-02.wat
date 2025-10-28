@@ -93,7 +93,7 @@
   (local.set $ptr (i32.sub (i32.add (local.get $result) (i32.const 20)) (local.get $lineCount)))
 
   (local.set $grid (call $grid.create (i32.const 5) (i32.const 5)))
-  (call $memmove
+  (memory.copy
     (i32.add (local.get $grid) (i32.const 8))
     (i32.const 0x2_0200)
     (i32.const 30))

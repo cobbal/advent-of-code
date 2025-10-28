@@ -1,6 +1,7 @@
 #include <sys/time.h>
 
 #include "common/common.h"
+#include "common/md5.h"
 
 extern daySolver day01;
 extern daySolver day02;
@@ -29,6 +30,16 @@ extern daySolver day24;
 extern daySolver day25;
 
 int main(void) {
+    auto res = md5("hello", 5);
+    printf("%08x %08x %08x %08x\n",
+        *(uint32_t*)&res.digest[0],
+        *(uint32_t*)&res.digest[4],
+        *(uint32_t*)&res.digest[8],
+        *(uint32_t*)&res.digest[12]
+    );
+
+    return 0;
+
     daySolver days[] = {
         day01, day02, day03, day04, day05,
         day06, day07, day08, day09, day10,
@@ -53,4 +64,3 @@ int main(void) {
     }
     return !!failed;
 }
-

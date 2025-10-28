@@ -47,8 +47,9 @@
 (import "wasi_snapshot_preview1" "proc_exit"
   (func $proc_exit
     (param $rval i32)))
-
-;; (import "env" "debugger" (func $debugger))
+;; This function is abused for a debugger hook
+(import "wasi_snapshot_preview1" "sched_yield"
+  (func $sched_yield (result i32)))
 
 ;; Each day gets its own page! (prelude gets page 0, start gets page 26)
 (memory (export "memory") 27)
@@ -104,16 +105,6 @@
         (br $loop))))
   (i32.sub (local.get $ptr) (local.get $string)))
 
-(func $memmove (param $destination i32) (param $source i32) (param $num i32)
-  (loop $loop
-    (if (local.get $num)
-      (then
-        (i32.store8 (local.get $destination) (i32.load8_u (local.get $source)))
-        (local.set $source (i32.add (local.get $source) (i32.const 1)))
-        (local.set $destination (i32.add (local.get $destination) (i32.const 1)))
-        (local.set $num (i32.sub (local.get $num) (i32.const 1)))
-        (br $loop)))))
-
 (func $strcmp (param $s0 i32) (param $s1 i32) (result i32)
   (local $c0 i32)
   (local $c1 i32)
@@ -137,7 +128,7 @@
   (local $buf i32)
   (local.set $len (call $strlen (local.get $s)))
   (local.set $buf (call $malloc (i32.add (local.get $len) (i32.const 1))))
-  (call $memmove (local.get $buf) (local.get $s) (local.get $len))
+  (memory.copy (local.get $buf) (local.get $s) (local.get $len))
   (local.get $buf))
 
 (func $strrchr (param $str i32) (param $c i32) (result i32)
@@ -151,6 +142,17 @@
         (local.set $ptr (i32.sub (local.get $ptr) (i32.const 1)))
         (br $loop))))
   (local.get $ptr))
+
+(func $strchr (param $str i32) (param $c i32) (result i32)
+  (local $d i32)
+  (loop $loop
+    (if (local.tee $d (i32.load8_u (local.get $str)))
+      (then 
+        (if (i32.eq (local.get $d) (local.get $c))
+          (then (return (local.get $str))))
+        (local.set $str (i32.add (local.get $str) (i32.const 1)))
+        (br $loop))))
+  (i32.const 0))
 
 (func $print.nl
   (i32.store (i32.const 0x108) (i32.const 0xa))
@@ -168,15 +170,12 @@
   (call $print.nl))
 
 (func $printI64 (param $i i64) 
-  (call $formatI64._impl (local.get $i) (i32.const 0x100))
-  (i32.store (i32.const 0x120) (i32.const 0x100))
-  (i32.store (i32.const 0x124) (i32.const 20))
-  (call $assert_not
-    (call $fd_write
-      (i32.const 1)
-      (i32.const 0x120)
-      (i32.const 1)
-      (i32.const 0x8))))
+  (call $formatI64._impl (local.get $i) (i32.const 0x200))
+  (call $printStr (i32.const 0x200)))
+
+(func $printI32.hex.nl (param $i i32)
+  (call $formatI64.hex._impl (i64.extend_i32_s (local.get $i)) (i32.const 0x200))
+  (call $printStr.nl (i32.const 0x208)))
 
 (func $formatI64 (param $i i64) (result i32)
   (local $buf i32)
@@ -184,8 +183,20 @@
     (local.tee $buf (call $malloc (i32.const 21))))
   (local.get $buf))
 
+(func $formatI64.hex (param $i i64) (result i32)
+  (local $buf i32)
+  (call $formatI64.hex._impl (local.get $i)
+    (local.tee $buf (call $malloc (i32.const 17))))
+  (local.get $buf))
+
 (func $formatI32 (param $i i32) (result i32)
   (call $formatI64 (i64.extend_i32_s (local.get $i))))
+
+(func $asciiHex (param $i i32) (result i32)
+  (call $assert (i32.lt_u (local.get $i) (i32.const 0x10)))
+  (if (i32.lt_u (local.get $i) (i32.const 10))
+    (then (return (i32.add (i32.const 0x30) (local.get $i)))))
+  (return (i32.add (i32.const 0x57) (local.get $i))))
 
 ;; $buf should have 21 bytes of space
 (func $formatI64._impl (param $i i64) (param $buf i32)
@@ -198,6 +209,7 @@
     (then (local.set $i (i64.sub (i64.const 0) (local.get $i)))))
 
   (memory.fill (local.get $buf) (i32.const 0x20 (;' ';)) (i32.const 20))
+  (i32.store8 (i32.add (local.get $buf) (i32.const 20)) (i32.const 0))
   (local.set $ptr (i32.add (local.get $buf) (i32.const 19)))
   (loop $loop
     (local.set $digit (i32.wrap_i64 (i64.rem_u (local.get $i) (i64.const 10))))
@@ -208,6 +220,23 @@
       (then (br $loop))))
   (if (local.get $neg)
     (then (i32.store8 (local.get $ptr) (i32.const 0x2d (;'-';))))))
+
+;; $buf should have 17 bytes of space
+(func $formatI64.hex._impl (param $i i64) (param $buf i32)
+  (local $pos i32)
+  (local $ptr i32)
+  (local $digit i32)
+
+  (memory.fill (local.get $buf) (i32.const 0x30 (;'0';)) (i32.const 16))
+  (i32.store8 (i32.add (local.get $buf) (i32.const 16)) (i32.const 0))
+  (local.set $ptr (i32.add (local.get $buf) (i32.const 15)))
+  (loop $loop
+    (local.set $digit (i32.wrap_i64 (i64.rem_u (local.get $i) (i64.const 0x10))))
+    (local.set $i (i64.div_u (local.get $i) (i64.const 0x10)))
+    (i32.store8 (local.get $ptr) (call $asciiHex (local.get $digit)))
+    (local.set $ptr (i32.sub (local.get $ptr) (i32.const 1)))
+    (if (i32.wrap_i64 (local.get $i))
+      (then (br $loop)))))
 
 
 (func $printStr.nl (param $i i32)
@@ -391,3 +420,6 @@
       (i64.const 0)
       (i32.const 0x100)))
   (i64.load (i32.const 0x100)))
+
+(func $debugger
+  (drop (call $sched_yield)))
