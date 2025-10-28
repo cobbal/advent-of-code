@@ -48,6 +48,8 @@
   (func $proc_exit
     (param $rval i32)))
 
+;; (import "env" "debugger" (func $debugger))
+
 ;; Each day gets its own page! (prelude gets page 0, start gets page 26)
 (memory (export "memory") 27)
 
@@ -129,6 +131,26 @@
         (return (i32.const 0)))))
   (select (i32.const 1) (i32.const -1)
     (i32.lt_u (local.get $c0) (local.get $c1))))
+
+(func $strdup (param $s i32) (result i32)
+  (local $len i32)
+  (local $buf i32)
+  (local.set $len (call $strlen (local.get $s)))
+  (local.set $buf (call $malloc (i32.add (local.get $len) (i32.const 1))))
+  (call $memmove (local.get $buf) (local.get $s) (local.get $len))
+  (local.get $buf))
+
+(func $strrchr (param $str i32) (param $c i32) (result i32)
+  (local $ptr i32)
+  (local.set $ptr (i32.add (local.get $str) (call $strlen (local.get $str))))
+  (loop $loop
+    (if (i32.lt_u (local.get $ptr) (local.get $str))
+      (then (return (i32.const 0))))
+    (if (i32.ne (i32.load8_u (local.get $ptr)) (local.get $c))
+      (then 
+        (local.set $ptr (i32.sub (local.get $ptr) (i32.const 1)))
+        (br $loop))))
+  (local.get $ptr))
 
 (func $print.nl
   (i32.store (i32.const 0x108) (i32.const 0xa))

@@ -19,8 +19,9 @@ const wasi = new WASI({
     const wasm = await WebAssembly.compile(
         await readFile(join(__dirname, 'build/2016.wasm')),
     );
-    const instance = await WebAssembly.instantiate(wasm, wasi.getImportObject());
-
-    debugger;
+    const instance = await WebAssembly.instantiate(wasm, {
+        ...wasi.getImportObject(),
+        "env": { "debugger": () => { debugger; } },
+    });
     wasi.start(instance);
 })();
