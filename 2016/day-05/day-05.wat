@@ -1,10 +1,10 @@
 (data (i32.const 0x05_8000) "day-05/input-ex0.txt")
 (data (i32.const 0x05_8040) "day-05/input-real0.txt")
 
-(data (i32.const 0x05_9000) "18f47a30  ")
-(data (i32.const 0x05_9020) "05ace8e3  ")
-(data (i32.const 0x05_9040) "1a3099aa  ")
-(data (i32.const 0x05_9060) "694190cd  ")
+(data (i32.const 0x05_9000) "18f47a30            ")
+(data (i32.const 0x05_9020) "05ace8e3            ")
+(data (i32.const 0x05_9040) "1a3099aa            ")
+(data (i32.const 0x05_9060) "694190cd            ")
 
 (data (i32.const 0x05_a000) "  \00")
 
@@ -21,8 +21,8 @@
   (local $hash i32)
   (local $foundDigits i32)
 
+  (memory.fill (i32.const 0x05_1000) (i32.const 0x20) (i32.const 20))
   (memory.fill (i32.const 0x05_1000) (i32.const 0x5f) (i32.const 8))
-  (memory.fill (i32.const 0x05_1008) (i32.const 0x20) (i32.const 2))
 
   (local.set $line (drop (call $readFile (local.get $filename))))
   (i32.store8 (call $strrchr (local.get $line) (i32.const 0x0a)) (i32.const 0))

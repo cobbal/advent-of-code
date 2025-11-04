@@ -57,8 +57,8 @@
 ;; Each day gets 16 table entries
 (table $fns 0x1a0 funcref)
 
-;; TODO
-;; (global $malloc.align i32 (i32.const 16))
+;; must be a power of 2
+(global $malloc.align i32 (i32.const 16))
 (global $malloc.end (mut i32) (i32.const 0x1b_0000))
 
 ;; Currently no free
@@ -66,6 +66,13 @@
   (local $result i32)
   (local $newCount i32)
   (local $pagesNeeded i32)
+
+  ;; round size up to alignment
+  (local.set $size
+    (i32.and
+      (i32.add (local.get $size) (i32.sub (global.get $malloc.align) (i32.const 1)))
+      (i32.sub (i32.const 0) (global.get $malloc.align))))
+
   (local.set $result (global.get $malloc.end))
   (local.set $newCount (i32.add (local.get $result) (local.get $size)))
   (local.set $pagesNeeded
@@ -244,6 +251,10 @@
   (call $print.nl))
 
 (func $printStr (param $string i32)
+  (if (i32.eqz (local.get $string))
+    (then
+      (local.set $string (i32.const 0x108))
+      (i64.store (i32.const 0x108) (i64.const 0x0000_3e6c_6c75_6e3c))))
   (i32.store (i32.const 0x100) (local.get $string))
   (i32.store (i32.const 0x104) (call $strlen (local.get $string)))
   (call $assert_not

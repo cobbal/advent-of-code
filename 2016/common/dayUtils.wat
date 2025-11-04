@@ -88,8 +88,10 @@
       (local.get $solver0)))
   ;; printf("%20lld ", result0);
   (call $printStr (local.get $result0))
-  (local.set $correct0
-    (i32.eqz (call $strcmp (local.get $result0) (local.get $expected0))))
+  (if (i32.eqz (i32.or (i32.eqz (local.get $result0)) (i32.eqz (local.get $expected0))))
+    (then
+      (local.set $correct0
+        (i32.eqz (call $strcmp (local.get $result0) (local.get $expected0))))))
   (call $memoryReset)
 
   ;; int64_t result1 = part1(arena, f);
@@ -99,8 +101,10 @@
       (local.get $solver1)))
   ;; printf("%20lld ", result1);
   (call $printStr (local.get $result1))
-  (local.set $correct1
-    (i32.eqz (call $strcmp (local.get $result1) (local.get $expected1))))
+  (if (i32.eqz (i32.or (i32.eqz (local.get $result1)) (i32.eqz (local.get $expected1))))
+    (then
+      (local.set $correct1
+        (i32.eqz (call $strcmp (local.get $result1) (local.get $expected1))))))
   (call $memoryReset)
 
   (i64.store (i32.const 0x200) (i64.const 0x00_64_6f_6f_67_20_20_20 (;'   good\0';)))
