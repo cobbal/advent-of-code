@@ -58,7 +58,7 @@
 (table $fns 0x1a0 funcref)
 
 ;; must be a power of 2
-(global $malloc.align i32 (i32.const 16))
+(global $malloc.align i32 (i32.const 8))
 (global $malloc.end (mut i32) (i32.const 0x1b_0000))
 
 ;; Currently no free
@@ -443,3 +443,53 @@
 
 (func $debugger
   (drop (call $sched_yield)))
+
+(func $cons (param $car i32) (param $cdr i32) (result i32)
+  (local $result i32)
+  (local.set $result (call $malloc (i32.const 8)))
+  (i32.store (local.get $result) (local.get $car))
+  (i32.store (i32.add (local.get $result) (i32.const 4)) (local.get $cdr))
+  (local.get $result))
+
+(func $cons.3 (param $car i32) (param $cdr i32) (param $cgr i32) (result i32)
+  (local $result i32)
+  (local.set $result (call $malloc (i32.const 12)))
+  (i32.store (local.get $result) (local.get $car))
+  (i32.store (i32.add (local.get $result) (i32.const 4)) (local.get $cdr))
+  (i32.store (i32.add (local.get $result) (i32.const 8)) (local.get $cgr))
+  (local.get $result))
+
+(func $cons.4 (param $car i32) (param $cdr i32) (param $cgr i32) (param $cjr i32) (result i32)
+  (local $result i32)
+  (local.set $result (call $malloc (i32.const 16)))
+  (i32.store (local.get $result) (local.get $car))
+  (i32.store (i32.add (local.get $result) (i32.const 4)) (local.get $cdr))
+  (i32.store (i32.add (local.get $result) (i32.const 8)) (local.get $cgr))
+  (i32.store (i32.add (local.get $result) (i32.const 12)) (local.get $cjr))
+  (local.get $result))
+
+(func $car (param $cell i32) (result i32)
+  (i32.load (local.get $cell)))
+
+(func $cdr (param $cell i32) (result i32)
+  (i32.load (i32.add (local.get $cell) (i32.const 4))))
+(func $cgr (param $cell i32) (result i32)
+  (i32.load (i32.add (local.get $cell) (i32.const 8))))
+
+(func $setCar (param $cell i32) (param $newCar i32)
+  (i32.store (local.get $cell) (local.get $newCar)))
+
+(func $setCdr (param $cell i32) (param $newCdr i32)
+  (i32.store (i32.add (local.get $cell) (i32.const 4)) (local.get $newCdr)))
+
+(func $setCgr (param $cell i32) (param $newCgr i32)
+  (i32.store (i32.add (local.get $cell) (i32.const 8)) (local.get $newCgr)))
+
+(func $uncons (param $cell i32) (result i32 i32)
+  (i32.load (local.get $cell))
+  (i32.load (i32.add (local.get $cell) (i32.const 4))))
+
+(func $uncons.3 (param $cell i32) (result i32 i32 i32)
+  (i32.load (local.get $cell))
+  (i32.load (i32.add (local.get $cell) (i32.const 4)))
+  (i32.load (i32.add (local.get $cell) (i32.const 8))))
