@@ -140,7 +140,6 @@
 (elem (table $mains) (i32.const 6) $day06.main)
 (func $day06.main (result i32)
   (i32.const 0)
-  (call $debugger)
   (i32.add
     (call $checkInputStr
       (i32.const 0x06_8000)
