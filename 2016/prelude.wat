@@ -424,6 +424,15 @@
     (then (local.set $a (local.get $b))))
   (local.get $a))
 
+(func $i32.mod_s (param $a i32) (param $b i32) (result i32)
+  (i32.rem_s
+    (i32.add
+      (i32.rem_s
+        (local.get $a)
+        (local.get $b))
+      (local.get $b))
+    (local.get $b)))
+
 (func $getClock (result i64)
   (call $assert_not
     (call $clock_time_get
