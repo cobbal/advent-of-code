@@ -5,7 +5,7 @@
 (data (i32.const 0x06_8120) "dzqckwsd            ")
 (data (i32.const 0x06_8140) "lragovly            ")
 
-(elem (i32.const 0x060) $day06.part0 $day06.part1)
+(elem (table $fns) (i32.const 0x060) $day06.part0 $day06.part1)
 
 (func $day06.part0 (param $filename i32) (result i32)
   (local $lines i32)
@@ -66,7 +66,7 @@
                   (i32.store8 (i32.add (local.get $result) (local.get $col)) (local.get $ch))))
               (local.set $ch (i32.add (local.get $ch) (i32.const 1)))
               (br $bestLoop))))
-        
+
         (local.set $col (i32.add (local.get $col) (i32.const 1)))
         (br $colLoop))))
   (local.get $result))
@@ -132,7 +132,7 @@
                       (i32.store8 (i32.add (local.get $result) (local.get $col)) (local.get $ch))))))
               (local.set $ch (i32.add (local.get $ch) (i32.const 1)))
               (br $bestLoop))))
-        
+
         (local.set $col (i32.add (local.get $col) (i32.const 1)))
         (br $colLoop))))
   (local.get $result))

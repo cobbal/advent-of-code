@@ -13,7 +13,7 @@
   ".ABC.\00"
   "..D..\00")
 
-(elem (i32.const 0x020) $day02.part0 $day02.part1)
+(elem (table $fns) (i32.const 0x020) $day02.part0 $day02.part1)
 
 (func $day02.part0 (param $filename i32) (result i32)
   (local $y i32)

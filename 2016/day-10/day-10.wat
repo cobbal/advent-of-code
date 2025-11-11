@@ -1,7 +1,7 @@
 (data (i32.const 0x0a_8000) "day-10/input-ex0.txt")
 (data (i32.const 0x0a_8020) "day-10/input-real0.txt")
 
-(elem (i32.const 0x0a0) $day10.part0.ex $day10.part0.real $day10.part1)
+(elem (table $fns) (i32.const 0x0a0) $day10.part0.ex $day10.part0.real $day10.part1)
 
 (data (i32.const 0x0a_0000) "value")
 (data (i32.const 0x0a_0010) "bot")
@@ -53,14 +53,14 @@
 
           (if (i32.eqz (call $strcmp (local.get $word) (i32.const 0x0a_0000)))
             (then
-            ;; value _ goes to _ _
+              ;; value _ goes to _ _
               (local.set $src (call $parseI32 (i32.load (i32.add (local.get $words) (i32.const 4)))))
               (local.set $dest0 (call $day10.parseBot (i32.add (local.get $words) (i32.const 16))))
               (local.set $command (call $cons.3 (i32.const -1) (local.get $src) (local.get $dest0)))
               (br $continue)))
           (if (i32.eqz (call $strcmp (local.get $word) (i32.const 0x0a_0010)))
             (then
-            ;; bot _ gives low to _ _ and high to _ _
+              ;; bot _ gives low to _ _ and high to _ _
               (local.set $src (call $day10.parseBot (local.get $words)))
               (local.set $dest0 (call $day10.parseBot (i32.add (local.get $words) (i32.const 20))))
               (local.set $dest1 (call $day10.parseBot (i32.add (local.get $words) (i32.const 40))))
@@ -104,7 +104,7 @@
   (local $lo i32)
   (local $hi i32)
 
-  (local.set $botPtr 
+  (local.set $botPtr
     (i32.add (local.get $bots) (i32.mul (local.get $dest) (i32.const 4))))
 
   (if (i32.eqz (i32.and (local.get $dest) (i32.const 1)))
@@ -178,7 +178,7 @@
   (local.set $list (local.get $commandList))
   (loop $loop
     (if (local.get $list)
-      (then 
+      (then
         (local.set $command
           (local.set $list
             (call $uncons (local.get $list))))
@@ -188,7 +188,7 @@
             (call $setCar (local.get $command) (i32.const -2))
             (i32.store
               (i32.add
-                (local.get $bots) 
+                (local.get $bots)
                 (i32.mul (local.get $i0) (i32.const 4)))
               (local.get $command))))
         (br $loop))))
@@ -196,7 +196,7 @@
   (local.set $list (local.get $commandList))
   (loop $loop
     (if (local.get $list)
-      (then 
+      (then
         (local.set $command
           (local.set $list
             (call $uncons (local.get $list))))

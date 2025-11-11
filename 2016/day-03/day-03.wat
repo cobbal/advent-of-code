@@ -1,7 +1,7 @@
 (data (i32.const 0x03_8000) "day-03/input-ex0.txt")
 (data (i32.const 0x03_8020) "day-03/input-real0.txt")
 
-(elem (i32.const 0x030) $day03.part0 $day03.part1)
+(elem (table $fns) (i32.const 0x030) $day03.part0 $day03.part1)
 
 (func $day03.isTri (param $a i32) (param $b i32) (param $c i32) (result i32)
   (local $longestSide i32)
@@ -33,7 +33,7 @@
               (i32.load (local.get $lines))
               (i32.const 0x20)
               (i32.const 0))))
-        (call $assert (i32.eq (local.get $wordsLen) (i32.const 3))) 
+        (call $assert (i32.eq (local.get $wordsLen) (i32.const 3)))
 
         (if
           (call $day03.isTri
@@ -74,15 +74,15 @@
               (i32.load (i32.add (local.get $lines) (i32.const 0)))
               (i32.const 0x20)
               (i32.const 0))))
-        (call $assert (i32.eq (local.get $wordsLen) (i32.const 3))) 
-        
+        (call $assert (i32.eq (local.get $wordsLen) (i32.const 3)))
+
         (local.set $words1
           (local.set $wordsLen
             (call $splitDestructively
               (i32.load (i32.add (local.get $lines) (i32.const 4)))
               (i32.const 0x20)
               (i32.const 0))))
-        (call $assert (i32.eq (local.get $wordsLen) (i32.const 3))) 
+        (call $assert (i32.eq (local.get $wordsLen) (i32.const 3)))
 
         (local.set $words2
           (local.set $wordsLen
@@ -90,7 +90,7 @@
               (i32.load (i32.add (local.get $lines) (i32.const 8)))
               (i32.const 0x20)
               (i32.const 0))))
-        (call $assert (i32.eq (local.get $wordsLen) (i32.const 3))) 
+        (call $assert (i32.eq (local.get $wordsLen) (i32.const 3)))
 
         (if
           (call $day03.isTri

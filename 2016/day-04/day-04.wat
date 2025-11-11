@@ -3,7 +3,7 @@
 
 (data (i32.const 0x04_0000) "northpole-object-storage")
 
-(elem (i32.const 0x040) $day04.part0 $day04.part1)
+(elem (table $fns) (i32.const 0x040) $day04.part0 $day04.part1)
 
 (func $day04.part0 (param $filename i32) (result i64)
   (local $lines i32)
@@ -113,7 +113,7 @@
     (if (local.tee $line (i32.load (local.get $lines)))
       (then
         (local.set $checksum
-          (i32.add 
+          (i32.add
             (call $strrchr (local.get $line) (i32.const 0x5b (;'[';)))
             (i32.const 1)))
 

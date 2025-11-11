@@ -2,7 +2,7 @@
 (data (i32.const 0x09_8020) "day-09/input-ex1.txt")
 (data (i32.const 0x09_8040) "day-09/input-real0.txt")
 
-(elem (i32.const 0x090) $day09.part0 $day09.part1)
+(elem (table $fns) (i32.const 0x090) $day09.part0 $day09.part1)
 
 (func $day09.decompress (param $s i32) (param $end i32) (param $recur i32) (result i64)
   (local $ch i32)

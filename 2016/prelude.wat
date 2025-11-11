@@ -57,6 +57,16 @@
 ;; Each day gets 16 table entries
 (table $fns 0x1a0 funcref)
 
+;; Some useful, common function pointers
+(func $_fns.i32.lt_s (param $a i32) (param $b i32) (result i32)
+  (i32.lt_s (local.get $a) (local.get $b)))
+
+(global $fns.i32.lt_s i32 (i32.const 0))
+(elem (table $fns) (i32.const 0) $_fns.i32.lt_s)
+
+(global $fns.strcmp i32 (i32.const 1))
+(elem (table $fns) (i32.const 1) $strcmp)
+
 ;; must be a power of 2
 (global $malloc.align i32 (i32.const 8))
 (global $malloc.end (mut i32) (i32.const 0x1b_0000))
@@ -77,16 +87,17 @@
   (local.set $newCount (i32.add (local.get $result) (local.get $size)))
   (local.set $pagesNeeded
     (i32.sub (i32.shr_u (i32.add (local.get $newCount) (i32.const 0xffff)) (i32.const 16))
-        (memory.size)))
+      (memory.size)))
   (if (i32.gt_s (local.get $pagesNeeded) (i32.const 0))
-      (then (call $assert (i32.ge_s (memory.grow (local.get $pagesNeeded)) (i32.const 0)))))
+    (then
+      (call $assert (i32.ge_s (memory.grow (local.get $pagesNeeded)) (i32.const 0)))))
   (global.set $malloc.end (local.get $newCount))
   (local.get $result))
 
 (func $memoryReset
   (global.set $malloc.end (i32.const 0x1b_0000))
   (memory.fill
-    (global.get $malloc.end) 
+    (global.get $malloc.end)
     (i32.const 0)
     (i32.sub
       (i32.mul (memory.size) (i32.const 0x1_0000))
@@ -100,14 +111,16 @@
 
 (func $assert (param $in i32)
   (if (i32.eqz (local.get $in))
-   (then unreachable)))
+    (then
+      (call $debugger)
+      unreachable)))
 
 (func $strlen (param $string i32) (result i32)
   (local $ptr i32)
   (local.set $ptr (local.get $string))
   (loop $loop
     (if (i32.ne (i32.load8_u (local.get $ptr)) (i32.const 0))
-      (then 
+      (then
         (local.set $ptr (i32.add (local.get $ptr) (i32.const 1)))
         (br $loop))))
   (i32.sub (local.get $ptr) (local.get $string)))
@@ -127,6 +140,23 @@
             (local.set $s1 (i32.add (local.get $s1) (i32.const 1)))
             (br $loop)))
         (return (i32.const 0)))))
+  (i32.sub (local.get $c0) (local.get $c1)))
+
+(func $memcmp (param $p0 i32) (param $p1 i32) (param $len i32) (result i32)
+  (local $c0 i32)
+  (local $c1 i32)
+  (loop $loop
+    (if (i32.eqz (local.get $len))
+      (then (return (i32.const 0))))
+    (if
+      (i32.eq
+        (local.tee $c0 (i32.load8_u (local.get $p0)))
+        (local.tee $c1 (i32.load8_u (local.get $p1))))
+      (then
+        (local.set $p0 (i32.add (local.get $p0) (i32.const 1)))
+        (local.set $p1 (i32.add (local.get $p1) (i32.const 1)))
+        (local.set $len (i32.sub (local.get $len) (i32.const 1)))
+        (br $loop))))
   (select (i32.const 1) (i32.const -1)
     (i32.lt_u (local.get $c0) (local.get $c1))))
 
@@ -145,7 +175,7 @@
     (if (i32.lt_u (local.get $ptr) (local.get $str))
       (then (return (i32.const 0))))
     (if (i32.ne (i32.load8_u (local.get $ptr)) (local.get $c))
-      (then 
+      (then
         (local.set $ptr (i32.sub (local.get $ptr) (i32.const 1)))
         (br $loop))))
   (local.get $ptr))
@@ -154,7 +184,7 @@
   (local $d i32)
   (loop $loop
     (if (local.tee $d (i32.load8_u (local.get $str)))
-      (then 
+      (then
         (if (i32.eq (local.get $d) (local.get $c))
           (then (return (local.get $str))))
         (local.set $str (i32.add (local.get $str) (i32.const 1)))
@@ -164,6 +194,16 @@
 (func $print.nl
   (i32.store (i32.const 0x108) (i32.const 0xa))
   (call $printStr (i32.const 0x108)))
+
+(func $print.nl.indent (param $indent i32)
+  (call $print.nl)
+  (i32.store (i32.const 0x108) (i32.const 0x20))
+  (loop $loop
+    (if (i32.gt_s (local.get $indent) (i32.const 0))
+      (then
+        (call $printStr (i32.const 0x108))
+        (local.set $indent (i32.sub (local.get $indent) (i32.const 1)))
+        (br $loop)))))
 
 (func $printI32.nl (param $i i32)
   (call $printI64 (i64.extend_i32_s (local.get $i)))
@@ -176,13 +216,17 @@
   (call $printI64 (local.get $i))
   (call $print.nl))
 
-(func $printI64 (param $i i64) 
+(func $printI64 (param $i i64)
   (call $formatI64._impl (local.get $i) (i32.const 0x200))
   (call $printStr (i32.const 0x200)))
 
 (func $printI32.hex.nl (param $i i32)
   (call $formatI64.hex._impl (i64.extend_i32_s (local.get $i)) (i32.const 0x200))
   (call $printStr.nl (i32.const 0x208)))
+
+(func $printI32.hex (param $i i32)
+  (call $formatI64.hex._impl (i64.extend_i32_s (local.get $i)) (i32.const 0x200))
+  (call $printStr (i32.const 0x208)))
 
 (func $formatI64 (param $i i64) (result i32)
   (local $buf i32)
@@ -304,7 +348,7 @@
             (local.set $workingString (i32.add (local.get $string) (i32.const 1)))
             (block $record
               (if (i32.eq (local.get $string) (local.get $oldWork))
-                (then 
+                (then
                   (if (i32.eqz (local.get $allowEmpty))
                     (then
                       (br $record)))))
@@ -315,7 +359,7 @@
 
   (block $record
     (if (i32.eq (local.get $string) (local.get $workingString))
-      (then 
+      (then
         (if (i32.eqz (local.get $allowEmpty))
           (then
             (br $record)))))
@@ -326,7 +370,7 @@
     (i32.shr_u
       (i32.sub (local.get $stringsPtr) (local.get $strings))
       (i32.const 2)))
-    
+
   (local.get $strings) (local.get $len))
 
 ;; string -> (string, size)
@@ -384,7 +428,7 @@
   (call $assert (i32.eq (i32.load (i32.const 16)) (local.get $len)))
 
   (call $assert_not (call $fd_close (local.get $fd)))
-    
+
   (local.get $buffer) (local.get $len))
 
 (func $parseI32 (param $string i32) (result i32)
@@ -493,3 +537,45 @@
   (i32.load (local.get $cell))
   (i32.load (i32.add (local.get $cell) (i32.const 4)))
   (i32.load (i32.add (local.get $cell) (i32.const 8))))
+
+;; returns new list and index of string in that list
+(func $stringList.addToList (param $list i32) (param $str i32) (result i32 i32)
+  (local $i i32)
+
+  ;; end of list, add to end
+  (if (i32.eqz (local.get $list))
+    (then (return (call $cons (local.get $str) (i32.const 0)) (i32.const 0))))
+
+  ;; found string, return index
+  (if (i32.eqz (call $strcmp (call $car (local.get $list)) (local.get $str)))
+    (then (return (local.get $list) (i32.const 0))))
+
+  ;; not found, recur
+  (call $cons
+    (call $car (local.get $list))
+    (local.set $i
+      (call $stringList.addToList (call $cdr (local.get $list)) (local.get $str))))
+  (i32.add (local.get $i) (i32.const 1)))
+
+(func $list.len (param $list i32) (result i32)
+  (local $i i32)
+  (loop $loop
+    (if (local.get $list)
+      (then
+        (local.set $list (call $cdr (local.get $list)))
+        (local.set $i (i32.add (local.get $i) (i32.const 1)))
+        (br $loop))))
+  (local.get $i))
+
+(func $list.nth (param $list i32) (param $i i32) (result i32)
+  (loop $loop
+    (call $assert (local.get $list))
+    (if (local.get $i)
+      (then
+        (local.set $list (call $cdr (local.get $list)))
+        (local.set $i (i32.sub (local.get $i) (i32.const 1)))
+        (br $loop))))
+  (call $car (local.get $list)))
+
+(func $swap (param $a i32) (param $b i32) (result i32 i32)
+  (local.get $b) (local.get $a))

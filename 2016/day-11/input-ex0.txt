@@ -1,0 +1,4 @@
+The first floor contains a h-compatible microchip and a l-compatible microchip.
+The second floor contains a h generator.
+The third floor contains a l generator.
+The fourth floor contains nothing relevant.

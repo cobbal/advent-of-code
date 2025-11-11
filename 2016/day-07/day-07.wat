@@ -2,12 +2,12 @@
 (data (i32.const 0x07_8020) "day-07/input-ex1.txt")
 (data (i32.const 0x07_8040) "day-07/input-real0.txt")
 
-(elem (i32.const 0x070) $day07.part0 $day07.part1)
+(elem (table $fns) (i32.const 0x070) $day07.part0 $day07.part1)
 
 (func $day07.part0 (param $filename i32) (result i64)
   (local $lines i32)
   (local $line i32)
-  (local $c0 i32) 
+  (local $c0 i32)
   (local $c1 i32)
   (local $c2 i32)
   (local $c3 i32)
@@ -66,7 +66,7 @@
 (func $day07.part1 (param $filename i32) (result i64)
   (local $lines i32)
   (local $line i32)
-  (local $c0 i32) 
+  (local $c0 i32)
   (local $c1 i32)
   (local $c2 i32)
   (local $inBracket i32)

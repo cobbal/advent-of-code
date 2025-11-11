@@ -20,7 +20,7 @@
 (data (i32.const 0x08_0010) "row")
 (data (i32.const 0x08_0020) "column")
 
-(elem (i32.const 0x080) $day08.part0.ex $day08.part1.ex $day08.part0.real $day08.part1.real)
+(elem (table $fns) (i32.const 0x080) $day08.part0.ex $day08.part1.ex $day08.part0.real $day08.part1.real)
 
 (func $day08.part0.common (param $filename i32) (param $h i32) (param $w i32) (result i32)
   (local $grid i32)
@@ -56,7 +56,7 @@
           (if (i32.eqz (call $strcmp (i32.load (local.get $words)) (i32.const 0x08_0000)))
             (then
             ;; rect _x_
-              (local.set $words 
+              (local.set $words
                 (drop (call $splitDestructively (local.get $word) (i32.const 0x78 (; 'x' ;)) (i32.const 0))))
               (local.set $w (call $parseI32 (i32.load (local.get $words))))
               (local.set $h (call $parseI32 (i32.load (i32.add (local.get $words) (i32.const 4)))))
@@ -104,7 +104,7 @@
                       (i32.add (local.get $x) (local.get $delta))
                       (i32.load8_u (i32.add (local.get $scratch) (local.get $x))))
 
-                    (local.set $x (i32.add (local.get $x) (i32.const 1))) 
+                    (local.set $x (i32.add (local.get $x) (i32.const 1)))
                     (br $loopX))))
               (br $continue)))
           (if (i32.eqz (call $strcmp (local.get $word) (i32.const 0x08_0020)))
@@ -130,7 +130,7 @@
                       (local.get $x)
                       (i32.load8_u (i32.add (local.get $scratch) (local.get $y))))
 
-                    (local.set $y (i32.add (local.get $y) (i32.const 1))) 
+                    (local.set $y (i32.add (local.get $y) (i32.const 1)))
                     (br $loopY))))
               (br $continue)))
           ;; unknown command

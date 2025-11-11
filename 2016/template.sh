@@ -12,7 +12,7 @@ cat >"day-${decDay}/day-${decDay}.wat" <<EOF
 (data (i32.const 0x${hexDay}_8000) "day-${decDay}/input-ex0.txt")
 (data (i32.const 0x${hexDay}_8020) "day-${decDay}/input-real0.txt")
 
-(elem (i32.const 0x${hexDay}0) \$day${decDay}.part0 \$day${decDay}.part1)
+(elem (table \$fns) (i32.const 0x${hexDay}0) \$day${decDay}.part0 \$day${decDay}.part1)
 
 (func \$day${decDay}.part0 (param \$filename i32) (result i64)
   (i64.const 0))

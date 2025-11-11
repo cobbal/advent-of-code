@@ -13,7 +13,7 @@
   (local.set $err (i32.add (local.get $err) (call $runDay (i32.const 08))))
   (local.set $err (i32.add (local.get $err) (call $runDay (i32.const 09))))
   (local.set $err (i32.add (local.get $err) (call $runDay (i32.const 10))))
-  ;; (local.set $err (i32.add (local.get $err) (call $runDay (i32.const 11))))
+  (local.set $err (i32.add (local.get $err) (call $runDay (i32.const 11))))
   ;; (local.set $err (i32.add (local.get $err) (call $runDay (i32.const 12))))
   ;; (local.set $err (i32.add (local.get $err) (call $runDay (i32.const 13))))
   ;; (local.set $err (i32.add (local.get $err) (call $runDay (i32.const 14))))
@@ -43,7 +43,7 @@
   (local $mtime i64)
   (i32.store8 (i32.const 0x1a_0008)
     (i32.add (i32.const 0x30) (i32.div_u (local.get $day) (i32.const 10))))
-  (i32.store8 (i32.const 0x1a_0009) 
+  (i32.store8 (i32.const 0x1a_0009)
     (i32.add (i32.const 0x30) (i32.rem_u (local.get $day) (i32.const 10))))
   (call $printStr.nl (i32.const 0x1a_0000))
 

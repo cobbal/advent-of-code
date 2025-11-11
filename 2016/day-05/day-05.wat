@@ -8,7 +8,7 @@
 
 (data (i32.const 0x05_a000) "  \00")
 
-(elem (i32.const 0x050) $day05.part0 $day05.part1 $day05.part0.dispatch $day05.part1.dispatch)
+(elem (table $fns) (i32.const 0x050) $day05.part0 $day05.part1 $day05.part0.dispatch $day05.part1.dispatch)
 
 (func $day05.common (param $filename i32) (param $dispatch i32) (result i32)
   (local $context i32)

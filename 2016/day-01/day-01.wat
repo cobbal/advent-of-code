@@ -4,7 +4,7 @@
 (data (i32.const 0x1_0080) "day-01/input-ex3.txt")
 (data (i32.const 0x1_00a0) "day-01/input-real0.txt")
 
-(elem (i32.const 0x010) $day01.part0 $day01.part1)
+(elem (table $fns) (i32.const 0x010) $day01.part0 $day01.part1)
 
 (func $day01.parse (param $filename i32) (result i32 i32)
   (local $words i32)
@@ -67,8 +67,8 @@
       (then
         (local.set $dir (i32.load (local.get $parse)))
         (local.set $dist (i32.load (i32.add (local.get $parse) (i32.const 4))))
-        (local.set $parse (i32.add (local.get $parse) (i32.const 8))) 
-        (local.set $count (i32.sub (local.get $count) (i32.const 1))) 
+        (local.set $parse (i32.add (local.get $parse) (i32.const 8)))
+        (local.set $count (i32.sub (local.get $count) (i32.const 1)))
         (if (i32.eq (local.get $dir) (i32.const 0))
           (then (local.set $y (i32.sub (local.get $y) (local.get $dist)))))
         (if (i32.eq (local.get $dir) (i32.const 1))
@@ -95,8 +95,8 @@
       (then
         (local.set $dir (i32.load (local.get $parse)))
         (local.set $dist (i32.load (i32.add (local.get $parse) (i32.const 4))))
-        (local.set $parse (i32.add (local.get $parse) (i32.const 8))) 
-        (local.set $count (i32.sub (local.get $count) (i32.const 1))) 
+        (local.set $parse (i32.add (local.get $parse) (i32.const 8)))
+        (local.set $count (i32.sub (local.get $count) (i32.const 1)))
         (if (i32.eq (local.get $dir) (i32.const 0))
           (then (local.set $y (i32.sub (local.get $y) (local.get $dist)))))
         (if (i32.eq (local.get $dir) (i32.const 1))
@@ -154,8 +154,8 @@
         (then
           (local.set $dir (i32.load (local.get $parse)))
           (local.set $dist (i32.load (i32.add (local.get $parse) (i32.const 4))))
-          (local.set $parse (i32.add (local.get $parse) (i32.const 8))) 
-          (local.set $count (i32.sub (local.get $count) (i32.const 1))) 
+          (local.set $parse (i32.add (local.get $parse) (i32.const 8)))
+          (local.set $count (i32.sub (local.get $count) (i32.const 1)))
           (if (i32.eq (local.get $dir) (i32.const 0))
             (then (local.set $dy (i32.const -1)) (local.set $dx (i32.const 0))))
           (if (i32.eq (local.get $dir) (i32.const 1))
