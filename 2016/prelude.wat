@@ -435,6 +435,13 @@
   (local $result i32)
   (local $c i32)
   (local $digit i32)
+  (local $negative i32)
+
+  (if (i32.eq (i32.load8_u (local.get $string)) (i32.const 0x2d (;'-';)))
+    (then
+      (local.set $negative (i32.const 1))
+      (local.set $string (i32.add (local.get $string) (i32.const 1)))))
+
   (loop $loop
     (if (local.tee $c (i32.load8_u (local.get $string)))
       (then
@@ -446,6 +453,9 @@
                 (local.get $digit)))
             (local.set $string (i32.add (local.get $string) (i32.const 1)))
             (br $loop))))))
+
+  (if (local.get $negative)
+    (then (local.set $result (i32.sub (i32.const 0) (local.get $result)))))
   (local.get $result))
 
 (func $i64.abs (param $i i64) (result i64)
