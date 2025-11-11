@@ -199,9 +199,6 @@
   (local $ptr i32)
   (local $chip i32)
 
-  ;; (call $day11.print (local.get $context) (local.get $state))
-  ;; (call $debugger)
-
   (local.set $ptr (i32.add (local.get $state) (i32.const 1)))
   (loop $generatorScan
     (if (i32.load8_u (local.get $ptr))

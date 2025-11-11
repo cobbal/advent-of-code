@@ -58,11 +58,11 @@
 (table $fns 0x1a0 funcref)
 
 ;; Some useful, common function pointers
-(func $_fns.i32.lt_s (param $a i32) (param $b i32) (result i32)
-  (i32.lt_s (local.get $a) (local.get $b)))
+(func $_fns.i32.cmp (param $a i32) (param $b i32) (result i32)
+  (i32.sub (local.get $b) (local.get $a)))
 
-(global $fns.i32.lt_s i32 (i32.const 0))
-(elem (table $fns) (i32.const 0) $_fns.i32.lt_s)
+(global $fns.i32.cmp i32 (i32.const 0))
+(elem (table $fns) (i32.const 0) $_fns.i32.cmp)
 
 (global $fns.strcmp i32 (i32.const 1))
 (elem (table $fns) (i32.const 1) $strcmp)

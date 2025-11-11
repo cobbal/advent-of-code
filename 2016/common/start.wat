@@ -21,7 +21,7 @@
     (then
       (local.set $err (i32.add (local.get $err) (call $start.runDay (i32.const 11))))))
   (local.set $err (i32.add (local.get $err) (call $start.runDay (i32.const 12))))
-  ;; (local.set $err (i32.add (local.get $err) (call $start.runDay (i32.const 13))))
+  (local.set $err (i32.add (local.get $err) (call $start.runDay (i32.const 13))))
   ;; (local.set $err (i32.add (local.get $err) (call $start.runDay (i32.const 14))))
   ;; (local.set $err (i32.add (local.get $err) (call $start.runDay (i32.const 15))))
   ;; (local.set $err (i32.add (local.get $err) (call $start.runDay (i32.const 16))))

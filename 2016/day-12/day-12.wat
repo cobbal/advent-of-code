@@ -30,8 +30,6 @@
   (local $x i32)
   (local $y i32)
 
-  (call $debugger)
-
   (local.set $words (drop (call $splitDestructively (local.get $line) (i32.const 0x20) (i32.const 0))))
   (local.set $x (i32.load (i32.add (local.get $words) (i32.const 4))))
   (block $result

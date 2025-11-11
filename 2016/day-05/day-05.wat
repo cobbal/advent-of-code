@@ -35,7 +35,6 @@
 
   (local.set $onesPtr (call $strrchr (i32.const 0x05_0000) (i32.const 0)))
   (local.set $magCap (i32.const 10))
-  (call $debugger)
   (loop $magnitude
     (i32.store8 (i32.add (local.get $onesPtr) (i32.const 1)) (i32.const 0))
     (loop $iLoop
