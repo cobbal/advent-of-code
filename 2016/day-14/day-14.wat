@@ -31,9 +31,6 @@
   (local.set $keyEnd (i32.add (local.get $keyEnd) (call $u32.digitCount (local.get $i))))
   (local.set $n (i32.sub (local.get $keyEnd) (local.get $keyStart)))
 
-  (if (i32.eq (local.get $i) (i32.const 10))
-    (then (call $debugger)))
-
   (i32.store8 (local.get $keyEnd) (i32.const 0))
   (loop $loop.format
     (local.set $keyEnd (i32.sub (local.get $keyEnd) (i32.const 1)))
