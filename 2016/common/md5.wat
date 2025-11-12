@@ -127,6 +127,7 @@
   (local.set $chunkCount (i32.div_u (i32.sub (local.get $len) (local.get $spilloverLen)) (i32.const 64)))
 
   (local.set $lastChunks (i32.add (local.get $context) (i32.const 0x140)))
+  (memory.fill (local.get $lastChunks) (i32.const 0) (i32.const 128))
   (memory.copy
     (local.get $lastChunks)
     (i32.add (local.get $message) (i32.shl (local.get $chunkCount)  (i32.const 6)))
@@ -203,7 +204,7 @@
             (local.set $word (i32.load (i32.add (local.get $m) (i32.shl (local.get $g) (i32.const 2)))))
             (local.set $f
               (i32.add
-                (local.get $f) 
+                (local.get $f)
                 (i32.add
                   (local.get $a)
                   (i32.add
@@ -229,3 +230,17 @@
         (br $chunkLoop))))
     (local.get $state.a) (local.get $state.b) (local.get $state.c) (local.get $state.d))
 
+;; outPtr should have 33 bytes of space
+(func $md5.hexString.into (param $a i32) (param $b i32) (param $c i32) (param $d i32) (param $outPtr i32)
+  (call $formatI32.le.hex.into (local.get $a) (i32.add (local.get $outPtr) (i32.const 0)))
+  (call $formatI32.le.hex.into (local.get $b) (i32.add (local.get $outPtr) (i32.const 8)))
+  (call $formatI32.le.hex.into (local.get $c) (i32.add (local.get $outPtr) (i32.const 16)))
+  (call $formatI32.le.hex.into (local.get $d) (i32.add (local.get $outPtr) (i32.const 24)))
+  (i32.store8 (i32.add (local.get $outPtr) (i32.const 32)) (i32.const 0)))
+
+(func $md5.hexString (param $a i32) (param $b i32) (param $c i32) (param $d i32) (result i32)
+  (local $result i32)
+  (call $md5.hexString.into
+    (local.get $a) (local.get $b) (local.get $c) (local.get $d)
+    (local.tee $result (call $malloc (i32.const 33))))
+  (local.get $result))

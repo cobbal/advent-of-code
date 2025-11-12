@@ -70,7 +70,7 @@
       (if (i32.eqz (i32.and (local.get $hash) (i32.const 0x00f0_ffff)))
         (then
           (if
-            (call_indirect
+            (call_indirect $fns
               (param i32 i32) (result i32)
               (local.get $i) (local.get $hash)
               (local.get $dispatch))

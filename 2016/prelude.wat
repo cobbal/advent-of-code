@@ -286,9 +286,29 @@
     (local.set $i (i64.div_u (local.get $i) (i64.const 0x10)))
     (i32.store8 (local.get $ptr) (call $asciiHex (local.get $digit)))
     (local.set $ptr (i32.sub (local.get $ptr) (i32.const 1)))
-    (if (i32.wrap_i64 (local.get $i))
-      (then (br $loop)))))
+    (br_if $loop (i64.ne (local.get $i) (i64.const 0)))))
 
+(func $formatI8.hex.into (param $x i32) (param $outPtr i32)
+  (i32.store8
+    (local.get $outPtr)
+    (call $asciiHex (i32.and (i32.const 0xf) (i32.shr_u (local.get $x) (i32.const 4)))))
+  (i32.store8
+    (i32.add (local.get $outPtr) (i32.const 1))
+    (call $asciiHex (i32.and (i32.const 0xf) (local.get $x)))))
+
+(func $formatI32.le.hex.into (param $x i32) (param $outPtr i32)
+  (call $formatI8.hex.into
+    (i32.shr_u (local.get $x) (i32.const 0))
+    (i32.add (local.get $outPtr) (i32.const 0)))
+  (call $formatI8.hex.into
+    (i32.shr_u (local.get $x) (i32.const 8))
+    (i32.add (local.get $outPtr) (i32.const 2)))
+  (call $formatI8.hex.into
+    (i32.shr_u (local.get $x) (i32.const 16))
+    (i32.add (local.get $outPtr) (i32.const 4)))
+  (call $formatI8.hex.into
+    (i32.shr_u (local.get $x) (i32.const 24))
+    (i32.add (local.get $outPtr) (i32.const 6))))
 
 (func $printStr.nl (param $i i32)
   (call $printStr (local.get $i))
@@ -589,3 +609,24 @@
 
 (func $swap (param $a i32) (param $b i32) (result i32 i32)
   (local.get $b) (local.get $a))
+
+(func $u32.digitCount (param $i i32) (result i32)
+  (if (i32.lt_u (local.get $i) (i32.const 10))
+    (then (return (i32.const 1))))
+  (if (i32.lt_u (local.get $i) (i32.const 100))
+    (then (return (i32.const 2))))
+  (if (i32.lt_u (local.get $i) (i32.const 1_000))
+    (then (return (i32.const 3))))
+  (if (i32.lt_u (local.get $i) (i32.const 10_000))
+    (then (return (i32.const 4))))
+  (if (i32.lt_u (local.get $i) (i32.const 100_000))
+    (then (return (i32.const 5))))
+  (if (i32.lt_u (local.get $i) (i32.const 1_000_000))
+    (then (return (i32.const 6))))
+  (if (i32.lt_u (local.get $i) (i32.const 10_000_000))
+    (then (return (i32.const 7))))
+  (if (i32.lt_u (local.get $i) (i32.const 100_000_000))
+    (then (return (i32.const 8))))
+  (if (i32.lt_u (local.get $i) (i32.const 1_000_000_000))
+    (then (return (i32.const 9))))
+  (i32.const 10))
