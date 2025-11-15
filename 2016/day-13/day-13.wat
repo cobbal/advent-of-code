@@ -71,7 +71,7 @@
     (call $day13.expand
       (local.get $key)
       (local.get $positions)
-      (call $set.empty (global.get $fns.i32.cmp)))
+      (call $set.empty (global.get $fns.i32.cmp_s)))
     (local.get $goal)
     (i32.add (local.get $depth) (i32.const 1))))
 
@@ -84,7 +84,7 @@
   (i64.extend_i32_s
     (call $day13.bfs
       (local.get $key)
-      (call $set.singleton (global.get $fns.i32.cmp) (i32.const 0x0001_0001))
+      (call $set.singleton (global.get $fns.i32.cmp_s) (i32.const 0x0001_0001))
       (i32.or
         (i32.shl (local.get $goalY) (i32.const 16))
         (local.get $goalX))
@@ -102,7 +102,7 @@
   (local $set i32)
 
   (local.set $key (call $parseI32 (drop (call $readFile (local.get $filename)))))
-  (local.set $set (call $set.singleton (global.get $fns.i32.cmp) (i32.const 0x0001_0001)))
+  (local.set $set (call $set.singleton (global.get $fns.i32.cmp_s) (i32.const 0x0001_0001)))
 
   (loop $loop
     (if (i32.lt_s (local.get $i) (i32.const 50))

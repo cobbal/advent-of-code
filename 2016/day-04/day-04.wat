@@ -63,7 +63,7 @@
               (local.set $line (i32.add (local.get $line) (i32.const 1)))
               (br $charLoop))))
 
-        (call $sort.i32_s
+        (call $sort.i32.lt_u
           (local.tee
             $readoutPtr
             (i32.add (local.get $histogram) (i32.const 0x184 (; 'a' * 4 ;))))

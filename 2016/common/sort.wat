@@ -1,7 +1,13 @@
+(func $sort.i32.lt_s (param $elements i32) (param $len i32)
+  (return_call $sort.i32 (global.get $fns.i32.cmp_s) (local.get $elements) (local.get $len)))
+
+(func $sort.i32.lt_u (param $elements i32) (param $len i32)
+  (return_call $sort.i32 (global.get $fns.i32.cmp_u) (local.get $elements) (local.get $len)))
+
 ;; based on https://en.wikipedia.org/w/index.php?title=Heapsort&oldid=1318342787#Standard_implementation
 ;; procedure heapsort(a, count) is
 ;;     input: an unordered array a of length count
-(func $sort.i32_s (param $elements i32) (param $len i32)
+(func $sort.i32 (param $cmp i32) (param $elements i32) (param $len i32)
   (local $start i32)
   (local $end i32)
   (local $tmp0 i32)
@@ -37,7 +43,7 @@
                   (i32.add (local.get $elements)
                     (i32.shl (local.get $end) (i32.const 2))))))
             (i32.store (local.get $p0) (local.get $tmp0))))
-   
+
         ;; (The following is siftDown(a, start, end))
         ;; root ← start
         (local.set $root (local.get $start))
@@ -53,31 +59,37 @@
             (if (i32.lt_u (i32.add (local.get $child) (i32.const 1)) (local.get $end))
               (then
                 (if
-                  (i32.lt_u
-                    (i32.load
-                      (i32.add
-                        (local.get $elements) (i32.shl (local.get $child) (i32.const 2))))
-                    (i32.load
-                      (i32.add
-                        (local.get $elements)
-                        (i32.shl (i32.add (local.get $child) (i32.const 1)) (i32.const 2)))))
-                    (then
+                  (i32.lt_s
+                    (call_indirect $fns (param i32 i32) (result i32)
+                      (i32.load
+                        (i32.add
+                          (local.get $elements) (i32.shl (local.get $child) (i32.const 2))))
+                      (i32.load
+                        (i32.add
+                          (local.get $elements)
+                          (i32.shl (i32.add (local.get $child) (i32.const 1)) (i32.const 2))))
+                      (local.get $cmp))
+                    (i32.const 0))
+                  (then
                     ;; child ← child + 1
-                  (local.set $child (i32.add (local.get $child) (i32.const 1)))))))
+                    (local.set $child (i32.add (local.get $child) (i32.const 1)))))))
 
             ;; if a[root] < a[child] then
             (if
-              (i32.lt_u
-                (local.tee $tmp0
-                  (i32.load
-                    (local.tee $p0
-                      (i32.add
-                        (local.get $elements) (i32.shl (local.get $root) (i32.const 2))))))
-                (local.tee $tmp1
-                  (i32.load
-                    (local.tee $p1
-                      (i32.add
-                        (local.get $elements) (i32.shl (local.get $child) (i32.const 2)))))))
+              (i32.lt_s
+                (call_indirect $fns (param i32 i32) (result i32)
+                  (local.tee $tmp0
+                    (i32.load
+                      (local.tee $p0
+                        (i32.add
+                          (local.get $elements) (i32.shl (local.get $root) (i32.const 2))))))
+                  (local.tee $tmp1
+                    (i32.load
+                      (local.tee $p1
+                        (i32.add
+                          (local.get $elements) (i32.shl (local.get $child) (i32.const 2))))))
+                  (local.get $cmp))
+                (i32.const 0))
               (then
                 ;; swap(a[root], a[child])
                 (i32.store (local.get $p0) (local.get $tmp1))

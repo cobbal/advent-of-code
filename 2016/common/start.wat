@@ -25,7 +25,7 @@
   (i32.add (call $start.runDay (i32.const 17)))
   (i32.add (call $start.runDay (i32.const 18)))
   (i32.add (call $start.slowDay (i32.const 19)))
-  ;; (i32.add (call $start.runDay (i32.const 20)))
+  (i32.add (call $start.runDay (i32.const 20)))
   ;; (i32.add (call $start.runDay (i32.const 21)))
   ;; (i32.add (call $start.runDay (i32.const 22)))
   ;; (i32.add (call $start.runDay (i32.const 23)))

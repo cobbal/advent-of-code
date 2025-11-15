@@ -58,14 +58,21 @@
 (table $fns 0x1a0 funcref)
 
 ;; Some useful, common function pointers
-(func $_fns.i32.cmp (param $a i32) (param $b i32) (result i32)
+(func $_fns.i32.cmp_s (param $a i32) (param $b i32) (result i32)
   (i32.sub (local.get $b) (local.get $a)))
 
-(global $fns.i32.cmp i32 (i32.const 0))
-(elem (table $fns) (i32.const 0) $_fns.i32.cmp)
+(func $_fns.i32.cmp_u (param $a i32) (param $b i32) (result i32)
+  (if (i32.lt_u (local.get $a) (local.get $b))
+    (then (return (i32.const -1))))
+  (i32.gt_u (local.get $a) (local.get $b)))
 
-(global $fns.strcmp i32 (i32.const 1))
-(elem (table $fns) (i32.const 1) $strcmp)
+(global $fns.i32.cmp_s i32 (i32.const 0))
+(global $fns.i32.cmp_u i32 (i32.const 1))
+(global $fns.strcmp i32 (i32.const 2))
+(elem (table $fns) (i32.const 0)
+  $_fns.i32.cmp_s
+  $_fns.i32.cmp_u
+  $strcmp)
 
 ;; must be a power of 2
 (global $malloc.align i32 (i32.const 8))
