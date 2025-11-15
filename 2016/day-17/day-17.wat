@@ -158,8 +158,6 @@
   (if (i32.eq (i32.add (local.get $x) (local.get $y)) (i32.const 6))
     (then (return (local.get $len))))
 
-  (call $debugger)
-
   (local.set $doors
     (call $day17.doors (local.get $context) (global.get $day17.buf) (local.get $len)))
 
