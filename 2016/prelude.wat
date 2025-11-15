@@ -212,7 +212,8 @@
   (local.get $result))
 
 (func $printStr.small (param $inlineStr i64)
-  (i64.store (i32.const 0x108) (i64.and (local.get $inlineStr) (i64.const 0x00ff_ffff_ffff_ffff)))
+  (i32.store (i32.const 0x110) (i32.const 0))
+  (i64.store (i32.const 0x108) (local.get $inlineStr))
   (call $printStr (i32.const 0x108)))
 
 (func $print.nl
@@ -241,8 +242,15 @@
   (call $print.nl))
 
 (func $printI64 (param $i i64)
-  (call $formatI64._impl (local.get $i) (i32.const 0x200))
+  (drop (call $formatI64._impl (local.get $i) (i32.const 0x200)))
   (call $printStr (i32.const 0x200)))
+
+(func $printI64.unpadded (param $i i64)
+  (return_call $printStr
+    (call $formatI64._impl (local.get $i) (i32.const 0x200))))
+
+(func $printI32.unpadded (param $i i32)
+  (return_call $printI64.unpadded (i64.extend_i32_s (local.get $i))))
 
 (func $printI32.hex.nl (param $i i32)
   (call $formatI64.hex._impl (i64.extend_i32_s (local.get $i)) (i32.const 0x200))
@@ -254,8 +262,9 @@
 
 (func $formatI64 (param $i i64) (result i32)
   (local $buf i32)
-  (call $formatI64._impl (local.get $i)
-    (local.tee $buf (call $malloc (i32.const 21))))
+  (drop
+    (call $formatI64._impl (local.get $i)
+      (local.tee $buf (call $malloc (i32.const 21)))))
   (local.get $buf))
 
 (func $formatI64.hex (param $i i64) (result i32)
@@ -274,7 +283,7 @@
   (return (i32.add (i32.const 0x57) (local.get $i))))
 
 ;; $buf should have 21 bytes of space
-(func $formatI64._impl (param $i i64) (param $buf i32)
+(func $formatI64._impl (param $i i64) (param $buf i32) (result i32)
   (local $neg i32)
   (local $pos i32)
   (local $ptr i32)
@@ -294,7 +303,10 @@
     (if (i32.wrap_i64 (local.get $i))
       (then (br $loop))))
   (if (local.get $neg)
-    (then (i32.store8 (local.get $ptr) (i32.const 0x2d (;'-';))))))
+    (then
+      (i32.store8 (local.get $ptr) (i32.const 0x2d (;'-';)))
+      (return (local.get $ptr))))
+  (i32.add (local.get $ptr) (i32.const 1)))
 
 ;; $buf should have 17 bytes of space
 (func $formatI64.hex._impl (param $i i64) (param $buf i32)
@@ -571,8 +583,12 @@
 
 (func $cdr (param $cell i32) (result i32)
   (i32.load (i32.add (local.get $cell) (i32.const 4))))
+
 (func $cgr (param $cell i32) (result i32)
   (i32.load (i32.add (local.get $cell) (i32.const 8))))
+
+(func $cjr (param $cell i32) (result i32)
+  (i32.load (i32.add (local.get $cell) (i32.const 12))))
 
 (func $setCar (param $cell i32) (param $newCar i32)
   (i32.store (local.get $cell) (local.get $newCar)))
@@ -583,6 +599,9 @@
 (func $setCgr (param $cell i32) (param $newCgr i32)
   (i32.store (i32.add (local.get $cell) (i32.const 8)) (local.get $newCgr)))
 
+(func $setCjr (param $cell i32) (param $newCjr i32)
+  (i32.store (i32.add (local.get $cell) (i32.const 12)) (local.get $newCjr)))
+
 (func $uncons (param $cell i32) (result i32 i32)
   (i32.load (local.get $cell))
   (i32.load (i32.add (local.get $cell) (i32.const 4))))
@@ -591,6 +610,12 @@
   (i32.load (local.get $cell))
   (i32.load (i32.add (local.get $cell) (i32.const 4)))
   (i32.load (i32.add (local.get $cell) (i32.const 8))))
+
+(func $uncons.4 (param $cell i32) (result i32 i32 i32 i32)
+  (i32.load (local.get $cell))
+  (i32.load (i32.add (local.get $cell) (i32.const 4)))
+  (i32.load (i32.add (local.get $cell) (i32.const 8)))
+  (i32.load (i32.add (local.get $cell) (i32.const 12))))
 
 ;; returns new list and index of string in that list
 (func $stringList.addToList (param $list i32) (param $str i32) (result i32 i32)

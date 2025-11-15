@@ -77,7 +77,6 @@
   (i64.extend_i32_s (local.get $safe)))
 
 (func $day18.part0.ex (param $filename i32) (result i64)
-  (call $debugger)
   (call $day18.common (local.get $filename) (i32.const 10)))
 
 (func $day18.part0.real (param $filename i32) (result i64)
