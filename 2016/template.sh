@@ -5,7 +5,7 @@ iDay=$(( $1 ))
 decDay=$(printf "%02d" "$iDay")
 hexDay=$(printf "%02x" "$iDay")
 
-echo "temmplating day-$decDay"
+echo "templating day-$decDay"
 mkdir -p "day-$decDay"
 
 cat >"day-${decDay}/day-${decDay}.wat" <<EOF

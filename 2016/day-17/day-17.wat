@@ -10,7 +10,7 @@
 (data (i32.const 0x11_1080) "DRURDRUDDLLDLUURRDULRLDUUDDDRR")
 (data (i32.const 0x11_10a0) "                 830")
 (data (i32.const 0x11_10c0) "                    RLDRUDRDDR")
-(data (i32.const 0x11_10e0) "                    ")
+(data (i32.const 0x11_10e0) "                 498")
 (global $day17.buf i32 (i32.const 0x11_9000))
 
 (elem (table $fns) (i32.const 0x110) $day17.part0 $day17.part1)
