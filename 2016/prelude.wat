@@ -191,6 +191,30 @@
         (br $loop))))
   (i32.const 0))
 
+(func $rPad (param $ch i32) (param $str i32) (param $n i32) (result i32)
+  (if (i32.ge_s (call $strlen (local.get $str)) (local.get $n))
+    (then (return (local.get $str))))
+  (return_call $rPadAndChop (local.get $ch) (local.get $str) (local.get $n)))
+
+(func $rPadAndChop (param $ch i32) (param $str i32) (param $n i32) (result i32)
+  (local $len i32)
+  (local $result i32)
+
+  (local.set $len (call $i32.min (call $strlen (local.get $str)) (local.get $n)))
+  (local.set $result (call $malloc (i32.add (local.get $n) (i32.const 1))))
+  (memory.fill (local.get $result) (local.get $ch) (local.get $n))
+  (memory.copy
+    (i32.add
+      (local.get $result)
+      (i32.sub (local.get $n) (local.get $len)))
+    (local.get $str)
+    (call $i32.min (local.get $n) (local.get $len)))
+  (local.get $result))
+
+(func $printStr.small (param $inlineStr i64)
+  (i64.store (i32.const 0x108) (i64.and (local.get $inlineStr) (i64.const 0x00ff_ffff_ffff_ffff)))
+  (call $printStr (i32.const 0x108)))
+
 (func $print.nl
   (i32.store (i32.const 0x108) (i32.const 0xa))
   (call $printStr (i32.const 0x108)))

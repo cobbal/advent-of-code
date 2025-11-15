@@ -11,4 +11,4 @@ build-wat:
     chmod -w build/2016.wat
 
 build-wasm: build-wat
-    ./wabt/bin/wat2wasm build/2016.wat --enable-all --debug-names -o build/2016.wasm
+    wat2wasm build/2016.wat --enable-all --debug-names -o build/2016.wasm
