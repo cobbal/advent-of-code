@@ -663,8 +663,40 @@
         (br $loop))))
   (call $car (local.get $list)))
 
-(func $swap (param $a i32) (param $b i32) (result i32 i32)
-  (local.get $b) (local.get $a))
+(func $i8.swap (param $a i32) (param $b i32)
+  (local $tmp i32)
+  (local.set $tmp (i32.load8_u (local.get $a)))
+  (i32.store8 (local.get $a) (i32.load8_u (local.get $b)))
+  (i32.store8 (local.get $b) (local.get $tmp)))
+
+(func $i32.swap (param $a i32) (param $b i32)
+  (local $tmp i32)
+  (local.set $tmp (i32.load (local.get $a)))
+  (i32.store (local.get $a) (i32.load (local.get $b)))
+  (i32.store (local.get $b) (local.get $tmp)))
+
+;; Adapted from https://en.cppreference.com/w/cpp/algorithm/rotate.html
+(func $memrotate.left (param $first i32) (param $middle i32) (param $last i32)
+  (local $read i32)
+  (local $write i32)
+  (local $nextRead i32)
+
+  (if (i32.eq (local.get $first) (local.get $middle))
+    (then (return)))
+  (if (i32.eq (local.get $middle) (local.get $last))
+    (then (return)))
+
+  (local.set $write (local.get $first))
+  (local.set $nextRead (local.get $first))
+  (local.set $read (local.get $middle))
+  (loop $loop
+    (if (i32.eq (local.get $write) (local.get $nextRead))
+      (then (local.set $nextRead (local.get $read))))
+    (call $i8.swap (local.get $write) (local.get $read))
+    (local.set $write (i32.add (local.get $write) (i32.const 1)))
+    (local.set $read (i32.add (local.get $read) (i32.const 1)))
+    (br_if $loop (i32.ne (local.get $read) (local.get $last))))
+  (return_call $memrotate.left (local.get $write) (local.get $nextRead) (local.get $last)))
 
 (func $u32.digitCount (param $i i32) (result i32)
   (if (i32.lt_u (local.get $i) (i32.const 10))
