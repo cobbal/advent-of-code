@@ -71,7 +71,7 @@
 
 (func $grid.set (param $grid i32) (param $y i32) (param $x i32) (param $newValue i32)
   (call $grid.check (local.get $grid) (local.get $y) (local.get $x))
-  (i32.store8 
+  (i32.store8
     (call $grid._ptr (local.get $grid) (local.get $y) (local.get $x))
     (local.get $newValue)))
 
@@ -144,6 +144,39 @@
         (local.set $y (i32.add (local.get $y) (i32.const 1)))
         (br $loopY))))
   (local.get $result))
+
+(func $grid.find (param $grid i32) (param $target i32) (result i32)
+  (local $width i32)
+  (local $height i32)
+  (local $y i32)
+  (local $x i32)
+  (local.set $height (i32.load (local.get $grid)))
+  (local.set $width (i32.load (i32.add (local.get $grid) (i32.const 4))))
+  (loop $loopY
+    (if (i32.lt_u (local.get $y) (local.get $height))
+      (then
+        (local.set $x (i32.const 0))
+        (loop $loopX
+          (if (i32.lt_u (local.get $x) (local.get $width))
+            (then
+              (if (i32.eq (i32.load8_u (call $grid._ptr (local.get $grid) (local.get $y) (local.get $x))) (local.get $target))
+                (then (return (i32.add (i32.mul (local.get $y) (local.get $width)) (local.get $x)))))
+              (local.set $x (i32.add (local.get $x) (i32.const 1)))
+              (br $loopX))))
+        (local.set $y (i32.add (local.get $y) (i32.const 1)))
+        (br $loopY))))
+  (i32.const -1))
+
+(func $grid.index.pack (param $grid i32) (param $y i32) (param $x i32) (result i32)
+  (local $width i32)
+  (local.set $width (i32.load (i32.add (local.get $grid) (i32.const 4))))
+  (i32.add (i32.mul (local.get $y) (local.get $width)) (local.get $x)))
+
+(func $grid.index.unpack (param $grid i32) (param $yx i32) (result i32 i32)
+  (local $width i32)
+  (local.set $width (i32.load (i32.add (local.get $grid) (i32.const 4))))
+  (i32.div_u (local.get $yx) (local.get $width))
+  (i32.rem_u (local.get $yx) (local.get $width)))
 
 (func $grid.format (param $grid i32) (result i32)
   (local $width i32)

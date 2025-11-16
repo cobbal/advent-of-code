@@ -391,14 +391,14 @@
   (local $len i32)
   (local $c i32)
 
-  (local.set $strings
-    (call $malloc
-      (i32.mul (i32.const 4)
-        (i32.add (i32.const 1)
-          (local.tee $len
-            (i32.add (i32.const 1)
-              (call $countChar (local.get $string) (local.get $sep))))))))
-  (local.set $stringsPtr (local.get $strings))
+  (local.set $stringsPtr
+    (local.tee $strings
+      (call $malloc
+        (i32.mul (i32.const 4)
+          (i32.add (i32.const 1)
+            (local.tee $len
+              (i32.add (i32.const 1)
+                (call $countChar (local.get $string) (local.get $sep)))))))))
   (local.set $workingString (local.get $string))
 
   (loop $loop
