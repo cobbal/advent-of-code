@@ -32,7 +32,7 @@
   (i32.add (call $start.runDay (i32.const 20) (global.get $start.fast)))
   (i32.add (call $start.runDay (i32.const 21) (global.get $start.fast)))
   (i32.add (call $start.runDay (i32.const 22) (global.get $start.fast)))
-  ;; (i32.add (call $start.runDay (i32.const 23) (global.get $start.fast)))
+  (i32.add (call $start.runDay (i32.const 23) (global.get $start.fast)))
   ;; (i32.add (call $start.runDay (i32.const 24) (global.get $start.fast)))
   ;; (i32.add (call $start.runDay (i32.const 25) (global.get $start.fast)))
   (local.set $err)
