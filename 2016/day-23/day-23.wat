@@ -6,6 +6,8 @@
 (data (i32.const 0x17_0020) "dec")
 (data (i32.const 0x17_0030) "jnz")
 (data (i32.const 0x17_0040) "tgl")
+(data (i32.const 0x17_0050) "fusedAdd")
+(data (i32.const 0x17_0060) "fusedMul")
 
 ;; 0 cpy -> 3 jnz
 ;; 1 inc -> 2 dec
@@ -122,25 +124,120 @@
     (local.set $op (i32.load (i32.add (local.get $program) (i32.shl (local.get $i) (i32.const 2)))))
     (local.set $x (i32.shr_s (i32.shl (local.get $op) (i32.const 16)) (i32.const 24)))
     (local.set $y (i32.shr_s (i32.shl (local.get $op) (i32.const 8)) (i32.const 24)))
-    (local.set $op (i32.and (local.get $op) (i32.const 0xff)))
 
     (if (i32.eq (local.get $i) (local.get $pc))
       (then (call $printStr.small (i64.const 0x203e2d)))
       (else (call $printStr.small (i64.const 0x202020))))
     (call $printI32.unpadded (local.get $i))
     (call $printStr.small (i64.const 0x20203a))
-    (call $printStr (i32.add (i32.const 0x17_0000) (i32.shl (local.get $op) (i32.const 4))))
-    (call $day23.printOperand (local.get $x))
-    (if (i32.or
-          (i32.eq (local.get $op) (i32.const 0))
-          (i32.eq (local.get $op) (i32.const 3)))
-      (then (call $day23.printOperand (local.get $y))))
-    (call $print.nl)
 
+    (if (i32.eqz (local.get $op))
+      (then (call $printStr.small (i64.const 0x706f6e))) ;; nop
+      (else
+        (local.set $op (i32.and (local.get $op) (i32.const 0xff)))
+        (call $printStr (i32.add (i32.const 0x17_0000) (i32.shl (local.get $op) (i32.const 4))))
+        (call $day23.printOperand (local.get $x))
+        (if (i32.or
+              (i32.eq (local.get $op) (i32.const 0))
+              (i32.or
+                (i32.eq (local.get $op) (i32.const 3))
+                (i32.eq (local.get $op) (i32.const 5))))
+          (then (call $day23.printOperand (local.get $y))))))
+    (call $print.nl)
     (local.set $i (i32.add (local.get $i) (i32.const 1)))
     (br $loop)))
 
-(func $day23.eval (param $program i32) (param $n i32) (param $pc i32) (param $registers i32)
+(func $day23.staticAnalysis (param $program i32) (param $n i32) (result i32)
+  (local $newProg i32)
+  (local $i i32)
+  (local $j i32)
+  (local $opPtr i32)
+  (local $op i32)
+  (local $x i32)
+  (local $y i32)
+  (local $decReg i32)
+  (local $incReg i32)
+
+  (local.set $newProg (call $malloc (i32.shl (local.get $n) (i32.const 2))))
+
+  (loop $loop.i
+    (block $write.i
+      (local.set $decReg (i32.const 0))
+      (local.set $incReg (i32.const 0))
+
+      (br_if $write.i (i32.ge_s (i32.add (local.get $i) (i32.const 2)) (local.get $n)))
+
+      ;; (call $day23.dis (local.get $program) (local.get $n) (local.get $i) (i32.const 0) (i32.const 0))
+      ;; (call $debugger)
+      (local.set $j (i32.add (local.get $i) (i32.const 1)))
+      (loop $loop.j
+        (local.set $opPtr (i32.add (local.get $program) (i32.shl (local.get $j) (i32.const 2))))
+        (local.set $op (i32.load8_u (local.get $opPtr)))
+        (local.set $x (i32.load8_s (i32.add (local.get $opPtr) (i32.const 1))))
+        (if (i32.eq (local.get $op) (i32.const 1)) ;; inc
+          (then (local.set $incReg (local.get $x))))
+        (if (i32.eq (local.get $op) (i32.const 2)) ;; dec
+          (then (local.set $decReg (local.get $x))))
+        (local.set $j (i32.sub (local.get $j) (i32.const 1)))
+        (br_if $loop.j (i32.le_s (local.get $i) (local.get $j))))
+      (br_if $write.i (i32.eqz (local.get $decReg)))
+      (br_if $write.i (i32.eqz (local.get $incReg)))
+
+      (local.set $opPtr
+        (i32.add
+          (local.get $program)
+          (i32.shl (i32.add (local.get $i) (i32.const 2)) (i32.const 2))))
+      (local.set $op (i32.load8_u (local.get $opPtr)))
+      (local.set $x (i32.load8_s (i32.add (local.get $opPtr) (i32.const 1))))
+      (local.set $y (i32.load8_s (i32.add (local.get $opPtr) (i32.const 2))))
+      (br_if $write.i (i32.ne (local.get $op) (i32.const 3))) ;; jnz
+      (br_if $write.i (i32.ne (local.get $x) (local.get $decReg)))
+      (br_if $write.i (i32.ne (local.get $y) (i32.const -2)))
+
+      ;; TODO: also needs to consume the copy before
+      ;; Found addition, check for multiply
+      ;; (block $fusedAdd
+      ;;   (br_if $fusedAdd (i32.ge_s (i32.add (local.get $i) (i32.const 4)) (local.get $n)))
+      ;;   (local.set $opPtr
+      ;;     (i32.add
+      ;;       (local.get $program)
+      ;;       (i32.shl (i32.add (local.get $i) (i32.const 3)) (i32.const 2))))
+      ;;   (local.set $op (i32.load8_u (local.get $opPtr)))
+      ;;   (local.set $x (i32.load8_s (i32.add (local.get $opPtr) (i32.const 1))))
+      ;;   (br_if $fusedAdd (i32.ne (local.get $op) (i32.const 2))) ;; dec
+      ;;   (br_if $fusedAdd (i32.eq (local.get $x) (local.get $incReg)))
+      ;;   (br_if $fusedAdd (i32.eq (local.get $x) (local.get $decReg)))
+      ;;   (local.set $opPtr
+      ;;     (i32.add
+      ;;       (local.get $program)
+      ;;       (i32.shl (i32.add (local.get $i) (i32.const 3)) (i32.const 2))))
+      ;;   (local.set $op (i32.load8_u (local.get $opPtr)))
+      ;;   (br_if $fusedAdd (i32.ne (local.get $x) (i32.load8_s (i32.add (local.get $opPtr) (i32.const 1)))))
+      ;;   (br_if $fusedAdd (i32.ne (i32.const -5) (i32.load8_s (i32.add (local.get $opPtr) (i32.const 2)))))
+      ;;   ;; it's a valid multiply
+      ;;   (call $printStr (i32.const 0x17_0060))
+      ;;   (call $printStr.small (i64.const 20))
+      ;;   (call $printStr.nl))
+
+      (i32.store
+        (i32.add (local.get $newProg) (i32.shl (local.get $i) (i32.const 2)))
+        (i32.or
+          (i32.const 5)
+          (i32.or
+            (i32.shl (local.get $decReg) (i32.const 8))
+            (i32.shl (local.get $incReg) (i32.const 16)))))
+      (local.set $i (i32.add (local.get $i) (i32.const 1)))
+      (br $loop.i))
+    (memory.copy
+      (i32.add (local.get $newProg) (i32.shl (local.get $i) (i32.const 2)))
+      (i32.add (local.get $program) (i32.shl (local.get $i) (i32.const 2)))
+      (i32.const 4))
+    (local.set $i (i32.add (local.get $i) (i32.const 1)))
+    (br_if $loop.i (i32.lt_s (local.get $i) (local.get $n))))
+
+  (local.get $newProg))
+
+(func $day23.eval (param $program i32) (param $deOpt i32) (param $n i32) (param $pc i32) (param $registers i32)
   (local $op i32)
   (local $x i32)
   (local $y i32)
@@ -162,51 +259,64 @@
 
   (block $next
     (block $badOp
-      (block $tgl
-        (block $jnz
-          (block $dec
-            (block $inc
-              (block $cpy
-                (br_table $cpy $inc $dec $jnz $tgl $badOp (local.get $op)))
-              ;; cpy
-              (i32.store (local.get $y) (i32.load (local.get $x)))
+      (block $fusedAdd
+        (block $tgl
+          (block $jnz
+            (block $dec
+              (block $inc
+                (block $cpy
+                  ;; (call $day23.dis (local.get $program) (local.get $n) (local.get $pc) (local.get $registers) (i32.const 0))
+                  ;; (call $debugger)
+                  (br_table $cpy $inc $dec $jnz $tgl $fusedAdd $badOp (local.get $op)))
+                ;; cpy
+                (i32.store (local.get $y) (i32.load (local.get $x)))
+                (br $next))
+              ;; inc
+              (i32.store
+                (local.get $x)
+                (i32.add (i32.load (local.get $x)) (i32.const 1)))
               (br $next))
-            ;; inc
+            ;; dec
             (i32.store
               (local.get $x)
-              (i32.add (i32.load (local.get $x)) (i32.const 1)))
+              (i32.sub (i32.load (local.get $x)) (i32.const 1)))
             (br $next))
-          ;; dec
-          (i32.store
-            (local.get $x)
-            (i32.sub (i32.load (local.get $x)) (i32.const 1)))
+          ;; jnz
+          (if (i32.load (local.get $x))
+            (then (local.set $pc (i32.sub (i32.add (local.get $pc) (i32.load (local.get $y))) (i32.const 1)))))
           (br $next))
-        ;; jnz
-        (if (i32.load (local.get $x))
-          (then (local.set $pc (i32.sub (i32.add (local.get $pc) (i32.load (local.get $y))) (i32.const 1)))))
+        ;; tgl
+        (local.set $tmp (i32.add (local.get $pc) (i32.load (local.get $x))))
+        (br_if $next (i32.ge_u (local.get $tmp) (local.get $n)))
+        (i32.store8
+          (local.tee $opPtr (i32.add (local.get $deOpt) (i32.shl (local.get $tmp) (i32.const 2))))
+          (i32.load8_u
+            (i32.add
+              (global.get $day23.tglTable)
+              (i32.load8_u (local.get $opPtr)))))
+        (local.set $program (call $day23.staticAnalysis (local.get $deOpt) (local.get $n)))
+        ;; (call $day23.dis (local.get $program) (local.get $n) (i32.const 0) (local.get $registers) (i32.const 1))
         (br $next))
-      ;; tgl
-      (local.set $tmp (i32.add (local.get $pc) (i32.load (local.get $x))))
-      (br_if $next (i32.ge_u (local.get $tmp) (local.get $n)))
-      (i32.store8
-        (local.tee $opPtr (i32.add (local.get $program) (i32.shl (local.get $tmp) (i32.const 2))))
-        (i32.load8_u
-          (i32.add
-            (global.get $day23.tglTable)
-            (i32.load8_u (local.get $opPtr)))))
+      ;; fusedAdd
+      (i32.store
+        (local.get $y)
+        (i32.add (i32.load (local.get $x)) (i32.load (local.get $y))))
+      (i32.store (local.get $x) (i32.const 0))
+      (local.set $pc (i32.add (local.get $pc) (i32.const 2)))
       (br $next))
     ;; badOp
     unreachable)
   ;; next
-  (return_call $day23.eval (local.get $program) (local.get $n)
+  (return_call $day23.eval (local.get $program) (local.get $deOpt) (local.get $n)
     (i32.add (local.get $pc) (i32.const 1))
     (local.get $registers)))
 
-(func $day23.part0 (param $filename i32) (result i64)
+(func $day23.common (param $filename i32) (param $a0 i32) (result i64)
   (local $n i32)
   (local $lines i32)
   (local $line i32)
   (local $program i32)
+  (local $optProgram i32)
   (local $ptr i32)
   (local $registers i32)
 
@@ -221,7 +331,7 @@
     (local.tee $program
       (call $malloc (i32.mul (local.get $n) (i32.const 4)))))
   (local.set $registers (call $malloc (i32.const 16)))
-  (i32.store (local.get $registers) (i32.const 7))
+  (i32.store (local.get $registers) (local.get $a0))
 
   (loop $lineLoop
     (if (local.tee $line (i32.load (local.get $lines)))
@@ -231,13 +341,17 @@
         (local.set $lines (i32.add (local.get $lines) (i32.const 4)))
         (br $lineLoop))))
 
-  ;; (call $day23.dis (local.get $program) (local.get $n) (i32.const 0) (local.get $registers) (i32.const 1))
+  (local.set $optProgram
+    (call $day23.staticAnalysis (local.get $program) (local.get $n)))
 
-  (call $day23.eval (local.get $program) (local.get $n) (i32.const 0) (local.get $registers))
+  (call $day23.eval (local.get $optProgram) (local.get $program) (local.get $n) (i32.const 0) (local.get $registers))
   (i64.extend_i32_s (i32.load (local.get $registers))))
 
+(func $day23.part0 (param $filename i32) (result i64)
+  (call $day23.common (local.get $filename) (i32.const 7)))
+
 (func $day23.part1 (param $filename i32) (result i64)
-  (i64.const 0))
+  (call $day23.common (local.get $filename) (i32.const 12)))
 
 (elem (table $mains) (i32.const 23) $day23.main)
 (func $day23.main (result i32)
@@ -246,10 +360,10 @@
     (call $checkInputI64
       (i32.const 0x17_8000)
       (i32.const 0x170) (i64.const 3)
-      (i32.const 0x171) (i64.const -1)))
+      (i32.const 0x171) (i64.const 3)))
   (i32.add
     (call $checkInputI64
       (i32.const 0x17_8020)
       (i32.const 0x170) (i64.const 10440)
-      (i32.const 0x171) (i64.const -1)))
+      (i32.const 0x171) (i64.const 479007000)))
   nop)
