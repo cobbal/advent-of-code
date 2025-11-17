@@ -1,6 +1,6 @@
 (table $mains 26 funcref)
 
-(global $start.maxSlowness i32 (i32.const 0))
+(global $start.maxSlowness i32 (i32.const 2))
 ;; Names chosen for visual length
 (global $start.fast i32 (i32.const 0))
 (global $start.bitSlow i32 (i32.const 1))
@@ -34,7 +34,7 @@
   (i32.add (call $start.runDay (i32.const 22) (global.get $start.fast)))
   (i32.add (call $start.runDay (i32.const 23) (global.get $start.reallySlow)))
   (i32.add (call $start.runDay (i32.const 24) (global.get $start.fast)))
-  ;; (i32.add (call $start.runDay (i32.const 25) (global.get $start.fast)))
+  (i32.add (call $start.runDay (i32.const 25) (global.get $start.fast)))
   (local.set $err)
 
   (call $printI32.nl (local.get $err))
