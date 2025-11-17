@@ -663,6 +663,24 @@
         (br $loop))))
   (call $car (local.get $list)))
 
+(func $list.toArray (param $list i32) (result i32)
+  (local $arr i32)
+  (local $ptr i32)
+  (local.set $arr
+    (local.tee $ptr
+      (call $malloc
+        (i32.shl
+          (i32.add (call $list.len (local.get $list)) (i32.const 1))
+          (i32.const 2)))))
+  (loop $loop
+    (if (local.get $list)
+      (then
+        (i32.store (local.get $ptr) (i32.load (local.get $list)))
+        (local.set $ptr (i32.add (local.get $ptr) (i32.const 4)))
+        (local.set $list (call $cdr (local.get $list)))
+        (br $loop))))
+  (local.get $arr))
+
 (func $i8.swap (param $a i32) (param $b i32)
   (local $tmp i32)
   (local.set $tmp (i32.load8_u (local.get $a)))

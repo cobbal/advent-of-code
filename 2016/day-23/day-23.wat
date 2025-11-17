@@ -168,7 +168,6 @@
       (br_if $write.i (i32.ge_s (i32.add (local.get $i) (i32.const 2)) (local.get $n)))
 
       ;; (call $day23.dis (local.get $program) (local.get $n) (local.get $i) (i32.const 0) (i32.const 0))
-      ;; (call $debugger)
       (local.set $j (i32.add (local.get $i) (i32.const 1)))
       (loop $loop.j
         (local.set $opPtr (i32.add (local.get $program) (i32.shl (local.get $j) (i32.const 2))))
@@ -266,7 +265,6 @@
               (block $inc
                 (block $cpy
                   ;; (call $day23.dis (local.get $program) (local.get $n) (local.get $pc) (local.get $registers) (i32.const 0))
-                  ;; (call $debugger)
                   (br_table $cpy $inc $dec $jnz $tgl $fusedAdd $badOp (local.get $op)))
                 ;; cpy
                 (i32.store (local.get $y) (i32.load (local.get $x)))
