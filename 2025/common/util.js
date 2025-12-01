@@ -37,8 +37,21 @@ export function sum(coll) {
     return coll.reduce((a, b) => a + b, 0);
 }
 
+export function div(x, m) {
+    return (x / m) | 0;
+}
+
+export function mod(x, m) {
+    return ((x % m) + m) % m;
+}
+
+export function divMod(x, m) {
+    return [(x / m) | 0, ((x % m) + m) % m];
+}
+
 export default {
     partition,
     checkDay,
-    sum
+    sum,
+    div, mod, divMod,
 };
