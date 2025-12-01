@@ -1,0 +1,8 @@
+latest:
+    ./driver.js -1
+
+all:
+    ./driver.js
+
+debug:
+    NODE_OPTIONS=--inspect-brk ./driver.js -1
