@@ -9,8 +9,6 @@ stdenv.mkDerivation {
     nodejs
     rlwrap
     wabt
-    (callPackage ./wac-cli.nix {})
-    wkg
     wasm-tools
     wasmtime
   ];

@@ -2,11 +2,22 @@
   (ice-9 format)
   (ice-9 match)
   (ice-9 pretty-print)
+  (ice-9 receive)
   (srfi srfi-1)
-  (srfi srfi-9)
+  (srfi srfi-9 gnu)
   (srfi srfi-26))
 
 (define (displayln . args) (apply display args) (newline))
+(define (sym-coerce sym-or-str)
+  (cond
+    [(symbol? sym-or-str) sym-or-str]
+    [(string? sym-or-str) (string->symbol sym-or-str)]
+    [#t (error "Expected string or symbol, got:" sym-or-str)]))
+(define (sym-append . syms-or-strs) (apply symbol-append (map sym-coerce syms-or-strs)))
+
+(define safe-failure (make-symbol "safe-failure"))
+(define (car-safe x) (if (pair? x) (car x) safe-failure))
+(define (cdr-safe x) (if (pair? x) (cdr x) safe-failure))
 
 (define (read* f)
   (let loop ([acc '()])
@@ -15,79 +26,75 @@
         (reverse acc)
         (loop (cons form acc))))))
 
-(define-record-type module
-  (make-module wit wasm)
-  module?
-  (wit module-wit)
-  (wasm module-wasm))
+(define-immutable-record-type env
+  (make-env namespace)
+  env?
+  (namespace env-namespace set-env-namespace))
 
-(define (format-wit port indent form)
-  (define (format-type type)
-    (match type
-      [('func . argsAndRets)
-        (format port "func(")
-        (let loop ([argsAndRets argsAndRets] [first #t])
-          (match argsAndRets
-            [([name type] . argsAndRets)
-              (format port "~a~a: " (if first "" ", ") name)
-              (format-type type)
-              (loop argsAndRets #f)]
-            [(or ('-> . rets) (and '() rets))
-              (format port ")")
-              (match rets
-                [() #f]
-                [(ret)
-                  (format port " -> ")
-                  (format-type ret)]
-                [(ret . rets)
-                  (format port " -> tuple<")
-                  (format-type ret)
-                  (for-each
-                    (lambda (ret)
-                      (format port ", ")
-                      (format-type ret))
-                    rets)
-                  (format port ">")])]))]
-      [(? symbol? name)
-        (format port "~a" name)]))
+(define (env-push-namespace env name)
+  (set-env-namespace env (string-append (env-namespace env) (symbol->string name) ".")))
 
-  (format port "~a" (make-string indent #\space))
-  (match form
-    [((and (or 'package 'import) type) name)
-      (format port "~a ~a;" type name)]
-    [((and (or 'world 'interface) type) name . forms)
-      (format port "~a ~a {\n" type name)
-      (for-each (cut format-wit port (+ indent 2) <>) forms)
-      (format port "}")]
-    [('export name type)
-      (format port "export ~a: " name)
-      (format-type type)
-      (format port ";")]
-    )
-  (newline port))
+(define (take-while-car target lst)
+  (let loop ([matches '()] [lst lst])
+    (if (eq? target (car-safe (car-safe lst)))
+      (loop (cons (cdr (car lst)) matches) (cdr lst))
+      (list (reverse matches) lst))))
 
-(define (process form)
-  (match form
-    [('wit wit ...)
-      (make-module wit '())]
-    [_
-      (make-module '() (list form))]))
+(define (lookup env name)
+  (let ([str (symbol->string name)])
+    (if (string-prefix? "$" str)
+      name
+      (string->symbol (string-append (env-namespace env) str)))))
+
+(define (process/module env)
+  (match-lambda
+    [`(namespace ,name . ,forms)
+      (concatenate (map (process/module (env-push-namespace env name)) forms))]
+    [`(import . ,imports) `((import ,@imports))]
+    [`(func ,name . ,forms)
+      (match-let* ([`(,params ,forms) (take-while-car 'param forms)]
+                    [`(,results ,forms) (take-while-car 'result forms)])
+        `((func ,(lookup env name)
+            ,@(map (cut cons 'param <>) params)
+            ,@(map (cut cons 'result <>) results)
+            ,@(map (process/instr 'i32) forms))))]
+    [form (error "unrecognized form:" form)]))
+
+(define (process/instr* i-width)
+  (match-lambda
+    [`(i64 . ,forms) (concatenate (map (process/instr* 'i64) forms))]
+    [`(i32 . ,forms) (concatenate (map (process/instr* 'i32) forms))]
+    [form (list ((process/instr i-width) form))]))
+
+(define (process/instr i-width)
+  (define (arith suffix . forms)
+    (cons (sym-append i-width "." suffix) forms))
+  (define (recur* f) ((process/instr* i-width) f))
+  (define (recur f) ((process/instr i-width) f))
+  (match-lambda
+    [`(i64 ,form) ((process/instr 'i64) form)]
+    [`(i32 ,form) ((process/instr 'i32) form)]
+    [(? integer? i) (arith 'const i)]
+    [`(+ ,form0 . ,forms)
+      (fold (lambda (x y) (arith 'add y x))
+        (recur form0)
+        (map recur forms))]
+    [form `(UNRECOGNIZED ,form)]
+    [form (error "unrecognized form:" form)]))
 
 (define (process* forms)
-  (define modules (map process forms))
-  (make-module
-    (concatenate (map module-wit modules))
-    (concatenate (map module-wasm modules))))
+  (concatenate (map (process/module (make-env "")) forms)))
 
-(define (process-input path)
-  (define out-wit (format #f "build/~a.wit" (basename path ".mwat")))
-  (define out-wasm (format #f "build/~a.wat" (basename path ".mwat")))
-  (format #t "Compiling ~a to ~a and ~a...\n" path out-wit out-wasm)
-  (define module (process* (call-with-input-file path read*)))
-  (call-with-output-file out-wit
-    (lambda (port)
-      (for-each (cut format-wit port 0 <>) (module-wit module))))
+(define (hoist-imports forms)
+  (receive (imports rest)
+    (partition (lambda (x) (eq? (car-safe x) 'import)) forms)
+    (append imports rest)))
+
+(define (process-inputs paths)
+  (define out-wasm "build/2017.wat")
+  (format #t "Compiling ~a to ~a...\n" paths out-wasm)
+  (define modules (map (lambda (path) (process* (call-with-input-file path read*))) paths))
   (call-with-output-file out-wasm
-    (cut pretty-print `(component ,@(module-wasm module)) <>)))
+    (cut pretty-print `(module ,@(hoist-imports (concatenate modules))) <>)))
 
-(for-each process-input (cdr (program-arguments)))
+(process-inputs (cdr (program-arguments)))

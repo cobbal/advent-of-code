@@ -1,26 +1,19 @@
 ;; -*- mode: wat -*-
-(data (i32.const #x018000) "day-01/input-ex0.txt")
-(data (i32.const #x018020) "day-01/input-real0.txt")
+(namespace $day01
+  (func part0 (param $filename i32) (result i64)
+    (i64 0))
 
-(elem (table $fns) (i32.const #x010) $day01.part0 $day01.part1)
+  (func part1 (param $filename i32) (result i64)
+    (i64 0))
 
-(func $day01.part0 (param $filename i32) (result i64)
-  (i64.const 0))
-
-(func $day01.part1 (param $filename i32) (result i64)
-  (i64.const 0))
-
-(elem (table $mains) (i32.const 1) $day01.main)
-(func $day01.main (result i32)
-  (i32.const 0)
-  (i32.add
-    (call $checkInputI64
-      (i32.const #x018000)
-      (i32.const #x010) (i64.const -1)
-      (i32.const #x011) (i64.const -1)))
-  (i32.add
-    (call $checkInputI64
-      (i32.const #x018020)
-      (i32.const #x010) (i64.const -1)
-      (i32.const #x011) (i64.const -1)))
-  nop)
+  (func main (result i32)
+    (+
+      (call $checkInputI64
+        "day-01/input-ex0.txt"
+        #x010 (i64 -1)
+        #x011 (i64 -1))
+      (call $checkInputI64
+        "day-01/input-real0.txt"
+        #x010 (i64 -1)
+        #x011 (i64 -1))
+      0)))

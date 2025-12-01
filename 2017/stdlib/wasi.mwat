@@ -1,0 +1,55 @@
+;; -*- mode: wat -*-
+
+;; External dependencies
+;; https://github.com/WebAssembly/WASI/blob/main/legacy/preview1/docs.md
+;; example implementation: https://github.com/nodejs/uvwasi/blob/v0.0.23/src/uvwasi.c
+(namespace wasi
+  (import "wasi_snapshot_preview1" "clock_time_get"
+    (func $clock_time_get
+      (param $clockid i32)
+      (param $precision i64)
+      (param $out_result i32)
+      (result i32)))
+  (import "wasi_snapshot_preview1" "fd_close"
+    (func $fd_close
+      (param $fd i32)
+      (result i32)))
+  (import "wasi_snapshot_preview1" "fd_read"
+    (func $fd_read
+      (param $fd i32)
+      (param $iovs.0 i32)
+      (param $iovs.1 i32)
+      (param $out_result i32)
+      (result i32)))
+  (import "wasi_snapshot_preview1" "fd_seek"
+    (func $fd_seek
+      (param $fd i32)
+      (param $offset i64)
+      (param $whence i32)
+      (param $out_result i32)
+      (result i32)))
+  (import "wasi_snapshot_preview1" "fd_write"
+    (func $fd_write
+      (param $fd i32)
+      (param $iovs.0 i32)
+      (param $iovs.1 i32)
+      (param $out_result i32)
+      (result i32)))
+  (import "wasi_snapshot_preview1" "path_open"
+    (func $path_open
+      (param $fd i32)
+      (param $dirflags i32)
+      (param $path.0 i32)
+      (param $path.1 i32)
+      (param $oflags i32)
+      (param $fs_rights_base i64)
+      (param $fs_rights_inheriting i64)
+      (param $fdflags i32)
+      (param $out_result i32)
+      (result i32)))
+  (import "wasi_snapshot_preview1" "proc_exit"
+    (func $proc_exit
+      (param $rval i32)))
+  ;; This function is abused for a debugger hook
+  (import "wasi_snapshot_preview1" "sched_yield"
+    (func $sched_yield (result i32))))
