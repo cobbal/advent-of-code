@@ -33,8 +33,8 @@ export function checkDay(path, part0, part1, expected0, expected1) {
     return +!(good0 && good1);
 }
 
-export function sum(coll) {
-    return coll.reduce((a, b) => a + b, 0);
+export function sum(coll, start) {
+    return coll.reduce((a, b) => a + b, start ?? 0);
 }
 
 export function div(x, m) {
@@ -49,9 +49,34 @@ export function divMod(x, m) {
     return [(x / m) | 0, ((x % m) + m) % m];
 }
 
+export function bigMin(a, b) {
+    return a < b ? a : b;
+}
+
+export function bigMax(a, b) {
+    return a > b ? a : b;
+}
+
+function nDigits(n) {
+    return String(n).length;
+}
+
+// if 1 parameter is passed, it's assumed to be 0..<hi
+function* range(lo, hi, step = 1) {
+    if (arguments.length === 1) {
+        [lo, hi] = [0, lo];
+    }
+    for (let i = lo; i < hi; i += step) {
+        yield i;
+    }
+}
+
 export default {
     partition,
     checkDay,
     sum,
     div, mod, divMod,
+    bigMin, bigMax,
+    nDigits,
+    range,
 };
