@@ -34,6 +34,9 @@ export function checkDay(path, part0, part1, expected0, expected1) {
 }
 
 export function sum(coll, start) {
+    if (!(coll instanceof Array)) {
+        coll = Array.from(coll)
+    }
     return coll.reduce((a, b) => a + b, start ?? 0);
 }
 

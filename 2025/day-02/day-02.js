@@ -37,7 +37,7 @@ function part0(lines) {
     for (const [lo, hi] of parse(lines)) {
         found = found.union(findReps(lo, hi, 2));
     }
-    return util.sum(Array.from(found), 0n);
+    return util.sum(found, 0n);
 }
 
 function part1(lines) {
@@ -47,7 +47,7 @@ function part1(lines) {
             found = found.union(findReps(lo, hi, copies));
         }
     }
-    return util.sum(Array.from(found), 0n);
+    return util.sum(found, 0n);
 }
 
 export function main() {
