@@ -74,6 +74,11 @@ function* range(lo, hi, step = 1) {
     }
 }
 
+export function assert(bool, msg) {
+    console.assert(bool, msg);
+    if (!bool) { throw "Assertion failure"; }
+}
+
 export default {
     partition,
     checkDay,
@@ -82,4 +87,5 @@ export default {
     bigMin, bigMax,
     nDigits,
     range,
+    assert,
 };
