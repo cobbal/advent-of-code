@@ -15,8 +15,14 @@ export function partition(pred, coll) {
     return [yes, no];
 }
 
+export function arrayTrim(array, pred) {
+    const first = array.findIndex(e => !pred(e));
+    const last = array.findLastIndex(e => !pred(e)) + 1;
+    return array.slice(first, last);
+}
+
 export function checkDay(path, part0, part1, expected0, expected1) {
-    let lines = fs.readFileSync(path, "utf8").split('\n').slice(0, -1);
+    let lines = arrayTrim(fs.readFileSync(path, "utf8").split('\n'), e => e === '');
     const result0 = part0(lines);
     const result1 = part1(lines);
     let good0 = result0 === expected0;
@@ -34,10 +40,21 @@ export function checkDay(path, part0, part1, expected0, expected1) {
 }
 
 export function sum(coll, start) {
-    if (!(coll instanceof Array)) {
-        coll = Array.from(coll)
+    let result = start ?? 0;
+    for (let x of coll) {
+        result += x;
     }
-    return coll.reduce((a, b) => a + b, start ?? 0);
+    return result;
+}
+
+export function count(coll, pred) {
+    var result = 0;
+    for (let x of coll) {
+        if (pred(x)) {
+            result++;
+        }
+    }
+    return result;
 }
 
 export function div(x, m) {
@@ -84,10 +101,11 @@ export function assert(bool, msg) {
 export default {
     partition,
     checkDay,
-    sum,
+    sum, count,
     div, mod, divMod,
     bigMin, bigMax,
     nDigits,
     range,
     assert,
+    arrayTrim,
 };

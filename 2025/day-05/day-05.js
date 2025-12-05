@@ -6,17 +6,17 @@ function parse(lines) {
     const blank = lines.indexOf("");
     const ranges = lines
           .slice(0, blank)
-          .map(s => s.split('-').map(s => Number(s)))
-          .map(([lo, hi]) => [lo, hi + 1]);
-    const inventory = lines.slice(blank + 1).map(s => Number(s));
+          .map(line => {
+              const [lo, hi] = line.split('-');
+              return [Number(lo), Number(hi) + 1];
+          })
+    const inventory = lines.slice(blank + 1).map(line => Number(line));
     return { ranges, inventory };
 }
 
 function part0(lines) {
     const { ranges, inventory } = parse(lines);
-    return inventory
-        .filter(item => ranges.some(([lo, hi]) => lo <= item && item < hi))
-        .length;
+    return util.count(inventory, item => ranges.some(([lo, hi]) => lo <= item && item < hi));
 }
 
 function intervalsSubtract1(iA, iB) {
@@ -24,9 +24,9 @@ function intervalsSubtract1(iA, iB) {
     const [bLo, bHi] = iB;
     if (aHi <= bLo || bHi <= aLo) { return [iA]; }
     if (aLo < bLo && bHi < aHi) { return [[aLo, bLo], [bHi, aHi]]; }
-    if (bLo <= aLo && aHi <= bHi) { return []; }
     if (aLo < bLo) { return [[aLo, bLo]]; }
-    return [[bHi, aHi]];
+    if (bHi < aHi) { return [[bHi, aHi]]; }
+    return [];
 }
 
 function intervalsSubtract(iAs, iBs) {
@@ -38,8 +38,7 @@ function intervalsUnion(iAs) {
 }
 
 function part1(lines) {
-    const { ranges} = parse(lines);
-    return util.sum(intervalsUnion(ranges).map(([lo, hi]) => hi - lo));
+    return util.sum(intervalsUnion(parse(lines).ranges).map(([lo, hi]) => hi - lo));
 }
 
 export function main() {
