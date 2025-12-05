@@ -16,7 +16,7 @@ export function partition(pred, coll) {
 }
 
 export function checkDay(path, part0, part1, expected0, expected1) {
-    let lines = fs.readFileSync(path, "utf8").split('\n').filter(s => s.length > 0);
+    let lines = fs.readFileSync(path, "utf8").split('\n').slice(0, -1);
     const result0 = part0(lines);
     const result1 = part1(lines);
     let good0 = result0 === expected0;
