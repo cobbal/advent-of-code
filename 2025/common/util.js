@@ -75,8 +75,10 @@ function* range(lo, hi, step = 1) {
 }
 
 export function assert(bool, msg) {
-    console.assert(bool, msg);
-    if (!bool) { throw "Assertion failure"; }
+    if (!bool) {
+        console.assert(bool, msg);
+        throw "Assertion failure";
+    }
 }
 
 export default {
