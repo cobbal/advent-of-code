@@ -1,0 +1,51 @@
+;; -*- mode: wat -*-
+(func $i64.abs (param $i i64) (result i64)
+  (i64
+    (if (lt_s $i 0)
+      (then (local.set $i (- $i))))
+    $i))
+
+(func $i32.abs (param $i i32) (result i32)
+  (if (i32.lt_s $i 0)
+    (then (local.set $i (i32.sub 0 $i))))
+  $i)
+
+(func $i32.max (param $a i32) (param $b i32) (result i32)
+  (if (i32.gt_s $b $a)
+    (then (local.set $a $b)))
+  $a)
+
+(func $i32.min (param $a i32) (param $b i32) (result i32)
+  (if (i32.lt_s $b $a)
+    (then (local.set $a $b)))
+  $a)
+
+(func $i32.mod_s (param $a i32) (param $b i32) (result i32)
+  (i32.rem_s
+    (i32.add
+      (i32.rem_s
+        $a
+        $b)
+      $b)
+    $b))
+
+(func $u32.digitCount (param $i i32) (result i32)
+  (if (i32.lt_u $i 10)
+    (then (return 1)))
+  (if (i32.lt_u $i 100)
+    (then (return 2)))
+  (if (i32.lt_u $i 1000)
+    (then (return 3)))
+  (if (i32.lt_u $i 10000)
+    (then (return 4)))
+  (if (i32.lt_u $i 100000)
+    (then (return 5)))
+  (if (i32.lt_u $i 1000000)
+    (then (return 6)))
+  (if (i32.lt_u $i 10000000)
+    (then (return 7)))
+  (if (i32.lt_u $i 100000000)
+    (then (return 8)))
+  (if (i32.lt_u $i 1000000000)
+    (then (return 9)))
+  10)

@@ -1,0 +1,35 @@
+;; -*- mode: wat -*-
+
+(namespace $day-utils
+  (func checkI64
+    (param $path i32)
+    (param $solver0 i32)
+    (param $expected0 i64)
+    (param $solver1 i32)
+    (param $expected1 i64)
+    (result i32)
+
+    (locals i32 $len $correct0 $correct1)
+    (locals i64 $result0 $result1)
+
+    ;; (call $printStr.pad $path 22)
+    (call $printStr $path)
+    (call $printStr ": ")
+
+    (local.set $result0
+      (call_indirect (param i32) (result i64) $path $solver0))
+    (call $printI64 $result0)
+    (call $printStr " ")
+
+    (local.set $result1
+      (call_indirect (param i32) (result i64) $path $solver1))
+    (call $printI64 $result1)
+
+    (call $printStr
+      (select "   bad" "  good"
+        (local.tee $correct0 (i64 (= $result0 $expected0)))))
+    (call $printStr
+      (select "   bad" "  good"
+        (local.tee $correct1 (i64 (= $result1 $expected1)))))
+    (call $print.nl)
+    (! (& $correct0 $correct1))))

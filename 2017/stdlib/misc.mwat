@@ -1,0 +1,25 @@
+;; -*- mode: wat -*-
+
+(func $assert_not (param $in i32)
+  (if $in
+    (then
+      (call $proc_exit $in)
+      (unreachable))))
+
+(func $assert (param $in i32)
+  (if (! $in)
+    (then
+      (debugger)
+      (unreachable))))
+
+(func $i8.swap (param $a i32) (param $b i32)
+  (locals i32 $tmp)
+  (local.set $tmp (i32.load8_u $a))
+  (i32.store8 $a (i32.load8_u $b))
+  (i32.store8 $b $tmp))
+
+(func $i32.swap (param $a i32) (param $b i32)
+  (locals i32 $tmp)
+  (local.set $tmp (i32.load $a))
+  (i32.store $a (i32.load $b))
+  (i32.store $b $tmp))

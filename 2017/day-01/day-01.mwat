@@ -1,19 +1,33 @@
 ;; -*- mode: wat -*-
 (namespace $day01
-  (func part0 (param $filename i32) (result i64)
+  (indirect_func part0 (param $filename i32) (result i64)
+    (locals (ref $bytes) $contents)
+    (local.set $contents (call $readFile $filename))
     (i64 0))
 
-  (func part1 (param $filename i32) (result i64)
+  (indirect_func part1 (param $filename i32) (result i64)
     (i64 0))
 
-  (func main (result i32)
+  (indirect_func main (result i32)
     (+
-      (call $checkInputI64
+      (call $day-utils.checkI64
         "day-01/input-ex0.txt"
-        #x010 (i64 -1)
-        #x011 (i64 -1))
-      (call $checkInputI64
+        (funcref part0) (i64 -1)
+        (funcref part1) (i64 -1))
+      (call $day-utils.checkI64
+        "day-01/input-ex1.txt"
+        (funcref part0) (i64 -1)
+        (funcref part1) (i64 -1))
+      (call $day-utils.checkI64
+        "day-01/input-ex2.txt"
+        (funcref part0) (i64 -1)
+        (funcref part1) (i64 -1))
+      (call $day-utils.checkI64
+        "day-01/input-ex3.txt"
+        (funcref part0) (i64 -1)
+        (funcref part1) (i64 -1))
+      (call $day-utils.checkI64
         "day-01/input-real0.txt"
-        #x010 (i64 -1)
-        #x011 (i64 -1))
+        (funcref part0) (i64 -1)
+        (funcref part1) (i64 -1))
       0)))

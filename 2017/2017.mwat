@@ -1,3 +1,0 @@
-;; -*- mode: wat -*-
-
-(func $start)

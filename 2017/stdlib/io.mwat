@@ -1,0 +1,226 @@
+;; -*- mode: wat -*-
+
+(namespace $_io
+  ;; Currently no free
+  (func stackAlloc (param $size i32) (result i32)
+    (locals i32 $result $newCount $pagesNeeded $align)
+    ;; must be a power of 2
+    (local.set $align (i32.const 8))
+    ;; round size up to alignment
+    (local.set $size
+      (&
+        (+ $size $align -1)
+        (- $align)))
+
+    (local.set $newCount
+      (+ (local.tee $result (global.get alloc.end)) $size))
+    (local.set $pagesNeeded
+      (- (shr_u (+ $newCount #xffff) 16)
+        (memory.size)))
+    (if (gt_s $pagesNeeded 0)
+      (then
+        (call $assert (ge_s (memory.grow $pagesNeeded) 0))))
+    (global.set alloc.end $newCount)
+    $result)
+
+  (func stackPop (param $old i32)
+    (memory.fill $old 0 (- (* (memory.size) #x10000) $old))
+    (global.set alloc.end $old)))
+
+(func $printChr (param $c i32)
+  (locals i32 $buf)
+  (i32.store8 (local.tee $buf "_") $c)
+  (call $printStr $buf))
+
+(func $print.nl
+  (return_call $printStr "\n"))
+
+(func $print.nl.indent (param $indent i32)
+  (call $print.nl)
+  (i32.store #x108 #x20)
+  (loop $loop
+    (if (i32.gt_s $indent 0)
+      (then
+        (call $printStr #x108)
+        (local.set $indent (i32.sub $indent 1))
+        (br $loop)))))
+
+(func $printI32.nl (param $i i32)
+  (call $printI64 (i64.extend_i32_s $i))
+  (call $print.nl))
+
+(func $printI32 (param $i i32)
+  (call $printI64 (i64.extend_i32_s $i)))
+
+(func $printI64.nl (param $i i64)
+  (call $printI64 $i)
+  (call $print.nl))
+
+(func $printI64 (param $i i64)
+  (drop (call $formatI64._impl $i #x200))
+  (call $printStr #x200))
+
+(func $printI64.unpadded (param $i i64)
+  (return_call $printStr
+    (call $formatI64._impl $i #x200)))
+
+(func $printI32.unpadded (param $i i32)
+  (return_call $printI64.unpadded (i64.extend_i32_s $i)))
+
+(func $printI32.hex.nl (param $i i32)
+  (call $formatI64.hex._impl (i64.extend_i32_s $i) #x200)
+  (call $printStr.nl #x208))
+
+(func $printI32.hex (param $i i32)
+  (call $formatI64.hex._impl (i64.extend_i32_s $i) #x200)
+  (call $printStr #x208))
+
+(func $asciiHex (param $i i32) (result i32)
+  (call $assert (i32.lt_u $i #x10))
+  (if (i32.lt_u $i 10)
+    (then (return (i32.add #x30 $i))))
+  (return (i32.add #x57 $i)))
+
+;; $buf should have 21 bytes of space
+(func $formatI64._impl (param $i i64) (param $buf i32) (result i32)
+  (locals i32 $neg $pos $ptr $digit)
+
+  (if (local.tee $neg (i64.lt_s $i (i64.const 0)))
+    (then (local.set $i (i64.sub (i64.const 0) $i))))
+
+  (memory.fill $buf #\space 20)
+  (i32.store8 (i32.add $buf 20) 0)
+  (local.set $ptr (i32.add $buf 19))
+  (loop $loop
+    (local.set $digit (i32.wrap_i64 (i64.rem_u $i (i64.const 10))))
+    (local.set $i (i64.div_u $i (i64.const 10)))
+    (i32.store8 $ptr (i32.add #\0 $digit))
+    (local.set $ptr (i32.sub $ptr 1))
+    (if (i32.wrap_i64 $i)
+      (then (br $loop))))
+  (if $neg
+    (then
+      (i32.store8 $ptr #\-)
+      (return $ptr)))
+  (i32.add $ptr 1))
+
+;; $buf should have 17 bytes of space
+(func $formatI64.hex._impl (param $i i64) (param $buf i32)
+  (locals i32 $pos $ptr $digit)
+
+  (memory.fill $buf #\0 16)
+  (i32.store8 (i32.add $buf 16) 0)
+  (local.set $ptr (i32.add $buf 15))
+  (loop $loop
+    (local.set $digit (i32.wrap_i64 (i64.rem_u $i (i64.const #x10))))
+    (local.set $i (i64.div_u $i (i64.const #x10)))
+    (i32.store8 $ptr (call $asciiHex $digit))
+    (local.set $ptr (i32.sub $ptr 1))
+    (br_if $loop (i64.ne $i (i64.const 0)))))
+
+(func $formatI8.hex.into (param $x i32) (param $outPtr i32)
+  (i32.store8
+    $outPtr
+    (call $asciiHex (i32.and #xf (i32.shr_u $x 4))))
+  (i32.store8
+    (i32.add $outPtr 1)
+    (call $asciiHex (i32.and #xf $x))))
+
+(func $formatI32.le.hex.into (param $x i32) (param $outPtr i32)
+  (call $formatI8.hex.into
+    (i32.shr_u $x 0)
+    (i32.add $outPtr 0))
+  (call $formatI8.hex.into
+    (i32.shr_u $x 8)
+    (i32.add $outPtr 2))
+  (call $formatI8.hex.into
+    (i32.shr_u $x 16)
+    (i32.add $outPtr 4))
+  (call $formatI8.hex.into
+    (i32.shr_u $x 24)
+    (i32.add $outPtr 6)))
+
+(func $printStr.nl (param $i i32)
+  (call $printStr $i)
+  (call $print.nl))
+
+(func $printStr (param $string i32)
+  (if (i32.eqz $string)
+    (then (local.set $string "<null>")))
+  (i32.store #x100 $string)
+  (i32.store #x104 (call $strlen $string))
+  (call $assert_not
+    (call $fd_write 1 #x100 1 #x8)))
+
+;; string -> (string, size)
+(func $readFile (param $path i32) (result (ref $bytes))
+  (locals i32 $err $fd $len $buffer $i)
+  (locals (ref $bytes) $result)
+
+  (call $assert_not
+    (call $path_open
+      3 ;; $fd
+      #x1 ;; symlink_follow=1 ;; $dirflags
+      $path ;; $path.0
+      (call $strlen $path) ;; $path.1
+      #x0 ;; $oflags
+      (i64 #x6) ;; fd_read | fd_seek ;; $fs_rights_base
+      (i64 #x6) ;; fd_read | fd_seek ;; $fs_rights_inheriting
+      #x0 ;; $fdflags
+      8)) ;; $out_result
+  (local.set $fd (i32.load 8))
+
+  (call $assert_not
+    (call $fd_seek
+      $fd ;; $fd
+      (i64.const 0) ;; $offset
+      2 ;; end ;; $whence
+      8)) ;; $out_result
+  (local.set $len (i32.load 8))
+
+  ;; check that file is reasonable
+  (call $assert (i64.lt_u (i64.load 8) (i64.const #x80000000)))
+
+  ;; Return to start
+  (call $assert_not
+    (call $fd_seek
+      $fd ;; $fd
+      (i64.const 0) ;; $offset
+      0 ;; set ;; $whence
+      8)) ;; $out_result
+
+  ;; allocate space
+  (local.set $buffer (call $_io.stackAlloc (i32.add 1 $len)))
+  ;; read file
+  (i32.store 8 $buffer)
+  (i32.store 12 $len)
+  (call $assert_not
+    (call $fd_read
+      $fd
+      8 ;; $iovs.0
+      1 ;; $iovs.1
+      16 ;; $out_result
+      ))
+  (call $assert (= (i32.load 16) $len))
+
+  (call $assert_not (call $fd_close $fd))
+
+  (local.set $result (array.new_default $bytes $len))
+  (loop $copy
+    (if (lt_s $i $len)
+      (then
+        (array.set $bytes $result $i (i32.load8_u (+ $buffer $i)))
+        (inc! $i)
+        (br $copy))))
+
+  (call $_io.stackPop $buffer)
+
+  $result)
+
+(func $getClock (result i64)
+  (call $assert_not
+    (call $clock_time_get
+      1
+      (i64.const 0)
+      #x100))
+  (i64.load #x100))

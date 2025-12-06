@@ -1,15 +1,15 @@
 run: build-wasm
-    wasmtime --dir .::.  build/2017.wasm
+    wasmtime -Wgc --dir .::.  build/2017.wasm
 
 debug: build-wasm
     node --inspect-brk node-run.js
 
 build-wat: compiler
     mkdir -p build
-    guile -c '(load-compiled "build/mwatc.go")' day-*/*.mwat 2017.mwat stdlib/*.mwat
+    guile -c '(load-compiled "build/mwatc.go")' day-*/*.mwat main.mwat stdlib/*.mwat
 
 build-wasm: build-wat
-    wat2wasm build/2017.wat --enable-all --debug-names -o build/2017.wasm
+    wasm-tools parse -g build/2017.wat -o build/2017.wasm
 
 compiler:
     guild compile -o build/mwatc.go compiler/mwatc.scm

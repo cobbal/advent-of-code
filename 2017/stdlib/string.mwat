@@ -1,0 +1,175 @@
+;; -*- mode: wat -*-
+
+(type $bytes (array (mut i8)))
+
+(func $strlen (param $string i32) (result i32)
+  (locals i32 $ptr)
+  (local.set $ptr $string)
+  (loop $loop
+    (if (i32.ne (i32.load8_u $ptr) 0)
+      (then
+        (local.set $ptr (i32.add $ptr 1))
+        (br $loop))))
+  (i32.sub $ptr $string))
+
+(func $strcmp (param $s0 i32) (param $s1 i32) (result i32)
+  (locals i32 $c0 $c1)
+  (loop $loop
+    (if
+      (i32.eq
+        (local.tee $c0 (i32.load8_u $s0))
+        (local.tee $c1 (i32.load8_u $s1)))
+      (then
+        (if $c0
+          (then
+            (local.set $s0 (i32.add $s0 1))
+            (local.set $s1 (i32.add $s1 1))
+            (br $loop)))
+        (return 0))))
+  (i32.sub $c0 $c1))
+
+(func $memcmp (param $p0 i32) (param $p1 i32) (param $len i32) (result i32)
+  (locals i32 $c0 $c1)
+  (loop $loop
+    (if (i32.eqz $len)
+      (then (return 0)))
+    (if
+      (i32.eq
+        (local.tee $c0 (i32.load8_u $p0))
+        (local.tee $c1 (i32.load8_u $p1)))
+      (then
+        (local.set $p0 (i32.add $p0 1))
+        (local.set $p1 (i32.add $p1 1))
+        (local.set $len (i32.sub $len 1))
+        (br $loop))))
+  (select 1 -1
+    (i32.lt_u $c0 $c1)))
+
+;; (func $strdup (param $s i32) (result i32)
+;;   (locals i32 $len $buf)
+;;   (local.set $len (call $strlen $s))
+;;   (local.set $buf (call $malloc (i32.add $len 1)))
+;;   (memory.copy $buf $s $len)
+;;   $buf)
+
+(func $strrchr (param $str i32) (param $c i32) (result i32)
+  (locals i32 $ptr)
+  (local.set $ptr (i32.add $str (call $strlen $str)))
+  (loop $loop
+    (if (i32.lt_u $ptr $str)
+      (then (return 0)))
+    (if (i32.ne (i32.load8_u $ptr) $c)
+      (then
+        (local.set $ptr (i32.sub $ptr 1))
+        (br $loop))))
+  $ptr)
+
+(func $strchr (param $str i32) (param $c i32) (result i32)
+  (locals i32 $d)
+  (loop $loop
+    (if (local.tee $d (i32.load8_u $str))
+      (then
+        (if (i32.eq $d $c)
+          (then (return $str)))
+        (local.set $str (i32.add $str 1))
+        (br $loop))))
+  0)
+
+;; (func $rPad (param $ch i32) (param $str i32) (param $n i32) (result i32)
+;;   (if (i32.ge_s (call $strlen $str) $n)
+;;     (then (return $str)))
+;;   (return_call $rPadAndChop $ch $str $n))
+
+;; (func $rPadAndChop (param $ch i32) (param $str i32) (param $n i32) (result i32)
+;;   (locals $len $result)
+
+;;   (local.set $len (call $i32.min (call $strlen $str) $n))
+;;   (local.set $result (call $malloc (i32.add $n 1)))
+;;   (memory.fill $result $ch $n)
+;;   (memory.copy
+;;     (i32.add
+;;       $result
+;;       (i32.sub $n $len))
+;;     $str
+;;     (call $i32.min $n $len))
+;;   $result)
+
+(func $countChar (param $string i32) (param $targetChar i32) (result i32)
+  (locals i32 $count $current)
+  (loop $loop
+    (if (local.tee $current (i32.load8_u $string))
+      (then
+        (if (i32.eq $current $targetChar)
+          (then (local.set $count (i32.add $count 1))))
+        (local.set $string (i32.add $string 1))
+        (br $loop))))
+  $count)
+
+#;(func $splitDestructively (param $string i32) (param $sep i32) (param $allowEmpty i32) (result i32 i32)
+  (locals i32 $strings $workingString $oldWork $stringsPtr $len $c)
+
+  (local.set $stringsPtr
+    (local.tee $strings
+      (call $malloc
+        (i32.mul 4
+          (i32.add 1
+            (local.tee $len
+              (i32.add 1
+                (call $countChar $string $sep))))))))
+  (local.set $workingString $string)
+
+  (loop $loop
+    (if (local.tee $c (i32.load8_u $string))
+      (then
+        (if (i32.eq $c $sep)
+          (then
+            (i32.store8 $string 0)
+            (local.set $oldWork $workingString)
+            (local.set $workingString (i32.add $string 1))
+            (block $record
+              (if (i32.eq $string $oldWork)
+                (then
+                  (if (i32.eqz $allowEmpty)
+                    (then
+                      (br $record)))))
+              (i32.store $stringsPtr $oldWork)
+              (local.set $stringsPtr (i32.add $stringsPtr 4)))))
+        (local.set $string (i32.add $string 1))
+        (br $loop))))
+
+  (block $record
+    (if (i32.eq $string $workingString)
+      (then
+        (if (i32.eqz $allowEmpty)
+          (then
+            (br $record)))))
+    (i32.store $stringsPtr $workingString)
+    (local.set $stringsPtr (i32.add $stringsPtr 4)))
+
+  (local.set $len
+    (i32.shr_u
+      (i32.sub $stringsPtr $strings)
+      2))
+
+  $strings $len)
+
+;; Adapted from https://en.cppreference.com/w/cpp/algorithm/rotate.html
+(func $memrotate.left (param $first i32) (param $middle i32) (param $last i32)
+  (locals i32 $read $write $nextRead)
+
+  (if (i32.eq $first $middle)
+    (then (return)))
+  (if (i32.eq $middle $last)
+    (then (return)))
+
+  (local.set $write $first)
+  (local.set $nextRead $first)
+  (local.set $read $middle)
+  (loop $loop
+    (if (i32.eq $write $nextRead)
+      (then (local.set $nextRead $read)))
+    (call $i8.swap $write $read)
+    (local.set $write (i32.add $write 1))
+    (local.set $read (i32.add $read 1))
+    (br_if $loop (i32.ne $read $last)))
+  (return_call $memrotate.left $write $nextRead $last))

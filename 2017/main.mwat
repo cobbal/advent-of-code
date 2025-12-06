@@ -1,0 +1,76 @@
+;; -*- mode: wat -*-
+
+(global $start.maxSlowness i32 (i32.const 2))
+
+(func $_start
+  (locals i32 $err $fast $bitSlow $reallySlow)
+
+  ;; Names chosen for visual length
+  (local.set $fast 0)
+  (local.set $bitSlow 1)
+  (local.set $reallySlow 2)
+
+  (local.set $err
+    (+
+      (call $start.runDay 01 (funcref $day01.main) $fast)
+      ;; (call $start.runDay 02 $fast)
+      ;; (call $start.runDay 03 $fast)
+      ;; (call $start.runDay 04 $fast)
+      ;; (call $start.runDay 05 $fast)
+      ;; (call $start.runDay 06 $fast)
+      ;; (call $start.runDay 07 $fast)
+      ;; (call $start.runDay 08 $fast)
+      ;; (call $start.runDay 09 $fast)
+      ;; (call $start.runDay 10 $fast)
+      ;; (call $start.runDay 11 $fast)
+      ;; (call $start.runDay 12 $fast)
+      ;; (call $start.runDay 13 $fast)
+      ;; (call $start.runDay 14 $fast)
+      ;; (call $start.runDay 15 $fast)
+      ;; (call $start.runDay 16 $fast)
+      ;; (call $start.runDay 17 $fast)
+      ;; (call $start.runDay 18 $fast)
+      ;; (call $start.runDay 19 $fast)
+      ;; (call $start.runDay 20 $fast)
+      ;; (call $start.runDay 21 $fast)
+      ;; (call $start.runDay 22 $fast)
+      ;; (call $start.runDay 23 $fast)
+      ;; (call $start.runDay 24 $fast)
+      ;; (call $start.runDay 25 $fast)
+      0))
+
+  (call $printI32.nl $err)
+  (call $proc_exit $err))
+
+(func $start.header (param $day i32)
+  (call $printStr "=== day ")
+  (call $printChr (+ #\0 (div_u $day 10)))
+  (call $printChr (+ #\0 (rem_u $day 10)))
+  (call $printStr.nl " ==="))
+
+(func $start.runDay (param $day i32) (param $dayMain i32) (param $slowness i32) (result i32)
+  (locals i32 $result)
+  (locals i64 $startTime $endTime $time $mtime)
+
+  (call $start.header $day)
+
+  (if (gt_s $slowness (global.get $start.maxSlowness))
+    (then
+      (call $printStr.nl "marked as slow... skipping")
+      (call $print.nl)
+      (return 0)))
+
+  (local.set $startTime (call $getClock))
+  (local.set $result (call_indirect (result i32) $dayMain))
+  (local.set $endTime (call $getClock))
+
+  (local.set $mtime (i64 (div_u (- $endTime $startTime) 1000000)))
+  (call $printI64 (i64 (div_u $mtime 1000)))
+
+  (call $printStr ".")
+  (call $printChr (+ #\0 (i32.wrap_i64 (i64 (rem_u (div_u $mtime 100) 10)))))
+  (call $printChr (+ #\0 (i32.wrap_i64 (i64 (rem_u (div_u $mtime 10) 10)))))
+  (call $printChr (+ #\0 (i32.wrap_i64 (i64 (rem_u (div_u $mtime 1) 10)))))
+  (call $printStr.nl "s")
+  (call $print.nl)
+  $result)
