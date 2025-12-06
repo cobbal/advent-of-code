@@ -40,9 +40,17 @@ export function checkDay(path, part0, part1, expected0, expected1) {
 }
 
 export function sum(coll, start) {
-    let result = start ?? 0;
+    let result = arguments.length < 2 ? 0 : start;
     for (let x of coll) {
         result += x;
+    }
+    return result;
+}
+
+export function product(coll, start) {
+    let result = arguments.length < 2 ? 1 : start;
+    for (let x of coll) {
+        result *= x;
     }
     return result;
 }
@@ -101,7 +109,7 @@ export function assert(bool, msg) {
 export default {
     partition,
     checkDay,
-    sum, count,
+    sum, product, count,
     div, mod, divMod,
     bigMin, bigMax,
     nDigits,
