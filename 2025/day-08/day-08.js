@@ -7,15 +7,15 @@ import { performance } from 'perf_hooks';
 function* lazySort(arr, cmp) {
     function partition(lo, hi) {
         const pivot = arr[hi - 1];
-        let pivotIndex = lo;
+        let i = lo;
         for (let j = lo; j < hi - 1; j++) {
             if (cmp(arr[j], pivot) < 0) {
-                [arr[pivotIndex], arr[j]] = [arr[j], arr[pivotIndex]];
-                pivotIndex++;
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+                i++;
             }
         }
-        [arr[pivotIndex], arr[hi - 1]] = [arr[hi - 1], arr[pivotIndex]];
-        return pivotIndex;
+        [arr[i], arr[hi - 1]] = [arr[hi - 1], arr[i]];
+        return i;
     }
     function *sort(lo, hi) {
         if (lo >= hi) { return; }
@@ -36,21 +36,28 @@ function distanceSquared([x0, y0, z0], [x1, y1, z1]) {
 
 function counts(nets, minSize) {
     minSize = minSize ?? 1
-    const arr = Array.from(Map.groupBy(nets, ([i, n]) => n).values().map(a => a.length).filter(x => x > minSize));
+    const sizes = Map.groupBy(nets, ([i, n]) => n).values().map(a => a.length);
+    const arr = Array.from(sizes.filter(x => x > minSize));
     arr.sort((a, b) => b - a);
     return arr;
 }
 
-const cmpDist = ([ai, aj, ad], [bi, bj, bd]) => ad - bd;
+function common(lines) {
+    const boxes = lines.map(s => s.split(',').map(s => Number(s)));
+    const nets = new Map(util.range(boxes.length).map(i => [i, i]));
+    const distPairs = lazySort(
+        Array.from(
+            util.range(boxes.length).flatMap(i =>
+                util.range(i + 1, boxes.length).map(j =>
+                    [i, j, distanceSquared(boxes[i], boxes[j])]))),
+        ([ai, aj, ad], [bi, bj, bd]) => ad - bd);
+    return { boxes, nets, distPairs };
+}
 
 function part0(cutoff) {
     return (lines) => {
-        const boxes = lines.map(s => s.split(',').map(s => Number(s)));
-        const nets = new Map(util.range(boxes.length).map(i => [i, i]));
-        let distancePairs = Array.from(
-            util.range(boxes.length).flatMap(i =>
-                util.range(i + 1, boxes.length).map(j => [i, j, distanceSquared(boxes[i], boxes[j])])));
-        for (let [i, j, ] of util.take(lazySort(distancePairs, cmpDist), cutoff)) {
+        const { boxes, nets, distPairs} = common(lines);
+        for (let [i, j] of util.take(distPairs, cutoff)) {
             let iNet = nets.get(i);
             let jNet = nets.get(j);
             for (let [index, kNet] of Array.from(nets)) {
@@ -65,13 +72,9 @@ function part0(cutoff) {
 }
 
 function part1(lines) {
-    const boxes = lines.map(s => s.split(',').map(s => Number(s)));
-    const nets = new Map(util.range(boxes.length).map(i => [i, i]));
-    const distancePairs = Array.from(
-        util.range(boxes.length).flatMap(i =>
-            util.range(i + 1, boxes.length).map(j => [i, j, distanceSquared(boxes[i], boxes[j])])));
+    const { boxes, nets, distPairs} = common(lines);
     let networks = boxes.length;
-    for (let [i, j, d] of lazySort(distancePairs, cmpDist)) {
+    for (let [i, j, ] of distPairs) {
         let iNet = nets.get(i);
         let jNet = nets.get(j);
         if (iNet === jNet) { continue; }
