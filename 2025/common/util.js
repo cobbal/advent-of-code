@@ -99,6 +99,17 @@ function* range(lo, hi, step = 1) {
     }
 }
 
+function* take(iter, n) {
+    let yielded = 0;
+    if (n > 0) {
+        for (let x of iter) {
+            yield x;
+            yielded++;
+            if (yielded >= n) { break; }
+        }
+    }
+}
+
 export function assert(bool, msg) {
     if (!bool) {
         console.assert(bool, msg);
@@ -113,7 +124,7 @@ export default {
     div, mod, divMod,
     bigMin, bigMax,
     nDigits,
-    range,
+    range, take,
     assert,
     arrayTrim,
 };

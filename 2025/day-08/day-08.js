@@ -1,11 +1,36 @@
 "use strict";
 
 import util from '../common/util.js';
+import { performance } from 'perf_hooks';
+
+// adapted from https://en.wikipedia.org/wiki/Quicksort
+function* lazySort(arr, cmp) {
+    function partition(lo, hi) {
+        const pivot = arr[hi - 1];
+        let pivotIndex = lo;
+        for (let j = lo; j < hi - 1; j++) {
+            if (cmp(arr[j], pivot) < 0) {
+                [arr[pivotIndex], arr[j]] = [arr[j], arr[pivotIndex]];
+                pivotIndex++;
+            }
+        }
+        [arr[pivotIndex], arr[hi - 1]] = [arr[hi - 1], arr[pivotIndex]];
+        return pivotIndex;
+    }
+    function *sort(lo, hi) {
+        if (lo >= hi) { return; }
+        const partIndex = partition(lo, hi);
+        yield *sort(lo, partIndex);
+        yield arr[partIndex];
+        yield *sort(partIndex + 1, hi);
+    }
+    yield* sort(0, arr.length);
+}
 
 function distanceSquared([x0, y0, z0], [x1, y1, z1]) {
-    const dx = Math.abs(x0 - x1);
-    const dy = Math.abs(y0 - y1);
-    const dz = Math.abs(z0 - z1);
+    const dx = x0 - x1;
+    const dy = y0 - y1;
+    const dz = z0 - z1;
     return dx * dx + dy * dy + dz * dz;
 }
 
@@ -16,20 +41,18 @@ function counts(nets, minSize) {
     return arr;
 }
 
+const cmpDist = ([ai, aj, ad], [bi, bj, bd]) => ad - bd;
+
 function part0(cutoff) {
     return (lines) => {
         const boxes = lines.map(s => s.split(',').map(s => Number(s)));
         const nets = new Map(util.range(boxes.length).map(i => [i, i]));
-        const distancePairs = Array.from(
+        let distancePairs = Array.from(
             util.range(boxes.length).flatMap(i =>
                 util.range(i + 1, boxes.length).map(j => [i, j, distanceSquared(boxes[i], boxes[j])])));
-        distancePairs.sort(([ai, aj, ad], [bi, bj, bd]) => ad - bd);
-        let connections = 0;
-        for (let [i, j, d] of distancePairs.slice(0, cutoff)) {
+        for (let [i, j, ] of util.take(lazySort(distancePairs, cmpDist), cutoff)) {
             let iNet = nets.get(i);
             let jNet = nets.get(j);
-            // if (iNet === jNet) { continue; }
-            connections++;
             for (let [index, kNet] of Array.from(nets)) {
                 if (kNet === jNet) {
                     nets.set(index, iNet);
@@ -47,9 +70,8 @@ function part1(lines) {
     const distancePairs = Array.from(
         util.range(boxes.length).flatMap(i =>
             util.range(i + 1, boxes.length).map(j => [i, j, distanceSquared(boxes[i], boxes[j])])));
-    distancePairs.sort(([ai, aj, ad], [bi, bj, bd]) => ad - bd);
     let networks = boxes.length;
-    for (let [i, j, d] of distancePairs) {
+    for (let [i, j, d] of lazySort(distancePairs, cmpDist)) {
         let iNet = nets.get(i);
         let jNet = nets.get(j);
         if (iNet === jNet) { continue; }
@@ -63,7 +85,6 @@ function part1(lines) {
             return boxes[i][0] * boxes[j][0];
         }
     }
-    return util.product(counts(nets).slice(0, 3));
 }
 
 export function main() {
