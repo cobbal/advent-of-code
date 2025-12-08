@@ -26,10 +26,10 @@
     (call $printI64 $result1)
 
     (call $printStr
-      (select "   bad" "  good"
+      (select "  \u2705 good" "  \u274c  bad"
         (local.tee $correct0 (i64 (= $result0 $expected0)))))
     (call $printStr
-      (select "   bad" "  good"
+      (select "  \u2705 good" "  \u274c  bad"
         (local.tee $correct1 (i64 (= $result1 $expected1)))))
     (call $print.nl)
     (! (& $correct0 $correct1))))

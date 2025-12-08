@@ -165,6 +165,9 @@
     [`(array.new ,type ,fill ,count) `(array.new ,type ,(recur fill) ,(recur count))]
     [`(array.new_default ,type ,count) `(array.new_default ,type ,(recur count))]
     [`(array.set ,type ,arr ,idx ,value) `(array.set ,type ,(recur arr) ,(recur idx) ,(recur value))]
+    [`(,(? (one-of '(array.get array.get_u array.get_s)) op) ,type ,arr ,idx)
+      `(,op ,type ,(recur arr) ,(recur idx))]
+    [`(array.len ,type ,arr) `(array.len ,type ,(recur arr))]
 
     [`(funcref ,name) `(global.get ,(symbol-append '$fns. (lookup env name)))]
     [`(inc! ,var) (recur `(local.set ,var (+ ,var 1)))]

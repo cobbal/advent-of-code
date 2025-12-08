@@ -2,32 +2,56 @@
 (namespace $day01
   (indirect_func part0 (param $filename i32) (result i64)
     (locals (ref $bytes) $contents)
+    (locals i32 $i $n $count $c0 $c1)
     (local.set $contents (call $readFile $filename))
-    (i64 0))
+    (local.set $n (- (array.len $contents) 1))
+    (debugger)
+    (loop $loop
+      (if (i32.lt_s $i $n)
+        (then
+          (local.set $c0 (array.get_u $bytes $contents $i))
+          (local.set $c1 (array.get_u $bytes $contents (rem_u (+ $i 1) $n)))
+          (local.set $count (+ $count (* (= $c0 $c1) (- $c0 #\0))))
+          (inc! $i)
+          (br $loop))))
+    (i64.extend_i32_s $count))
 
   (indirect_func part1 (param $filename i32) (result i64)
-    (i64 0))
+    (locals (ref $bytes) $contents)
+    (locals i32 $i $n $count $c0 $c1)
+    (local.set $contents (call $readFile $filename))
+    (local.set $n (- (array.len $contents) 1))
+    (debugger)
+    (loop $loop
+      (if (i32.lt_s $i $n)
+        (then
+          (local.set $c0 (array.get_u $bytes $contents $i))
+          (local.set $c1 (array.get_u $bytes $contents (rem_u (+ $i (div_u $n 2)) $n)))
+          (local.set $count (+ $count (* (= $c0 $c1) (- $c0 #\0))))
+          (inc! $i)
+          (br $loop))))
+    (i64.extend_i32_s $count))
 
   (indirect_func main (result i32)
     (+
       (call $day-utils.checkI64
         "day-01/input-ex0.txt"
-        (funcref part0) (i64 -1)
-        (funcref part1) (i64 -1))
+        (funcref part0) (i64 3)
+        (funcref part1) (i64 0))
       (call $day-utils.checkI64
         "day-01/input-ex1.txt"
-        (funcref part0) (i64 -1)
-        (funcref part1) (i64 -1))
+        (funcref part0) (i64 4)
+        (funcref part1) (i64 4))
       (call $day-utils.checkI64
         "day-01/input-ex2.txt"
-        (funcref part0) (i64 -1)
-        (funcref part1) (i64 -1))
+        (funcref part0) (i64 0)
+        (funcref part1) (i64 0))
       (call $day-utils.checkI64
         "day-01/input-ex3.txt"
-        (funcref part0) (i64 -1)
-        (funcref part1) (i64 -1))
+        (funcref part0) (i64 9)
+        (funcref part1) (i64 6))
       (call $day-utils.checkI64
         "day-01/input-real0.txt"
-        (funcref part0) (i64 -1)
-        (funcref part1) (i64 -1))
+        (funcref part0) (i64 1150)
+        (funcref part1) (i64 1064))
       0)))
