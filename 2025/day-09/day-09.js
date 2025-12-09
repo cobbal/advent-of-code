@@ -15,16 +15,27 @@ function part0(lines) {
     return util.minMax(areas()).max;
 }
 
+function compress(corners) {
+    let xs = new Set();
+    let ys = new Set();
+    for (let [x, y] of corners) {
+        [x - 1, x, x + 1].forEach(p => xs.add(p));
+        [y - 1, y, y + 1].forEach(p => ys.add(p));
+    }
+    xs = Array.from(xs).sort((a, b) => a - b);
+    ys = Array.from(ys).sort((a, b) => a - b);
+    corners = corners.map(([x, y]) => [xs.indexOf(x), ys.indexOf(y)]);
+    return { xs, ys, corners };
+}
 
 function part1(lines) {
     let yx = (y, x) => 1000000000 * y + x;
     const corners = lines.map(s => s.split(',').map(s => Number(s)));
-    const { min: minX, max: maxX } = util.minMax(corners.map(xy => xy[0]));
-    const { min: minY, max: maxY } = util.minMax(corners.map(xy => xy[1]));
+    const comp = compress(corners);
     const grid = new Map();
     for (let i = 0; i < corners.length; i++) {
-        let [x0, y0] = corners[i];
-        let [x1, y1] = corners[(i + 1) % corners.length];
+        let [x0, y0] = comp.corners[i];
+        let [x1, y1] = comp.corners[(i + 1) % corners.length];
         grid.set(yx(y0, x0), '#');
         let dx = Math.sign(x1 - x0);
         let dy = Math.sign(y1 - y0);
@@ -45,13 +56,17 @@ function part1(lines) {
         }
     }
 
-    function cast(x, y, dx, dy) {
-        for (let distance = 0;; distance += 1, x += dx, y += dy) {
-            if (grid.get(yx(y, x)) === 'O') { return distance - 1; }
+    function cast(x0, y0, dx, dy) {
+        for (let [x, y] = [x0, y0];; x += dx, y += dy) {
+            if (grid.get(yx(y, x)) === 'O') {
+                let xDist = Math.abs(comp.xs[x] - comp.xs[x0]);
+                let yDist = Math.abs(comp.ys[y] - comp.ys[y0]);
+                return xDist + yDist - 1;
+            }
         }
     }
 
-    let extents = corners.map(([x, y]) =>
+    let extents = comp.corners.map(([x, y]) =>
         ({
             n: cast(x, y, 0, -1),
             e: cast(x, y, 1, 0),
@@ -61,39 +76,21 @@ function part1(lines) {
     );
 
     function* areas() {
-        let progress = 0;
-        let n = corners.length * (corners.length + 1) / 2;
         for (let i = 0; i < corners.length; i++) {
             let [xi, yi] = corners[i];
-            let extentsi = extents[i];
+            let iExtents = extents[i];
             for (let j = i + 1; j < corners.length; j++) {
                 let [xj, yj] = corners[j];
-                let extentsj = extents[j];
+                let jExtents = extents[j];
                 let width = Math.abs(xi - xj);
                 let height = Math.abs(yi - yj);
-                const area = (width + 1) * (height + 1);
 
-                // if (area == 24) { debugger; }
+                if (iExtents[xi < xj ? 'e' : 'w'] < width) { continue; }
+                if (jExtents[xi < xj ? 'w' : 'e'] < width) { continue; }
+                if (iExtents[yi < yj ? 's' : 'n'] < height) { continue; }
+                if (jExtents[yi < yj ? 'n' : 's'] < height) { continue; }
 
-                let clear = true;
-                if (xi <= xj) {
-                    clear &&= (width <= extentsi.e);
-                    clear &&= (width <= extentsj.w);
-                } else {
-                    clear &&= (width <= extentsi.w);
-                    clear &&= (width <= extentsj.e);
-                }
-                if (yi <= yj) {
-                    clear &&= (height <= extentsi.s);
-                    clear &&= (height <= extentsj.n);
-                } else {
-                    clear &&= (height <= extentsi.n);
-                    clear &&= (height <= extentsj.s);
-                }
-
-                if (clear) {
-                    yield area;
-                }
+                yield (width + 1) * (height + 1);
             }
         }
     }
