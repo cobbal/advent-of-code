@@ -55,6 +55,16 @@ export function product(coll, start) {
     return result;
 }
 
+export function minMax(coll) {
+    let min = Infinity;
+    let max = -Infinity;
+    for (let x of coll) {
+        max = Math.max(max, x);
+        min = Math.min(min, x);
+    }
+    return { min, max };
+}
+
 export function count(coll, pred) {
     var result = 0;
     for (let x of coll) {
@@ -117,14 +127,22 @@ export function assert(bool, msg) {
     }
 }
 
+export function mapGetOrInsert(map, key, defaultValue) {
+    if (!map.has(key)) {
+        map.set(key, defaultValue);
+    }
+    return map.get(key);
+}
+
 export default {
     partition,
     checkDay,
-    sum, product, count,
+    sum, product, minMax, count,
     div, mod, divMod,
     bigMin, bigMax,
     nDigits,
     range, take,
     assert,
     arrayTrim,
+    mapGetOrInsert,
 };
