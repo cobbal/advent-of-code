@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import process from 'node:process';
 import util from './common/util.js';
-import { performance } from 'perf_hooks';
+import { performance } from 'node:perf_hooks';
 
 const days = await (async () => {
     const allDays = new Map();

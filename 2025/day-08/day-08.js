@@ -1,7 +1,6 @@
 "use strict";
 
 import util from '../common/util.js';
-import { performance } from 'perf_hooks';
 
 // adapted from https://en.wikipedia.org/wiki/Quicksort
 function* lazySort(arr, cmp) {
