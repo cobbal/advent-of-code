@@ -4,5 +4,8 @@ all:
 latest:
     ./driver.js -1
 
-debug:
-    NODE_OPTIONS=--inspect-brk ./driver.js -1
+day N:
+    ./driver.js {{N}}
+
+debug N="-1":
+    NODE_OPTIONS=--inspect-brk ./driver.js {{N}}
