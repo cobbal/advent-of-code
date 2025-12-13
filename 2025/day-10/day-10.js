@@ -5,11 +5,11 @@ import { Q, mkQ } from '../common/q.js';
 import solver from '../node_modules/javascript-lp-solver/src/solver.js';
 import Model from '../node_modules/javascript-lp-solver/src/Model.js';
 
-function printTab(tableau, label) {
-    let [m, n] = [tableau.length, tableau[0].length];
-    tableau = tableau.map(row => row.map((x, j) => j == 0 ? `${x} |` : `${x}`));
-    tableau = [tableau[0], tableau[0].map(x => '-'.repeat(x.length)), ...tableau.slice(1)]
-    printMat(tableau, label);
+function printTab(tab, label) {
+    let [m, n] = [tab.length, tab[0].length];
+    tab = tab.map(row => row.map((x, j) => j == 0 ? `${x} |` : `${x}`));
+    tab = [tab[0], tab[0].map(x => '-'.repeat(x.length)), ...tab.slice(1)]
+    printMat(tab, label);
 }
 
 function printMat(mat, label) {
@@ -53,18 +53,21 @@ function part0(lines) {
     return sum;
 }
 
-function minWithIndex(coll) {
+function argmin(coll, f) {
     let index = undefined;
     let value = undefined
+    let projection = undefined;
     let i = 0;
     for (let x of coll) {
-        if (i === 0 || Q.cmp(x, value) < 0) {
+        let xProj = f === undefined ? x : f(x, i)
+        if (i === 0 || Q.cmp(xProj, projection) < 0) {
             index = i;
             value = x;
+            projection = xProj;
         }
         i++;
     }
-    return { index, value };
+    return { index, value, projection };
 }
 
 function pivot(mat, pivotRowIndex, pivotColIndex) {
@@ -89,18 +92,20 @@ function pivot(mat, pivotRowIndex, pivotColIndex) {
 function myPhase1(tab) {
     const [m, n] = [tab.length, tab[0].length];
     while (true) {
-        const { index: pivotRow, value: rowValue } = minWithIndex(tab.map(row => row[0]));
+        const { index: pivotRow, projection: rowValue } = argmin(tab, row => row[0]);
         if (Q.ge(rowValue, 0)) {
             // Found fasible solution
-            return;
+            return true;
         }
-        const { index: pivotCol, value: quotientValue } = minWithIndex(util.range(0, n).map(c =>
-            (c > 0 && Q.lt(tab[pivotRow][c], 0)) ?
-                tab[0][c].div(tab[pivotRow][c]) :
-                Infinity
-        ));
+        const { index: pivotCol, projection: quotientValue } = argmin(util.range(0, n), c => {
+            if (c > 0 && Q.lt(tab[pivotRow][c], 0)) {
+                return tab[0][c].div(tab[pivotRow][c]);
+            } else {
+                return Infinity
+            }
+        });
         if (quotientValue === Infinity) {
-            throw "infeasible";
+            return false;
         }
         // console.log(`pivoting on ${tab[pivotRow][pivotCol]} at (${pivotRow}, ${pivotCol})`);
         pivot(tab, pivotRow, pivotCol);
@@ -165,10 +170,103 @@ function filterZeroRows(mat) {
     return mat.filter(row => row.some(x => !Q.eq(x, 0)))
 }
 
-function doMethod1(tableau) {
-    tableau = tableau.map(row => row.map(mkQ));
-    myPhase1(tableau);
-    return [tableau[0][0].approx(), tableau];
+function doMethod1(tab) {
+    tab = tab.map(row => row.map(mkQ));
+    return branchAndCut(tab);
+}
+
+function selectCut(tab) {
+    const { index, projection } = argmin(tab.slice(1), row =>
+        row[0].fracPart().sub(Q.half).abs()
+    );
+    if (Q.eq(projection, Q.half)) {
+        return { variable: -1 }
+    } else {
+        return {
+            variable: index + 1,
+            value: tab[index + 1][0],
+        }
+    }
+}
+
+function isIdentityRow(row) {
+    let zeroes = util.count(row, x => Q.eq(x, Q.zero));
+    let ones = util.count(row, x => Q.eq(x, Q.one));
+    return zeroes === row.length - 1 && ones === 1 && Q.eq(row[0], Q.zero);
+}
+
+function applyCuts(tab, cuts) {
+    tab = tab.map(row => Array.from(row));
+    let [m, n] = [tab.length, tab[0].length];
+    for (let cut of cuts) {
+        const constraintRow = new Array(n).fill(Q.zero);
+        const sign = (cut.type === 'min') ? -1 : 1;
+        const varRow = tab[cut.variable];
+        const varValue = varRow[0];
+
+        if (isIdentityRow(varRow)) {
+            const column = varRow.findIndex(x => Q.eq(x, Q.one));
+            constraintRow[0] = cut.value.mul(sign);
+            constraintRow[column] = mkQ(sign);
+        } else {
+            constraintRow[0] = cut.value.sub(varValue).mul(sign);
+            for (let c = 1; c < n; c++) {
+                constraintRow[c] = varRow[c].mul(-sign);
+            }
+        }
+        tab.push(constraintRow);
+    }
+    // printTab(tab);
+    return tab;
+}
+
+function branchAndCut(originalTab) {
+    let bestIntegralSolution = Infinity;
+    const branches = [{ evaluation: -Infinity, cuts: [] }];
+    // Find feasible initial config
+    util.assert(myPhase1(originalTab));
+    while (branches.length > 0) {
+        const branch = branches.pop();
+        if (Q.ge(branch.evaluation, bestIntegralSolution)) { continue; }
+        const tab = applyCuts(originalTab, branch.cuts);
+        if (!myPhase1(tab)) {
+            // not feasible
+            continue;
+        }
+        let evaluation = tab[0][0];
+        const nextCut = selectCut(tab);
+        if (nextCut.variable === -1) {
+            // integral solution found
+            bestIntegralSolution = Math.min(bestIntegralSolution, evaluation.approx());
+            continue;
+        }
+        const cutsHi = [];
+        const cutsLo = [];
+        for (let cut of branch.cuts) {
+            if (cut.variable === nextCut.variable) {
+                if (cut.type === "min") {
+                    cutsLo.push(cut);
+                } else {
+                    cutsHi.push(cut);
+                }
+            } else {
+                cutsHi.push(cut);
+                cutsLo.push(cut);
+            }
+        }
+        const minCut = { type: 'min', variable: nextCut.variable, value: nextCut.value.ceil() };
+        const maxCut = { type: 'max', variable: nextCut.variable, value: nextCut.value.floor() }
+        if (Q.eq(nextCut.value, new Q(73, 30))) {
+            debugger;
+        }
+        console.log("cutting", nextCut, minCut, maxCut);
+        cutsHi.push(minCut)
+        cutsLo.push(maxCut)
+        branches.push({ evaluation, cuts: cutsHi });
+        branches.push({ evaluation, cuts: cutsLo });
+        branches.sort((a, b) => a.evaluation - b.evaluation);
+    }
+    return [bestIntegralSolution, [[]]];
 }
 
 function part1(lines) {
@@ -183,7 +281,7 @@ function part1(lines) {
         const joltages = words[words.length - 1].slice(1, -1).split(',').map(s => Number(s));
 
         const wirings = rawWirings.map(wire => joltages.map((_, i) => wire.indexOf(i) !== -1 ? 1 : 0));
-        const tableau = [
+        const tab = [
             [0, ...rawWirings.map(wire => -1)],
             ...joltages.flatMap((jolt, i) => [
                 [-jolt, ...rawWirings.map(wire => wire.indexOf(i) !== -1 ? -1 : 0)],
@@ -218,35 +316,22 @@ function part1(lines) {
             ints,
         };
 
-        function findMin(jolts, wireIndex) {
-            if (jolts.some(x => x < 0)) { return Infinity; }
-            if (jolts.every(x => x === 0)) { return 0; }
-            if (wireIndex >= wirings.length) { return Infinity; }
-            const maxLeft = util.minMax(jolts).max;
-            let best = Infinity;
-            for (let count = 0; count <= maxLeft; count++) {
-                const newJolts = jolts.map((jolt, j) => jolt - count * wirings[wireIndex][j]);
-                best = Math.min(best, count + findMin(newJolts, wireIndex + 1));
-            }
-            return best;
-        }
-
         let method0 = solver.Solve(model).result;
         console.log("==============", method0, "==============");
-        let [method1, reduced] = doMethod1(tableau);
+        let [method1, reduced] = doMethod1(tab);
         model.ints = undefined;
         const m = new Model().loadJson(model);
         m.tableau.setModel(m);
         // console.log(m);
-        // printTab(filterZeroRows(m.tableau.matrix), "init:");
+        // printTab(filterZeroRows(m.tab.matrix), "init:");
         m.tableau.phase1();
-        // printTab(filterZeroRows(m.tableau.matrix), "phase1:");
+        // printTab(filterZeroRows(m.tab.matrix), "phase1:");
         m.solve();
 
         if (method0 !== method1) {
             console.log();
             console.log("DIFFERENCE", method0, method1, method0 - method1);
-            // printTab(filterZeroRows(m.tableau.matrix), "REF:");
+            // printTab(filterZeroRows(m.tab.matrix), "REF:");
             printTab(reduced);
             console.log();
             console.log();

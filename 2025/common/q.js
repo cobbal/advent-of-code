@@ -1,5 +1,7 @@
 "use strict";
 
+import util from "./util.js";
+
 function gcd(a, b) {
     if (a < b) {
         [a, b] = [b, a];
@@ -46,6 +48,20 @@ export class Q {
     inv() {
         return new Q(this.denom, this.num);
     }
+
+    fracPart() {
+        return new Q(util.mod(this.num, this.denom), this.denom);
+    }
+
+    floor() {
+        return this.sub(this.fracPart());
+    }
+
+    ceil() {
+        // could be faster...
+        return this.neg().floor().neg();
+    }
+
     toString() {
         if (this.denom === 1) {
             return `${this.num}`
@@ -93,6 +109,15 @@ export class Q {
         return Q.cmp(lhs, rhs) >= 0;
     }
 
+    static min(lhs, rhs) {
+        return Q.le(lhs, rhs) ? lhs : rhs
+    }
+
+    static max(lhs, rhs) {
+        return Q.ge(lhs, rhs) ? lhs : rhs
+    }
 
     static zero = new Q(0, 1);
+    static half = new Q(1, 2);
+    static one = new Q(1, 1);
 }
