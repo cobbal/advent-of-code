@@ -4,14 +4,24 @@ import util from '../common/util.js';
 import { Q, mkQ } from '../common/q.js';
 import solver from '../node_modules/javascript-lp-solver/src/solver.js';
 
-function printMat(mat) {
+function printTab(tableau, label) {
+    let [m, n] = [tableau.length, tableau[0].length];
+    tableau = tableau.map(row => row.map((x, j) => j == n - 2 ? `| ${x}` : `${x}`));
+    tableau = [...tableau.slice(0, -1), tableau[0].map(x => '_'), tableau.at(-1)]
+    printMat(tableau, label);
+}
+
+function printMat(mat, label) {
     console.log();
+    if (label !== undefined) {
+        console.log(label);
+    }
     let [m, n] = [mat.length, mat[0].length];
     let strings = mat.map(row => row.map(e => `${e}`));
     let colWidths = Array.from(util.range(n).map(j => util.minMax(strings.map(row => row[j].length)).max));
-    strings.forEach(row =>
-        console.log(row.map((s, j) => s.padStart(colWidths[j])).join(', '))
-    );
+    strings.forEach((row, i) => {
+        console.log(row.map((s, j) => s.padStart(colWidths[j])).join(', '));
+    });
 }
 
 function part0(lines) {
@@ -55,23 +65,23 @@ function arrgMin(arr) {
 
 function simplexMany(mat) {
     let tries = 0;
-    while (mat[0].slice(0, -1).some(x => Q.cmp(x, 0) < 0)) {
-        // printMat(mat);
+    while (mat.at(-1).slice(0, -1).some(x => Q.cmp(x, 0) > 0)) {
+        // printTab(mat);
         if (tries++ > 2 * mat.length) {
             console.log("failed to converge");
-            mat = gauss(mat, false)[0];
+            // mat = gauss(mat, false)[0];
             break;
         }
         mat = simplex1(mat);
     }
     // console.log(" =>");
-    // printMat(mat);
+    // printTab(mat);
     return mat;
 }
 
 function simplex1(mat) {
     mat = mat.map(row => row.map(n => mkQ(n)));
-    let pivotCol = arrgMin(mat[0].slice(0, -1));
+    let pivotCol = mat.at(-1).findIndex(x => Q.lt(x, 0));
     let pivotRow = arrgMin(mat.map(row => row[row.length - 1].div(row[pivotCol])).slice(1)) + 1;
     // console.log(pivotRow, pivotCol);
 
@@ -162,16 +172,19 @@ function pullNegs(mat) {
 }
 
 function doMethod1(tableau) {
-    tableau = gauss(tableau, false)[0];
-    while (true) {
-        let next = pullNegs(tableau);
-        if (next === undefined) {
-            break;
-        }
-        tableau = gauss(next, false)[0];
-    }
+    tableau = tableau.map(row => row.map(mkQ));
+    printTab(tableau, "init:", true);
+    // tableau = gauss(tableau, false)[0];
+    // while (true) {
+    //     let next = pullNegs(tableau);
+    //     if (next === undefined) {
+    //         break;
+    //     }
+    //     tableau = gauss(next, false)[0];
+    // }
     tableau = simplexMany(tableau);
-    return [-tableau[0].slice(-1)[0].approx(), tableau];
+    printTab(tableau, "after:", true);
+    return [-tableau.at(-1).at(-1).approx(), tableau];
 }
 
 function part1(lines) {
@@ -207,16 +220,16 @@ function part1(lines) {
 
         const wirings = rawWirings.map(wire => joltages.map((_, i) => wire.indexOf(i) !== -1 ? 1 : 0));
         const tableau = [
-            [1, ...rawWirings.map(wire => 1), 0],
             ...joltages.map(
                 (jolt, i) => [
-                    0,
                     ...rawWirings.map(wire =>
                         wire.indexOf(i) !== -1 ? 1 : 0
                     ),
+                    0,
                     jolt,
                 ]
             ),
+            [...rawWirings.map(wire => -1), 1, 0],
         ];
         // console.log(tableau.map(r => r.join(', ')));
         // console.log("=true=>", gauss(tableau, true).map(r => r.join(', ')));
@@ -270,9 +283,9 @@ function part1(lines) {
         if (method0 !== method1) {
             console.log();
             console.log("DIFFERENCE", method0, method1, method0 - method1);
-            // printMat(tableau);
-            // printMat(simplexMany(tableau));
-            printMat(reduced);
+            // printTab(tableau);
+            // printTab(simplexMany(tableau));
+            printTab(reduced);
             console.log();
             console.log();
             diffs++;
@@ -291,9 +304,9 @@ export function main() {
     //     [0,   1,   1, 1, 0, 12],
     //     [0,   2,   1, 0, 1, 16],
     // ];
-    // printMat(m);
-    // printMat(m = simplex(m));
-    // printMat(m = simplex(m));
+    // printTab(m);
+    // printTab(m = simplex(m));
+    // printTab(m = simplex(m));
     return [
         util.checkDay("day-10/input-ex0.txt", part0, part1, 7, 33),
         util.checkDay("day-10/input-real0.txt", part0, part1, 500, 19763),

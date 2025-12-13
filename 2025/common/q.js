@@ -82,7 +82,7 @@ export class Q {
     }
 
     static gt(lhs, rhs) {
-        return Q.cmp(lhs, rhs) < 0;
+        return Q.cmp(lhs, rhs) > 0;
     }
 
     static le(lhs, rhs) {
