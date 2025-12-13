@@ -4,6 +4,16 @@ import util from '../common/util.js';
 import { Q } from '../common/q.js';
 import solver from '../node_modules/javascript-lp-solver/src/solver.js';
 
+function printMat(mat) {
+    console.log();
+    let [m, n] = [mat.length, mat[0].length];
+    let strings = mat.map(row => row.map(e => `${e}`));
+    let colWidths = Array.from(util.range(n).map(j => util.minMax(strings.map(row => row[j].length)).max));
+    strings.forEach(row =>
+        console.log(row.map((s, j) => s.padStart(colWidths[j])).join(', '))
+    );
+}
+
 function part0(lines) {
     let sum = 0;
     for (let line of lines) {
@@ -36,6 +46,7 @@ function part0(lines) {
 function gauss(mat, recolumn) {
     mat = mat.map(row => row.map(n => new Q(n)));
     let [m, n] = [mat.length, mat[0].length];
+    let columnTracker = Array.from(util.range(n).map(i => `b${i}`));
     let h = 0;
     let kSrc = 0;
     let kDest = 0;
@@ -57,6 +68,7 @@ function gauss(mat, recolumn) {
             for (let i = 0; i < m; i++) {
                 [mat[i][kSrc], mat[i][kDest]] = [mat[i][kDest], mat[i][kSrc]];
             }
+            [columnTracker[kSrc], columnTracker[kDest]] = [columnTracker[kDest], columnTracker[kSrc]];
             k = kDest;
         }
 
@@ -77,11 +89,22 @@ function gauss(mat, recolumn) {
         kSrc++;
         kDest++;
     }
-    return mat.filter(row => row.some(x => !Q.eq(x, Q.zero)));
+    return [
+        mat.filter(row => row.some(x => !Q.eq(x, Q.zero))),
+        columnTracker
+    ];
+}
+
+function filterColumns(mat) {
+    return mat.map(row =>
+        row.filter((_, j) => !Q.eq(mat[0][j], 0))
+    );
 }
 
 function part1(lines) {
-    let sum = 0;
+    let sum0 = 0;
+    let sum1 = 0;
+    let diffs = 0;
     let lineNum = 0;
     for (let line of lines) {
         lineNum++;
@@ -90,6 +113,24 @@ function part1(lines) {
         const joltages = words[words.length - 1].slice(1, -1).split(',').map(s => Number(s));
         rawWirings.sort((a, b) => b.length - a.length);
         // console.log(rawWirings);
+
+        // b0 (3)      ex 1
+        // b1 (1,3)    ex 3
+        // b2 (2)      ex 0
+        // b3 (2,3)    ex 3
+        // b4 (0,2)    ex 1
+        // b5 (0,1)    ex 2
+        // {3,5,4,7}
+
+        // b0 + b3 - b5 = 2
+        // b1 + b5 = 5
+        // b2 + b3 - b5 = 1
+        // b4 + b5 = 3
+
+        // 1 + 3 - 2 = 2
+        // 3 + 2 = 5
+        // 0 + 3 - 2 = 1
+        // 1 + 2 = 3
 
         const wirings = rawWirings.map(wire => joltages.map((_, i) => wire.indexOf(i) !== -1 ? 1 : 0));
         const tableau = [
@@ -107,7 +148,7 @@ function part1(lines) {
         // console.log(tableau.map(r => r.join(', ')));
         // console.log("=true=>", gauss(tableau, true).map(r => r.join(', ')));
         // console.log(lineNum);
-        const reduced = gauss(tableau, true);
+        const [reduced, labels] = gauss(tableau, true);
 
         const symWire = i => `wire${i}`;
         const symJolt = i => `jolt${i}`;
@@ -152,17 +193,30 @@ function part1(lines) {
         let method0 = solver.Solve(model).result;
         let method1 = -reduced[0].slice(-1)[0].approx();
 
+        let n = reduced.length;
+        let leftIdentity = true
+        for (let i = 0; i < n; i++) {
+            for (let j = 0; j < n; j++) {
+                if (!Q.eq(reduced[i][j], i == j ? 1 : 0)) {
+                    leftIdentity = false;
+                }
+            }
+        }
+        util.assert(leftIdentity);
+
         if (method0 !== method1) {
             console.log();
             console.log(method0 - method1);
-            console.log(tableau.map(r => r.join(', ')));
-            console.log(reduced.map(r => r.join(', ')));
+            // printMat(tableau);
+            printMat(reduced);
+            diffs++;
         }
 
-        // sum +=
-        sum += method0;
+        sum0 += method0;
+        sum1 += method1;
     }
-    return sum;
+    console.log(sum0, sum1, diffs);
+    return sum0;
 }
 
 export function main() {
