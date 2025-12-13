@@ -3,11 +3,12 @@
 import util from '../common/util.js';
 import { Q, mkQ } from '../common/q.js';
 import solver from '../node_modules/javascript-lp-solver/src/solver.js';
+import Model from '../node_modules/javascript-lp-solver/src/Model.js';
 
 function printTab(tableau, label) {
     let [m, n] = [tableau.length, tableau[0].length];
-    tableau = tableau.map(row => row.map((x, j) => j == n - 2 ? `| ${x}` : `${x}`));
-    tableau = [...tableau.slice(0, -1), tableau[0].map(x => '_'), tableau.at(-1)]
+    tableau = tableau.map(row => row.map((x, j) => j == 0 ? `${x} |` : `${x}`));
+    tableau = [tableau[0], tableau[0].map(x => '-'.repeat(x.length)), ...tableau.slice(1)]
     printMat(tableau, label);
 }
 
@@ -52,52 +53,59 @@ function part0(lines) {
     return sum;
 }
 
-function arrgMin(arr) {
-    let best = 0;
-    for (let i = 1; i < arr.length; i++) {
-        if (Q.cmp(arr[i], arr[best]) < 0) {
-            best = i;
+function minWithIndex(coll) {
+    let index = undefined;
+    let value = undefined
+    let i = 0;
+    for (let x of coll) {
+        if (i === 0 || Q.cmp(x, value) < 0) {
+            index = i;
+            value = x;
         }
+        i++;
     }
-    // console.log(`[${arr.join(', ')}] => ${arr[best]} @${best}`);
-    return best;
+    return { index, value };
 }
 
-function simplexMany(mat) {
-    let tries = 0;
-    while (mat.at(-1).slice(0, -1).some(x => Q.cmp(x, 0) > 0)) {
-        // printTab(mat);
-        if (tries++ > 2 * mat.length) {
-            console.log("failed to converge");
-            // mat = gauss(mat, false)[0];
-            break;
-        }
-        mat = simplex1(mat);
+function pivot(mat, pivotRowIndex, pivotColIndex) {
+    const pivotValue = mat[pivotRowIndex][pivotColIndex];
+    for (let j = 0; j < mat[pivotRowIndex].length; j++) {
+        mat[pivotRowIndex][j] = mat[pivotRowIndex][j].div(pivotValue);
     }
-    // console.log(" =>");
-    // printTab(mat);
-    return mat;
+    // I still don't understand this part of the pivot...
+    mat[pivotRowIndex][pivotColIndex] = pivotValue.inv();
+
+    const pivotRow = mat[pivotRowIndex];
+    mat.forEach((row, i) => {
+        if (i === pivotRowIndex) { return; }
+        const coeff = row[pivotColIndex];
+        for (let c = 0; c < row.length; c++)  {
+            row[c] = row[c].sub(coeff.mul(pivotRow[c]));
+        }
+        row[pivotColIndex] = coeff.neg().div(pivotValue)
+    });
 }
 
-function simplex1(mat) {
-    mat = mat.map(row => row.map(n => mkQ(n)));
-    let pivotCol = mat.at(-1).findIndex(x => Q.lt(x, 0));
-    let pivotRow = arrgMin(mat.map(row => row[row.length - 1].div(row[pivotCol])).slice(1)) + 1;
-    // console.log(pivotRow, pivotCol);
-
-    const factor = mat[pivotRow][pivotCol];
-    for (let j = 0; j < mat[pivotRow].length; j++) {
-        mat[pivotRow][j] = mat[pivotRow][j].div(factor);
-    }
-    for (let i = 0; i < mat.length; i++)  {
-        if (i === pivotRow) { continue; }
-        const factor = mat[i][pivotCol].div(mat[pivotRow][pivotCol]);
-        for (let j = 0; j < mat[i].length; j++)  {
-            mat[i][j] = mat[i][j].sub(factor.mul(mat[pivotRow][j]));
+function myPhase1(tab) {
+    const [m, n] = [tab.length, tab[0].length];
+    while (true) {
+        const { index: pivotRow, value: rowValue } = minWithIndex(tab.map(row => row[0]));
+        if (Q.ge(rowValue, 0)) {
+            // Found fasible solution
+            return;
         }
+        const { index: pivotCol, value: quotientValue } = minWithIndex(util.range(0, n).map(c =>
+            (c > 0 && Q.lt(tab[pivotRow][c], 0)) ?
+                tab[0][c].div(tab[pivotRow][c]) :
+                Infinity
+        ));
+        if (quotientValue === Infinity) {
+            throw "infeasible";
+        }
+        // console.log(`pivoting on ${tab[pivotRow][pivotCol]} at (${pivotRow}, ${pivotCol})`);
+        pivot(tab, pivotRow, pivotCol);
+        // printTab(tab, `after pivoting on ${tab[pivotRow][pivotCol]} at (${pivotRow}, ${pivotCol})`);
     }
-
-    return mat;
 }
 
 // https://en.wikipedia.org/wiki/Gaussian_elimination#Pseudocode
@@ -153,38 +161,14 @@ function gauss(mat, recolumn) {
     ];
 }
 
-function pullNegs(mat) {
-    let [m, n] = [mat.length, mat[0].length];
-    for (let i = 1; i < m; i++) {
-        if (Q.lt(mat[i][n - 1], 0)) {
-            for (let j = m; j < n - 1; j++) {
-                if (Q.lt(mat[i][j], 0)) {
-                    // swap column j with column i
-                    return mat.map(row => {
-                        const newRow = row.slice();
-                        [newRow[i], newRow[j]] = [newRow[j], newRow[i]];
-                        return newRow;
-                    });
-                }
-            }
-        }
-    }
+function filterZeroRows(mat) {
+    return mat.filter(row => row.some(x => !Q.eq(x, 0)))
 }
 
 function doMethod1(tableau) {
     tableau = tableau.map(row => row.map(mkQ));
-    printTab(tableau, "init:", true);
-    // tableau = gauss(tableau, false)[0];
-    // while (true) {
-    //     let next = pullNegs(tableau);
-    //     if (next === undefined) {
-    //         break;
-    //     }
-    //     tableau = gauss(next, false)[0];
-    // }
-    tableau = simplexMany(tableau);
-    printTab(tableau, "after:", true);
-    return [-tableau.at(-1).at(-1).approx(), tableau];
+    myPhase1(tableau);
+    return [tableau[0][0].approx(), tableau];
 }
 
 function part1(lines) {
@@ -197,44 +181,15 @@ function part1(lines) {
         const words = line.split(' ');
         const rawWirings = words.slice(1, -1).map(s => s.slice(1, -1).split(',').map(s => Number(s)));
         const joltages = words[words.length - 1].slice(1, -1).split(',').map(s => Number(s));
-        rawWirings.sort((a, b) => b.length - a.length);
-        // console.log(rawWirings);
-
-        // b0 (3)      ex 1
-        // b1 (1,3)    ex 3
-        // b2 (2)      ex 0
-        // b3 (2,3)    ex 3
-        // b4 (0,2)    ex 1
-        // b5 (0,1)    ex 2
-        // {3,5,4,7}
-
-        // b0 + b3 - b5 = 2
-        // b1 + b5 = 5
-        // b2 + b3 - b5 = 1
-        // b4 + b5 = 3
-
-        // 1 + 3 - 2 = 2
-        // 3 + 2 = 5
-        // 0 + 3 - 2 = 1
-        // 1 + 2 = 3
 
         const wirings = rawWirings.map(wire => joltages.map((_, i) => wire.indexOf(i) !== -1 ? 1 : 0));
         const tableau = [
-            ...joltages.map(
-                (jolt, i) => [
-                    ...rawWirings.map(wire =>
-                        wire.indexOf(i) !== -1 ? 1 : 0
-                    ),
-                    0,
-                    jolt,
-                ]
-            ),
-            [...rawWirings.map(wire => -1), 1, 0],
+            [0, ...rawWirings.map(wire => -1)],
+            ...joltages.flatMap((jolt, i) => [
+                [-jolt, ...rawWirings.map(wire => wire.indexOf(i) !== -1 ? -1 : 0)],
+                [jolt, ...rawWirings.map(wire => wire.indexOf(i) !== -1 ? 1 : 0)],
+            ]),
         ];
-        // console.log(tableau.map(r => r.join(', ')));
-        // console.log("=true=>", gauss(tableau, true).map(r => r.join(', ')));
-        // console.log(lineNum);
-        // const [reduced, labels] = gauss(tableau, true);
 
         const symWire = i => `wire${i}`;
         const symJolt = i => `jolt${i}`;
@@ -279,12 +234,19 @@ function part1(lines) {
         let method0 = solver.Solve(model).result;
         console.log("==============", method0, "==============");
         let [method1, reduced] = doMethod1(tableau);
+        model.ints = undefined;
+        const m = new Model().loadJson(model);
+        m.tableau.setModel(m);
+        // console.log(m);
+        // printTab(filterZeroRows(m.tableau.matrix), "init:");
+        m.tableau.phase1();
+        // printTab(filterZeroRows(m.tableau.matrix), "phase1:");
+        m.solve();
 
         if (method0 !== method1) {
             console.log();
             console.log("DIFFERENCE", method0, method1, method0 - method1);
-            // printTab(tableau);
-            // printTab(simplexMany(tableau));
+            // printTab(filterZeroRows(m.tableau.matrix), "REF:");
             printTab(reduced);
             console.log();
             console.log();
@@ -299,14 +261,7 @@ function part1(lines) {
 }
 
 export function main() {
-    // let m = [
-    //     [1, -40, -30, 0, 0, 0 ],
-    //     [0,   1,   1, 1, 0, 12],
-    //     [0,   2,   1, 0, 1, 16],
-    // ];
-    // printTab(m);
-    // printTab(m = simplex(m));
-    // printTab(m = simplex(m));
+    global.printTab = printTab;
     return [
         util.checkDay("day-10/input-ex0.txt", part0, part1, 7, 33),
         util.checkDay("day-10/input-real0.txt", part0, part1, 500, 19763),
