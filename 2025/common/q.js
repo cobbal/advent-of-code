@@ -10,11 +10,11 @@ function gcd(a, b) {
     return a;
 }
 
-const ensureQ = n => n instanceof Q ? n : new Q(n, 1);
+export const mkQ = n => n instanceof Q ? n : new Q(n, 1);
 
 export class Q {
     constructor(num, denom = 1) {
-        if (isNaN(num) || isNaN(denom)) {
+        if (num instanceof Q || denom instanceof Q || isNaN(num) || isNaN(denom)) {
             debugger;
         }
         if (denom < 0) {
@@ -27,18 +27,18 @@ export class Q {
     }
 
     add(rhs) {
-        rhs = ensureQ(rhs);
+        rhs = mkQ(rhs);
         return new Q(this.num * rhs.denom + rhs.num * this.denom, this.denom * rhs.denom);
     }
     sub(rhs) {
-        return this.add(ensureQ(rhs).neg());
+        return this.add(mkQ(rhs).neg());
     }
     mul(rhs) {
-        rhs = ensureQ(rhs);
+        rhs = mkQ(rhs);
         return new Q(this.num * rhs.num, this.denom * rhs.denom);
     }
     div(rhs) {
-        return this.mul(ensureQ(rhs).inv());
+        return this.mul(mkQ(rhs).inv());
     }
     neg() {
         return new Q(-this.num, this.denom);
@@ -66,8 +66,8 @@ export class Q {
     }
 
     static cmp(lhs, rhs) {
-        lhs = ensureQ(lhs);
-        rhs = ensureQ(rhs);
+        lhs = mkQ(lhs);
+        rhs = mkQ(rhs);
         const left = lhs.num * rhs.denom;
         const right = rhs.num * lhs.denom;
         return left - right;
@@ -76,6 +76,23 @@ export class Q {
     static eq(lhs, rhs) {
         return Q.cmp(lhs, rhs) === 0;
     }
+
+    static lt(lhs, rhs) {
+        return Q.cmp(lhs, rhs) < 0;
+    }
+
+    static gt(lhs, rhs) {
+        return Q.cmp(lhs, rhs) < 0;
+    }
+
+    static le(lhs, rhs) {
+        return Q.cmp(lhs, rhs) <= 0;
+    }
+
+    static ge(lhs, rhs) {
+        return Q.cmp(lhs, rhs) >= 0;
+    }
+
 
     static zero = new Q(0, 1);
 }

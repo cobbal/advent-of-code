@@ -123,6 +123,7 @@ function* take(iter, n) {
 export function assert(bool, msg) {
     if (!bool) {
         console.assert(bool, msg);
+        debugger;
         throw "Assertion failure";
     }
 }
