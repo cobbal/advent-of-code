@@ -120,4 +120,21 @@ export class Q {
     static zero = new Q(0, 1);
     static half = new Q(1, 2);
     static one = new Q(1, 1);
+
+    static argmin(coll, f) {
+        let index = undefined;
+        let value = undefined
+        let projection = undefined;
+        let i = 0;
+        for (let x of coll) {
+            let xProj = f === undefined ? x : f(x, i)
+            if (i === 0 || Q.cmp(xProj, projection) < 0) {
+                index = i;
+                value = x;
+                projection = xProj;
+            }
+            i++;
+        }
+        return { index, value, projection };
+    }
 }
