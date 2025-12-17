@@ -9,7 +9,8 @@ build-wat: compiler
     guile -c '(load-compiled "build/mwatc.go")' day-*/*.mwat main.mwat stdlib/*.mwat
 
 build-wasm: build-wat
-    wasm-tools parse -g build/2017.wat -o build/2017.wasm
+    wasm-tools parse build/2017.wat -o build/2017.wasm
+    # wasm-tools parse -g build/2017.wat -o build/2017.wasm
 
 compiler:
     guild compile -o build/mwatc.go compiler/mwatc.scm

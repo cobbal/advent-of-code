@@ -144,18 +144,18 @@
   (call $printStr $i)
   (call $print.nl))
 
-(func $printStr (param $string i32)
-  (if (i32.eqz $string)
-    (then (local.set $string "<null>")))
-  (i32.store #x100 $string)
-  (i32.store #x104 (call $strlen $string))
+(func $printStr (param $str i32)
+  (if (i32.eqz $str)
+    (then (local.set $str "<null>")))
+  (i32.store #x100 $str)
+  (i32.store #x104 (call $strlen $str))
   (call $assert_not
     (call $fd_write 1 #x100 1 #x8)))
 
 ;; string -> (string, size)
-(func $readFile (param $path i32) (result (ref $bytes))
+(func $readFile (param $path i32) (result (ref $String))
   (locals i32 $err $fd $len $buffer $i)
-  (locals (ref $bytes) $result)
+  (locals (ref $String) $result)
 
   (call $assert_not
     (call $path_open
@@ -205,12 +205,12 @@
 
   (call $assert_not (call $fd_close $fd))
 
-  (local.set $result (array.new_default $bytes $len))
+  (local.set $result (array.new_default $String $len))
   (loop $copy
     (if (lt_s $i $len)
       (then
-        (array.set $bytes $result $i (i32.load8_u (+ $buffer $i)))
-        (inc! $i)
+        (array.set $String $result $i (i32.load8_u (+ $buffer $i)))
+        (add! $i 1)
         (br $copy))))
 
   (call $_io.stackPop $buffer)

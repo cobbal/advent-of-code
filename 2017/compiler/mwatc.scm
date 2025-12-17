@@ -74,7 +74,7 @@
 (define (take-while-car target lst)
   (let loop ([matches '()] [lst lst])
     (if (eq? target (car-safe (car-safe lst)))
-      (loop (cons (car lst) matches) (cdr lst))
+      (loop (cons (cdr (car lst)) matches) (cdr lst))
       (list (reverse matches) lst))))
 
 (define (lookup env name)
@@ -83,14 +83,52 @@
       name
       (string->symbol (string-append (env-namespace env) str)))))
 
+(define (process/type env)
+  (match-lambda
+    [`(ref any) `(ref any)]
+    [`(ref null any) `(ref null any)]
+    [`(ref ,id) `(ref ,(lookup env id))]
+    [`(ref null ,id) `(ref null ,(lookup env id))]
+    [t t]))
+
+(define (process/typedef env)
+  (match-lambda
+    [`(array (mut ,type)) `(array (mut ,((process/type env) type)))]
+    [`(struct . ,fields)
+      `(struct
+         ,@(map
+             (match-lambda
+               [`(field ,id ,type) `(field ,(lookup env id) ,((process/type env) type))]
+               [`(field ,type) `(field ,((process/type env) type))]
+               [form (error "unrecognized field form:" form)])
+             fields))]
+    [t `(UNRECOGNIZED ,@t)]))
+
+
+(define (process/params-results-body env forms)
+  (match-let* ([`(,params ,forms) (take-while-car 'param forms)]
+                [`(,results ,forms) (take-while-car 'result forms)])
+    (list
+      (map
+        (match-lambda
+          [`(,(? symbol? name) ,type) `(param ,(lookup env name) ,((process/type env) type))]
+          [`(,type) `(param ,((process/type env) type))]
+          [form (error "unrecognized param form:" `(param ,@form))])
+        params)
+      (map
+        (match-lambda
+          [`(,type) `(result ,((process/type env) type))]
+          [form (error "unrecognized result form:" `(result ,@form))])
+        results)
+      forms)))
+
 (define (process/module env)
   (match-lambda
     [`(namespace ,name . ,forms)
       (concatenate (map (process/module (env-push-namespace env name)) forms))]
     [`(import . ,imports) `((import ,@imports))]
     [`(,(? (one-of '(func indirect_func)) op) ,name . ,forms)
-      (match-let* ([`(,params ,forms) (take-while-car 'param forms)]
-                    [`(,results ,forms) (take-while-car 'result forms)])
+      (match-let* ([`(,params ,results ,forms) (process/params-results-body env forms)])
         (let ([fn-name (lookup env name)])
           (if (eq? op 'indirect_func)
             (push-fn-table! env fn-name))
@@ -99,9 +137,8 @@
               ,@(concatenate (map (process/instr* env) forms))))))]
     [`(global ,name ,ty ,value)
       `((global ,name ,ty ,((process/instr env) value)))]
-    [(and `(type . ,_) form)
-      ;; TODO: more here?
-      (list form)]
+    [`(type ,id ,def)
+      `((type ,(lookup env id) ,((process/typedef env) def)))]
     [form (error "unrecognized form:" form)]))
 
 (define (process/instr* env)
@@ -149,8 +186,7 @@
     [`(,(? (one-of '(call return_call)) op) ,name . ,args)
       `(call ,(lookup env name) ,@(map recur args))]
     [`(,(? (one-of '(call_indirect return_call_indirect)) op) . ,forms)
-      (match-let* ([`(,params ,forms) (take-while-car 'param forms)]
-                    [`(,results ,forms) (take-while-car 'result forms)])
+      (match-let* ([`(,params ,results ,forms) (process/params-results-body env forms)])
         `(,op ,@params ,@results ,@(map recur forms)))]
     [`(,(? (one-of '(loop block)) op) ,label . ,forms)
       `(,op ,label ,@(concatenate (map recur* forms)))]
@@ -162,6 +198,8 @@
     [`(global.get ,name) `(global.get ,(lookup env name))]
     [`(global.set ,name ,form) `(global.set ,(lookup env name) ,(recur form))]
 
+    [`(ref.null ,type) `(ref.null ,(lookup env type))]
+
     [`(array.new ,type ,fill ,count) `(array.new ,type ,(recur fill) ,(recur count))]
     [`(array.new_default ,type ,count) `(array.new_default ,type ,(recur count))]
     [`(array.set ,type ,arr ,idx ,value) `(array.set ,type ,(recur arr) ,(recur idx) ,(recur value))]
@@ -169,8 +207,13 @@
       `(,op ,type ,(recur arr) ,(recur idx))]
     [`(array.len ,type ,arr) `(array.len ,type ,(recur arr))]
 
+    [`(struct.new ,type . ,fields)
+      `(struct.new ,(lookup env type) ,@(map recur fields))]
+    [`(struct.get ,type ,field ,val)
+      `(struct.get ,(lookup env type) ,field ,(recur val))]
+
     [`(funcref ,name) `(global.get ,(symbol-append '$fns. (lookup env name)))]
-    [`(inc! ,var) (recur `(local.set ,var (+ ,var 1)))]
+    [`(add! ,var ,n) (recur `(local.set ,var (+ ,var ,(recur n))))]
 
     ['drop '(drop)]
     ['unreachable '(unreachable)]

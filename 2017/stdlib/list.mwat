@@ -1,0 +1,21 @@
+;; -*- mode: wat -*-
+
+(namespace $list<*>
+  (type T (struct (field (ref null any)) (field (ref null T))))
+  (func cons (param $head (ref null any)) (param $tail (ref null T)) (result (ref T))
+    (struct.new T $head $tail))
+  (func head (param $pair (ref null T)) (result (ref null any))
+    (struct.get T 0 $pair))
+  (func tail (param $pair (ref null T)) (result (ref null T))
+    (struct.get T 1 $pair))
+
+  (func revAppend (param $l1 (ref null T)) (param $l2 (ref null T)) (result (ref null T))
+    (if (ref.is_null $l1)
+      (then (return $l2)))
+    (return_call revAppend
+      (struct.get T 1 $l1)
+      (struct.new T (struct.get T 0 $l1) $l2)))
+
+  (func rev (param $l (ref null T)) (result (ref null T))
+    (return_call revAppend $l (ref.null T)))
+  )
