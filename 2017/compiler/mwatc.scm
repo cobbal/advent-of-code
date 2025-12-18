@@ -31,11 +31,12 @@
         (loop (cons form acc))))))
 
 (define-immutable-record-type static-allocator
-  (make-static-allocator next-ptr strings fns)
+  (make-static-allocator next-ptr strings fns types)
   static-allocator?
   (next-ptr static-allocator-next-ptr set-static-allocator-next-ptr)
   (strings static-allocator-strings set-static-allocator-strings)
-  (fns static-allocator-fns set-static-allocator-fns))
+  (fns static-allocator-fns set-static-allocator-fns)
+  (types static-allocator-types set-static-allocator-types))
 
 (define-immutable-record-type env
   (make-env namespace i-width static-allocator)
@@ -59,14 +60,21 @@
     (make-static-allocator
       (+ result (string-utf8-length string) 1)
       (cons `(data (i32.const ,result) ,string) (static-allocator-strings (unbox alloc-box)))
-      (static-allocator-fns (unbox alloc-box))))
+      (static-allocator-fns (unbox alloc-box))
+      (static-allocator-types (unbox alloc-box))))
   result)
 
-(define (push-fn-table! env fn-name)
+(define* (push-indirect-fn! env fn-name #:optional def)
   (define alloc-box (env-static-allocator env))
   (set-box! alloc-box
     (set-static-allocator-fns (unbox alloc-box)
-      (cons fn-name (static-allocator-fns (unbox alloc-box))))))
+      (cons (list fn-name def) (static-allocator-fns (unbox alloc-box))))))
+
+(define (push-type! env type)
+  (define alloc-box (env-static-allocator env))
+  (set-box! alloc-box
+    (set-static-allocator-types (unbox alloc-box)
+      (cons type (static-allocator-types (unbox alloc-box))))))
 
 (define (env-push-namespace env name)
   (set-env-namespace env (string-append (env-namespace env) (symbol->string name) ".")))
@@ -131,7 +139,7 @@
       (match-let* ([`(,params ,results ,forms) (process/params-results-body env forms)])
         (let ([fn-name (lookup env name)])
           (if (eq? op 'indirect_func)
-            (push-fn-table! env fn-name))
+            (push-indirect-fn! env fn-name))
           `((func ,fn-name
               ,@params ,@results
               ,@(concatenate (map (process/instr* env) forms))))))]
@@ -181,13 +189,42 @@
           op) ,form0 ,form1)
       (arith op (recur form0) (recur form1))]
     [`(= ,form0 ,form1) (arith 'eq (recur form0) (recur form1))]
+    [`(!= ,form0 ,form1) (arith 'ne (recur form0) (recur form1))]
     [`(! ,form0) (arith 'eqz (recur form0))]
+
+    [`(closure ,closure-env . ,forms)
+      (let* ([fn-name (gensym "$closure")]
+              [struct-id (symbol-append fn-name '.Env)])
+        (match-let* ([`(,params ,results ,forms) (process/params-results-body env forms)])
+          (push-type! env
+            `(type ,struct-id
+               (sub $Closure.Base (struct (field i32) (field ,@closure-env)))))
+          (push-indirect-fn! env fn-name
+            `(func ,fn-name
+               (param (ref $Closure.Base))
+               ,@params
+               ,@results
+               ;; TODO: make closure vars available
+               ,@(concatenate (map recur* forms))))
+          `(struct.new ,struct-id (global.get ,(symbol-append '$fns. fn-name)) ,@closure-env)))]
+    [`(call_closure . ,forms)
+      (match-let* ([`(,params ,results (,clo-exp . ,forms)) (process/params-results-body env forms)])
+        ;; TODO: figure out how to support arbitrary expressions here
+        (unless (symbol? clo-exp) (error "call_closure: closure must be symbol, got: " clo-exp))
+        `(call_indirect
+           (param (ref $Closure.Base))
+           ,@params
+           ,@results
+           ,(recur clo-exp)
+           ,@(map recur forms)
+           (struct.get $Closure.Base $fnsIdx ,(recur clo-exp))))]
 
     [`(,(? (one-of '(call return_call)) op) ,name . ,args)
       `(call ,(lookup env name) ,@(map recur args))]
     [`(,(? (one-of '(call_indirect return_call_indirect)) op) . ,forms)
       (match-let* ([`(,params ,results ,forms) (process/params-results-body env forms)])
         `(,op ,@params ,@results ,@(map recur forms)))]
+
     [`(,(? (one-of '(loop block)) op) ,label . ,forms)
       `(,op ,label ,@(concatenate (map recur* forms)))]
     [`(br ,id) `(br ,id)]
@@ -199,6 +236,7 @@
     [`(global.set ,name ,form) `(global.set ,(lookup env name) ,(recur form))]
 
     [`(ref.null ,type) `(ref.null ,(lookup env type))]
+    [`(ref.cast ,type ,value) `(ref.cast ,((process/type env) type) ,(recur value))]
 
     [`(array.new ,type ,fill ,count) `(array.new ,type ,(recur fill) ,(recur count))]
     [`(array.new_default ,type ,count) `(array.new_default ,type ,(recur count))]
@@ -231,14 +269,16 @@
 (define (process* env forms)
   (concatenate (map (process/module env) forms)))
 
-(define (hoist-imports forms static-allocator)
+(define (hoist-top-levels forms static-allocator)
   (define datae (reverse (static-allocator-strings static-allocator)))
   (define memory-size (static-allocator-next-ptr static-allocator))
   (define memory
     `((memory (export "memory") ,(ceiling-quotient memory-size #x10000))
        (global $_io.alloc.end (mut i32) (i32.const ,memory-size))))
 
-  (define indirect-fns (reverse (static-allocator-fns static-allocator)))
+  (define indirect-fns-and-defs (reverse (static-allocator-fns static-allocator)))
+  (define indirect-fns (map car indirect-fns-and-defs))
+  (define indirect-fn-defs (filter (lambda (x) x) (map cadr indirect-fns-and-defs)))
   (define fn-table
     `((table $fns (export "fns") funcref
         (elem ,@indirect-fns))
@@ -247,12 +287,17 @@
              '()
              `((global ,(symbol-append '$fns. (car indirect-fns)) i32 (i32.const ,i))
                 ,@(loop (+ i 1) (cdr indirect-fns)))))))
+  (define types (reverse (static-allocator-types static-allocator)))
   (receive (imports rest)
     (partition (lambda (x) (eq? (car-safe x) 'import)) forms)
     `(,@imports
        ,@datae
        ,@memory
        ,@fn-table
+       ,@indirect-fn-defs
+       (rec
+         (type $Closure.Base (sub (struct (field $fnsIdx i32))))
+         ,@types)
        (export "_start" (func $_start))
        ;; (start $_start)
        ,@rest)))
@@ -260,12 +305,12 @@
 (define (process-inputs paths)
   (define out-wasm "build/2017.wat")
   (format #t "Compiling ~a to ~a...\n" paths out-wasm)
-  (define env (make-env "" 'i32 (box (make-static-allocator 1024 '() '()))))
+  (define env (make-env "" 'i32 (box (make-static-allocator 1024 '() '() '()))))
   (define modules (map (lambda (path) (process* env (call-with-input-file path read*))) paths))
   (call-with-output-file out-wasm
     (cut pretty-print
       `(module
-         ,@(hoist-imports (concatenate modules) (unbox (env-static-allocator env))))
+         ,@(hoist-top-levels (concatenate modules) (unbox (env-static-allocator env))))
       <>)))
 
 (process-inputs (cdr (program-arguments)))

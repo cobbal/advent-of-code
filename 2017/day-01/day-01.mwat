@@ -1,28 +1,32 @@
 ;; -*- mode: wat -*-
 (namespace $day01
   (indirect_func part0 (param $filename i32) (result i64)
-    (locals (ref $String) $contents)
+    (locals (ref null $list<*>.T) $lines)
+    (locals (ref $String) $line)
     (locals i32 $i $n $count $c0 $c1)
-    (local.set $contents (call $readFile $filename))
-    (drop (call $split $contents #\newline 0))
-    (local.set $n (- (array.len $contents) 1))
     (debugger)
-    (loop $loop
-      (if (i32.lt_s $i $n)
-        (then
-          (local.set $c0 (array.get_u $String $contents $i))
-          (local.set $c1 (array.get_u $String $contents (rem_u (+ $i 1) $n)))
-          (local.set $count (+ $count (* (= $c0 $c1) (- $c0 #\0))))
-          (add! $i 1)
-          (br $loop))))
-    (i64.extend_i32_s $count))
+    (local.set $lines (call $split (call $readFile $filename) #\newline 0))
+    (call $list<*>.sumToI64 $lines
+      (closure () (param $line.any (ref null any)) (result i64)
+        (locals i32 $i $n $c0 $c1 $count)
+        (locals (ref $String) $line)
+        (local.set $line (ref.cast (ref $String) $line.any))
+        (local.set $n (array.len $line))
+        (loop $loop
+          (if (i32.lt_s $i $n)
+            (then
+              (local.set $c0 (array.get_u $String $line $i))
+              (local.set $c1 (array.get_u $String $line (rem_u (+ $i 1) $n)))
+              (local.set $count (+ $count (* (= $c0 $c1) (- $c0 #\0))))
+              (add! $i 1)
+              (br $loop))))
+        (i64.extend_i32_s $count))))
 
   (indirect_func part1 (param $filename i32) (result i64)
     (locals (ref $String) $contents)
     (locals i32 $i $n $count $c0 $c1)
     (local.set $contents (call $readFile $filename))
     (local.set $n (- (array.len $contents) 1))
-    (debugger)
     (loop $loop
       (if (i32.lt_s $i $n)
         (then

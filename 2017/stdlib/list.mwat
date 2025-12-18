@@ -9,6 +9,13 @@
   (func tail (param $pair (ref null T)) (result (ref null T))
     (struct.get T 1 $pair))
 
+  (func len/acc (param $l (ref null T)) (param $acc i32) (result i32)
+    (if (ref.is_null $l)
+      (then (return $acc)))
+    (return_call len/acc (struct.get T 1 $l) (+ $acc 1)))
+  (func len (param $l (ref null T)) (result i32)
+    (return_call len/acc $l 0))
+
   (func revAppend (param $l1 (ref null T)) (param $l2 (ref null T)) (result (ref null T))
     (if (ref.is_null $l1)
       (then (return $l2)))
@@ -18,4 +25,13 @@
 
   (func rev (param $l (ref null T)) (result (ref null T))
     (return_call revAppend $l (ref.null T)))
-  )
+
+  (func sumToI64/acc (param $l (ref null T)) (param $clo (ref $Closure.Base)) (param $acc i64) (result i64)
+    (if (ref.is_null $l)
+      (then (return $acc)))
+    (call sumToI64/acc
+      (struct.get T 1 $l)
+      $clo
+      (i64 (+ $acc (call_closure (param (ref null any)) (result i64) $clo (struct.get T 0 $l))))))
+  (func sumToI64 (param $l (ref null T)) (param $clo (ref $Closure.Base)) (result i64)
+    (return_call sumToI64/acc $l $clo (i64 0))))

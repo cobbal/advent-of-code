@@ -142,6 +142,10 @@
                 (call $list<*>.cons (call $subString $str (+ $i 1) $end) $result)))
             (local.set $end $i)))
         (br $loop))))
+  (if (i32.or (!= 0 $allowEmpty) (!= 0 $end))
+    (then
+      (local.set $result
+        (call $list<*>.cons (call $subString $str 0 $end) $result))))
   $result)
 
 ;; Adapted from https://en.cppreference.com/w/cpp/algorithm/rotate.html
