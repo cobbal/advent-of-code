@@ -30,7 +30,7 @@
         (reverse acc)
         (loop (cons form acc))))))
 
-(define-immutable-record-type static-allocator
+(define-immutable-record-type <static-allocator>
   (make-static-allocator next-ptr strings fns types)
   static-allocator?
   (next-ptr static-allocator-next-ptr set-static-allocator-next-ptr)
@@ -38,31 +38,50 @@
   (fns static-allocator-fns set-static-allocator-fns)
   (types static-allocator-types set-static-allocator-types))
 
-(define-immutable-record-type env
+(define-immutable-record-type <env>
   (make-env namespace i-width static-allocator)
   env?
   (namespace env-namespace set-env-namespace)
   (i-width env-i-width set-env-i-width)
   (static-allocator env-static-allocator))
 
-(define-immutable-record-type comment-record
+(define-immutable-record-type <comment>
   (comment contents)
   comment?
   (contents comment-contents))
-(set-record-type-printer! comment-record
+(set-record-type-printer! <comment>
   (lambda (record port)
     (format port "(; ~a ;)" (comment-contents record))))
 
+(define-immutable-record-type <wasm-string>
+  (wasm-string str)
+  wasm-string?
+  (str wasm-string-str))
+(set-record-type-printer! <wasm-string>
+  (lambda (record port)
+    (format port "\"")
+    (string-for-each
+      (lambda (c)
+        (cond
+          [(not (eq? (char-general-category c) 'Cc))
+            (format port "~c" c)]
+          [(< (char->integer c) #x100)
+            (format port "\\~2,'0x" (char->integer c))]
+          [#t (format port "\\u{~a}" (char->integer c))]))
+      (wasm-string-str record))
+    (format port "\"")))
+
 (define (static-alloc! env string)
   (define alloc-box (env-static-allocator env))
-  (define result (static-allocator-next-ptr (unbox alloc-box)))
+  (define offset (static-allocator-next-ptr (unbox alloc-box)))
   (set-box! alloc-box
     (make-static-allocator
-      (+ result (string-utf8-length string) 1)
-      (cons `(data (i32.const ,result) ,string) (static-allocator-strings (unbox alloc-box)))
+      (+ offset (string-utf8-length string) 1)
+      ;; (cons `(data ,(data-symbol offset) (i32.const ,offset) ,string) (static-allocator-strings (unbox alloc-box)))
+      (cons (wasm-string (string-append string "\0")) (static-allocator-strings (unbox alloc-box)))
       (static-allocator-fns (unbox alloc-box))
       (static-allocator-types (unbox alloc-box))))
-  result)
+  offset)
 
 (define* (push-indirect-fn! env fn-name #:optional def)
   (define alloc-box (env-static-allocator env))
@@ -240,6 +259,7 @@
 
     [`(array.new ,type ,fill ,count) `(array.new ,type ,(recur fill) ,(recur count))]
     [`(array.new_default ,type ,count) `(array.new_default ,type ,(recur count))]
+    [`(array.new_fixed ,type ,count . ,args) `(array.new_fixed ,type ,count ,@(map recur args))]
     [`(array.set ,type ,arr ,idx ,value) `(array.set ,type ,(recur arr) ,(recur idx) ,(recur value))]
     [`(,(? (one-of '(array.get array.get_u array.get_s)) op) ,type ,arr ,idx)
       `(,op ,type ,(recur arr) ,(recur idx))]
@@ -258,7 +278,11 @@
     [(or 'debugger '(debugger)) '(drop (call $sched_yield))]
 
     [(? string? s)
-      `(i32.const ,(static-alloc! env s) ,(comment (format #f "~s" s)))]
+      (let ([offset (static-alloc! env s)])
+        `(array.new_data $String $_data.strings ,(comment (format #f "~s" s))
+           (i32.const ,offset)
+           (i32.const ,(string-utf8-length s))))]
+    #;[`(datastring ,(? string? s)) `(i32.const ,(static-alloc! env s))]
     [`(,(? symbol? op) . ,args)
       `(,op ,@(map recur args))]
     [(? symbol? id) `(local.get ,(lookup env id))]
@@ -270,7 +294,7 @@
   (concatenate (map (process/module env) forms)))
 
 (define (hoist-top-levels forms static-allocator)
-  (define datae (reverse (static-allocator-strings static-allocator)))
+  (define strings (reverse (static-allocator-strings static-allocator)))
   (define memory-size (static-allocator-next-ptr static-allocator))
   (define memory
     `((memory (export "memory") ,(ceiling-quotient memory-size #x10000))
@@ -291,7 +315,7 @@
   (receive (imports rest)
     (partition (lambda (x) (eq? (car-safe x) 'import)) forms)
     `(,@imports
-       ,@datae
+       (data $_data.strings ,@strings)
        ,@memory
        ,@fn-table
        ,@indirect-fn-defs
@@ -305,7 +329,7 @@
 (define (process-inputs paths)
   (define out-wasm "build/2017.wat")
   (format #t "Compiling ~a to ~a...\n" paths out-wasm)
-  (define env (make-env "" 'i32 (box (make-static-allocator 1024 '() '() '()))))
+  (define env (make-env "" 'i32 (box (make-static-allocator 0 '() '() '()))))
   (define modules (map (lambda (path) (process* env (call-with-input-file path read*))) paths))
   (call-with-output-file out-wasm
     (cut pretty-print

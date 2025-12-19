@@ -23,27 +23,31 @@
     (global.set alloc.end $newCount)
     $result)
 
+  (func stackAlloc.string (param $str (ref $String)) (result i32)
+    (locals i32 $buffer $i $n)
+    (local.set $buffer (call stackAlloc (+ 1 (local.tee $n (array.len $str)))))
+    (loop $copy
+      (if (lt_u $i $n)
+        (then
+          (i32.store8 (+ $buffer $i) (array.get_u $String $str $i))
+          (add! $i 1)
+          (br $copy))))
+    (i32.store8 (+ $buffer $n) 0)
+    $buffer)
+
   (func stackPop (param $old i32)
     (memory.fill $old 0 (- (* (memory.size) #x10000) $old))
     (global.set alloc.end $old)))
 
 (func $printChr (param $c i32)
-  (locals i32 $buf)
-  (i32.store8 (local.tee $buf "_") $c)
-  (call $printStr $buf))
+  (call $printStr (array.new_fixed $String 1 $c)))
 
 (func $print.nl
   (return_call $printStr "\n"))
 
 (func $print.nl.indent (param $indent i32)
   (call $print.nl)
-  (i32.store #x108 #x20)
-  (loop $loop
-    (if (i32.gt_s $indent 0)
-      (then
-        (call $printStr #x108)
-        (local.set $indent (i32.sub $indent 1))
-        (br $loop)))))
+  (call $printStr (array.new $String #\space $indent)))
 
 (func $printI32.nl (param $i i32)
   (call $printI64 (i64.extend_i32_s $i))
@@ -58,22 +62,18 @@
 
 (func $printI64 (param $i i64)
   (drop (call $formatI64._impl $i #x200))
-  (call $printStr #x200))
+  (call $printStr.data #x200))
 
 (func $printI64.unpadded (param $i i64)
-  (return_call $printStr
+  (return_call $printStr.data
     (call $formatI64._impl $i #x200)))
 
 (func $printI32.unpadded (param $i i32)
   (return_call $printI64.unpadded (i64.extend_i32_s $i)))
 
-(func $printI32.hex.nl (param $i i32)
-  (call $formatI64.hex._impl (i64.extend_i32_s $i) #x200)
-  (call $printStr.nl #x208))
-
 (func $printI32.hex (param $i i32)
   (call $formatI64.hex._impl (i64.extend_i32_s $i) #x200)
-  (call $printStr #x208))
+  (call $printStr.data #x208))
 
 (func $asciiHex (param $i i32) (result i32)
   (call $assert (i32.lt_u $i #x10))
@@ -140,29 +140,37 @@
     (i32.shr_u $x 24)
     (i32.add $outPtr 6)))
 
-(func $printStr.nl (param $i i32)
-  (call $printStr $i)
+(func $printStr.nl (param $str (ref $String))
+  (call $printStr $str)
   (call $print.nl))
 
-(func $printStr (param $str i32)
-  (if (i32.eqz $str)
+(func $printStr (param $str (ref null $String))
+  (locals i32 $memstr)
+  (if (ref.is_null $str)
     (then (local.set $str "<null>")))
+  (local.set $memstr (call $_io.stackAlloc.string (ref.cast (ref $String) $str)))
+  (call $printStr.data $memstr)
+  (call $_io.stackPop $memstr))
+
+(func $printStr.data (param $str i32)
   (i32.store #x100 $str)
   (i32.store #x104 (call $strlen $str))
   (call $assert_not
     (call $fd_write 1 #x100 1 #x8)))
 
 ;; string -> (string, size)
-(func $readFile (param $path i32) (result (ref $String))
-  (locals i32 $err $fd $len $buffer $i)
+(func $readFile (param $path (ref $String)) (result (ref $String))
+  (locals i32 $mempath $err $fd $len $buffer $i)
   (locals (ref $String) $result)
+
+  (local.set $mempath (call $_io.stackAlloc.string $path))
 
   (call $assert_not
     (call $path_open
       3 ;; $fd
       #x1 ;; symlink_follow=1 ;; $dirflags
-      $path ;; $path.0
-      (call $strlen $path) ;; $path.1
+      $mempath ;; $path.0
+      (array.len $path) ;; $path.1
       #x0 ;; $oflags
       (i64 #x6) ;; fd_read | fd_seek ;; $fs_rights_base
       (i64 #x6) ;; fd_read | fd_seek ;; $fs_rights_inheriting
@@ -213,7 +221,7 @@
         (add! $i 1)
         (br $copy))))
 
-  (call $_io.stackPop $buffer)
+  (call $_io.stackPop $mempath)
 
   $result)
 

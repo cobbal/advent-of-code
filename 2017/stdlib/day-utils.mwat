@@ -2,34 +2,40 @@
 
 (namespace $day-utils
   (func checkI64
-    (param $path i32)
+    (param $path (ref $String))
     (param $solver0 i32)
     (param $expected0 i64)
     (param $solver1 i32)
     (param $expected1 i64)
     (result i32)
 
-    (locals i32 $len $correct0 $correct1)
+    (locals i32 $correct0 $correct1)
     (locals i64 $result0 $result1)
+    (locals (ref $String) $contents)
+    (locals (ref null $list<*>.T) $lines)
 
     ;; (call $printStr.pad $path 22)
-    (call $printStr $path)
+    (call $printStr (call $rPad #\space $path 23))
     (call $printStr ": ")
 
+    (local.set $contents (call $readFile $path))
+    (local.set $contents (call $subString $contents 0 (- (array.len $contents) 1)))
+    (local.set $lines (call $split $contents #\newline 0))
+
     (local.set $result0
-      (call_indirect (param i32) (result i64) $path $solver0))
+      (call_indirect (param (ref null $list<*>.T)) (result i64) $lines $solver0))
     (call $printI64 $result0)
     (call $printStr " ")
 
     (local.set $result1
-      (call_indirect (param i32) (result i64) $path $solver1))
+      (call_indirect (param (ref null $list<*>.T)) (result i64) $lines $solver1))
     (call $printI64 $result1)
 
-    (call $printStr
-      (select "  \u2705 good" "  \u274c  bad"
-        (local.tee $correct0 (i64 (= $result0 $expected0)))))
-    (call $printStr
-      (select "  \u2705 good" "  \u274c  bad"
-        (local.tee $correct1 (i64 (= $result1 $expected1)))))
+    (if (local.tee $correct0 (i64 (= $result0 $expected0)))
+      (then (call $printStr "  \u2705 good"))
+      (else (call $printStr "  \u274c  bad")))
+    (if (local.tee $correct1 (i64 (= $result1 $expected1)))
+      (then (call $printStr "  \u2705 good"))
+      (else (call $printStr "  \u274c  bad")))
     (call $print.nl)
     (! (& $correct0 $correct1))))

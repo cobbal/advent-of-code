@@ -76,24 +76,25 @@
         (br $loop))))
   0)
 
-;; (func $rPad (param $ch i32) (param $str i32) (param $n i32) (result i32)
-;;   (if (i32.ge_s (call $strlen $str) $n)
-;;     (then (return $str)))
-;;   (return_call $rPadAndChop $ch $str $n))
+(func $rPad (param $ch i32) (param $str (ref $String)) (param $n i32) (result (ref $String))
+  (if (ge_s (array.len $str) $n)
+    (then (return $str)))
+  (return_call $rPadAndChop $ch $str $n))
 
-;; (func $rPadAndChop (param $ch i32) (param $str i32) (param $n i32) (result i32)
-;;   (locals $len $result)
-
-;;   (local.set $len (call $i32.min (call $strlen $str) $n))
-;;   (local.set $result (call $malloc (i32.add $n 1)))
-;;   (memory.fill $result $ch $n)
-;;   (memory.copy
-;;     (i32.add
-;;       $result
-;;       (i32.sub $n $len))
-;;     $str
-;;     (call $i32.min $n $len))
-;;   $result)
+(func $rPadAndChop (param $ch i32) (param $str (ref $String)) (param $n i32) (result (ref $String))
+  (locals i32 $len $start $i)
+  (locals (ref $String) $result)
+  (local.set $len (call $i32.min (array.len $str) $n))
+  (local.set $result (array.new $String $ch $n))
+  (local.set $start (- $n $len))
+  (loop $fill
+    (if (lt_u $i $len)
+      (then
+        (array.set $String $result (+ $start $i)
+          (array.get_u $String $str $i))
+        (add! $i 1)
+        (br $fill))))
+  $result)
 
 (func $countChar (param $string i32) (param $targetChar i32) (result i32)
   (locals i32 $count $current)
@@ -109,7 +110,7 @@
 (func $subString (param $str (ref $String)) (param $start i32) (param $end i32) (result (ref $String))
   (locals (ref $String) $result)
   (locals i32 $n $i)
-  (call $assert (& (le_s 0 $start) (lt_s $end (array.len $str))))
+  (call $assert (& (le_s 0 $start) (le_s $end (array.len $str))))
   (local.set $result (array.new_default $String (local.tee $n (- $end $start))))
   (loop $fill
     (if (lt_u $i $n)
