@@ -169,13 +169,21 @@
     [form (error "unrecognized form:" form)]))
 
 (define (process/instr* env)
+  (define (recur* f) ((process/instr* env) f))
+  (define (recur f) ((process/instr env) f))
+
   (match-lambda
     [`(i32 . ,forms) (concatenate (map (process/instr* (set-env-i-width env 'i32)) forms))]
     [`(i64 . ,forms) (concatenate (map (process/instr* (set-env-i-width env 'i64)) forms))]
     [`(locals ,ty . ,names) (map (cut list 'local <> ty) names)]
+    [`(when ,test . ,forms)
+      `((if ,(recur test) (then ,@(concatenate (map recur* forms)))))]
     [form (list ((process/instr env) form))]))
 
 (define (process/instr env)
+  (define (recur* f) ((process/instr* env) f))
+  (define (recur f) ((process/instr env) f))
+
   (define (arith suffix . forms)
     (cons (sym-append (env-i-width env) "." suffix) forms))
   (define (arith* suffix form0 forms)
@@ -183,8 +191,6 @@
       (recur form0)
       (map recur forms)))
 
-  (define (recur* f) ((process/instr* env) f))
-  (define (recur f) ((process/instr env) f))
   (match-lambda
     [`(i32 ,form) ((process/instr (set-env-i-width env 'i32)) form)]
     [`(i64 ,form) ((process/instr (set-env-i-width env 'i64)) form)]
@@ -195,7 +201,8 @@
 
     [`(+ ,form0 . ,forms) (arith* 'add form0 forms)]
     [`(* ,form0 . ,forms) (arith* 'mul form0 forms)]
-    [`(& ,form0 . ,forms) (arith* 'and form0 forms)]
+    [`(bit-and ,form0 . ,forms) (arith* 'and form0 forms)]
+    [`(bit-or ,form0 . ,forms) (arith* 'or form0 forms)]
     [`(- ,form0) (arith 'sub (arith 'const 0) (recur form0))]
     [`(- ,form0 . ,forms)
       (fold (lambda (x y) (arith 'sub y x))
@@ -217,15 +224,28 @@
         (match-let* ([`(,params ,results ,forms) (process/params-results-body env forms)])
           (push-type! env
             `(type ,struct-id
-               (sub $Closure.Base (struct (field i32) (field ,@closure-env)))))
+               (sub $Closure.Base (struct (field i32) ,@(map (cut cons 'field <>) closure-env)))))
           (push-indirect-fn! env fn-name
             `(func ,fn-name
                (param (ref $Closure.Base))
                ,@params
                ,@results
-               ;; TODO: make closure vars available
+               ,@(map
+                 (match-lambda
+                   [`(,var ,type) `(local ,var ,type)])
+                   closure-env)
+               ,@(map
+                 (match-lambda
+                   [`(,var ,type)
+                     `(local.set ,var
+                        (struct.get ,struct-id ,var (ref.cast (ref ,struct-id) (local.get 0))))])
+                   closure-env)
                ,@(concatenate (map recur* forms))))
-          `(struct.new ,struct-id (global.get ,(symbol-append '$fns. fn-name)) ,@closure-env)))]
+          `(struct.new ,struct-id (global.get ,(symbol-append '$fns. fn-name))
+             ,@(map
+                 (match-lambda
+                   [`(,var ,type) `(local.get ,var)])
+                 closure-env))))]
     [`(call_closure . ,forms)
       (match-let* ([`(,params ,results (,clo-exp . ,forms)) (process/params-results-body env forms)])
         ;; TODO: figure out how to support arbitrary expressions here
@@ -295,7 +315,8 @@
 
 (define (hoist-top-levels forms static-allocator)
   (define strings (reverse (static-allocator-strings static-allocator)))
-  (define memory-size (static-allocator-next-ptr static-allocator))
+  ;; (define memory-size (static-allocator-next-ptr static-allocator))
+  (define memory-size 1024)
   (define memory
     `((memory (export "memory") ,(ceiling-quotient memory-size #x10000))
        (global $_io.alloc.end (mut i32) (i32.const ,memory-size))))

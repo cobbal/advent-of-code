@@ -1,0 +1,74 @@
+;; -*- mode: wat -*-
+(namespace $day02
+  (indirect_func part0 (param $lines (ref null $list<*>.T)) (result i64)
+    (call $list<*>.sumToI64 $lines
+      (closure () (param $line.any (ref null any)) (result i64)
+        (locals (ref $String) $line)
+        (locals (ref null $list<*>.T) $words)
+        (locals i32 $n $min $max)
+        (local.set $line (ref.cast (ref $String) $line.any))
+        (local.set $words
+          (call $list<*>.map
+            (closure () (param $str (ref null any)) (result (ref null any))
+              (ref.i31 (call $parseI32 (ref.cast (ref $String) $str))))
+            (call $split.ws $line 0)))
+
+        (local.set $min #x7fffffff)
+        (local.set $max #x80000000)
+        (loop $loop
+          (when (! (ref.is_null $words))
+            (local.set $n (i31.get_s (ref.cast i31ref (call $list<*>.head $words))))
+            (local.set $min (call $i32.min $min $n))
+            (local.set $max (call $i32.max $max $n))
+            (local.set $words (call $list<*>.tail $words))
+            (br $loop)))
+
+        (i64.extend_i32_s (- $max $min)))))
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
+    (call $list<*>.sumToI64 $lines
+      (closure () (param $line.any (ref null any)) (result i64)
+        (locals (ref $String) $line)
+        (locals (ref null $list<*>.T) $words $innerList)
+        (locals i32 $x $y)
+        (local.set $line (ref.cast (ref $String) $line.any))
+        (local.set $words
+          (call $list<*>.map
+            (closure () (param $str (ref null any)) (result (ref null any))
+              (ref.i31 (call $parseI32 (ref.cast (ref $String) $str))))
+            (call $split.ws $line 0)))
+
+        (loop $outer
+          (when (! (ref.is_null $words))
+            (local.set $x (i31.get_s (ref.cast i31ref (call $list<*>.head $words))))
+            (local.set $innerList (call $list<*>.tail $words))
+            (loop $inner
+              (when (! (ref.is_null $innerList))
+                (local.set $y (i31.get_s (ref.cast i31ref (call $list<*>.head $innerList))))
+                (when (! (rem_u $x $y))
+                  ;; (debugger)
+                  (return (i64.extend_i32_s (div_u $x $y))))
+                (when (! (rem_u $y $x))
+                  ;; (debugger)
+                  (return (i64.extend_i32_s (div_u $y $x))))
+                (local.set $innerList (call $list<*>.tail $innerList))
+                (br $inner)))
+            (local.set $words (call $list<*>.tail $words))
+            (br $outer)))
+        (i64 0))))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkI64
+        "day-02/input-ex0.txt"
+        (funcref part0) (i64 18)
+        (funcref part1) (i64 7))
+      (call $day-utils.checkI64
+        "day-02/input-ex1.txt"
+        (funcref part0) (i64 18)
+        (funcref part1) (i64 9))
+      (call $day-utils.checkI64
+        "day-02/input-real0.txt"
+        (funcref part0) (i64 41887)
+        (funcref part1) (i64 226))
+      0)))

@@ -19,7 +19,11 @@
     (call $printStr ": ")
 
     (local.set $contents (call $readFile $path))
-    (local.set $contents (call $subString $contents 0 (- (array.len $contents) 1)))
+    (if (gt_u (array.len $contents) 0)
+      (then
+        (if (= (array.get_u $String $contents (- (array.len $contents) 1)) #\newline)
+          (then
+            (local.set $contents (call $subString $contents 0 (- (array.len $contents) 1)))))))
     (local.set $lines (call $split $contents #\newline 0))
 
     (local.set $result0
@@ -38,4 +42,4 @@
       (then (call $printStr "  \u2705 good"))
       (else (call $printStr "  \u274c  bad")))
     (call $print.nl)
-    (! (& $correct0 $correct1))))
+    (! (bit-and $correct0 $correct1))))

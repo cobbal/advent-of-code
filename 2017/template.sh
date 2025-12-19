@@ -8,18 +8,14 @@ hexDay=$(printf "%02x" "$iDay")
 echo "templating day-$decDay"
 mkdir -p "day-$decDay"
 
-cat >"day-${decDay}/day-${decDay}.wat" <<EOF
+cat >"day-${decDay}/day-${decDay}.mwat" <<EOF
 ;; -*- mode: wat -*-
 (namespace \$day${decDay}
-  (indirect_func part0 (param \$filename i32) (result i64)
-    (locals (ref null $list<*>.T) $lines)
-    (locals (ref $String) $line)
-    (local.set $lines (call $split (call $readFile $filename) #\newline 0))
+  (indirect_func part0 (param \$lines (ref null \$list<*>.T)) (result i64)
+    (i64 0))
 
-    0)
-
-  (indirect_func part1 (param \$filename i32) (result i64)
-    0)
+  (indirect_func part1 (param \$lines (ref null \$list<*>.T)) (result i64)
+    (i64 0))
 
   (indirect_func main (result i32)
     (+
@@ -28,7 +24,7 @@ cat >"day-${decDay}/day-${decDay}.wat" <<EOF
         (funcref part0) (i64 -1)
         (funcref part1) (i64 -1))
       (call \$day-utils.checkI64
-        "${decDay}-01/input-real0.txt"
+        "day-${decDay}/input-real0.txt"
         (funcref part0) (i64 -1)
         (funcref part1) (i64 -1))
       0)))

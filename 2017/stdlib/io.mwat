@@ -8,7 +8,7 @@
     (local.set $align (i32.const 8))
     ;; round size up to alignment
     (local.set $size
-      (&
+      (bit-and
         (+ $size $align -1)
         (- $align)))
 

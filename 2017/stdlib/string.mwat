@@ -110,7 +110,7 @@
 (func $subString (param $str (ref $String)) (param $start i32) (param $end i32) (result (ref $String))
   (locals (ref $String) $result)
   (locals i32 $n $i)
-  (call $assert (& (le_s 0 $start) (le_s $end (array.len $str))))
+  (call $assert (bit-and (le_s 0 $start) (le_s $end (array.len $str))))
   (local.set $result (array.new_default $String (local.tee $n (- $end $start))))
   (loop $fill
     (if (lt_u $i $n)
@@ -121,8 +121,8 @@
         (br $fill))))
   $result)
 
-(func $split
-  (param $str (ref $String)) (param $sep i32) (param $allowEmpty i32)
+(func $split.fn
+  (param $str (ref $String)) (param $pred (ref $Closure.Base)) (param $allowEmpty i32)
   (result (ref null $list<*>.T))
 
   (locals i32 $i $end $c)
@@ -134,7 +134,7 @@
     (if (le_s 0 $i)
       (then
         (local.set $c (array.get_u $String $str $i))
-        (if (= $c $sep)
+        (if (call_closure (param i32) (result i32) $pred $c)
           (then
             (block $skip
               (if (! $allowEmpty)
@@ -148,6 +148,23 @@
       (local.set $result
         (call $list<*>.cons (call $subString $str 0 $end) $result))))
   $result)
+
+(func $split.ws
+  (param $str (ref $String)) (param $allowEmpty i32)
+  (result (ref null $list<*>.T))
+
+  (call $split.fn $str
+    (closure () (param $c i32) (result i32)
+      (bit-or (= #\space $c) (= #\newline $c) (= #\tab $c)))
+    $allowEmpty))
+
+(func $split
+  (param $str (ref $String)) (param $sep i32) (param $allowEmpty i32)
+  (result (ref null $list<*>.T))
+  (call $split.fn $str
+    (closure (($sep i32)) (param $c i32) (result i32)
+      (= $sep $c))
+    $allowEmpty))
 
 ;; Adapted from https://en.cppreference.com/w/cpp/algorithm/rotate.html
 (func $memrotate.left (param $first i32) (param $middle i32) (param $last i32)
@@ -169,3 +186,22 @@
     (local.set $read (i32.add $read 1))
     (br_if $loop (i32.ne $read $last)))
   (return_call $memrotate.left $write $nextRead $last))
+
+(func $parseI32 (param $str (ref $String)) (result i32)
+  (locals i32 $result $digit $negative $offset $n)
+  (local.set $n (array.len $str))
+  (if (= (array.get_u $String $str 0) #\-)
+    (then
+      (local.set $negative 1)
+      (local.set $offset 1)))
+  (loop $loop
+    (if (lt_u $offset $n)
+      (then
+        (local.set $digit (- (array.get_u $String $str $offset) #\0))
+        (if (lt_u $digit 10)
+          (then
+            (local.set $result (+ (* $result 10) $digit))
+            (add! $offset 1)
+            (br $loop))))))
+  (if $negative (then (local.set $result (- $result))))
+  $result)

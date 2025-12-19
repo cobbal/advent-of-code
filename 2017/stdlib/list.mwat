@@ -26,6 +26,13 @@
   (func rev (param $l (ref null T)) (result (ref null T))
     (return_call revAppend $l (ref.null T)))
 
+  (func map (param $clo (ref $Closure.Base)) (param $l (ref null T)) (result (ref null T))
+    (if (ref.is_null $l)
+      (then (return (ref.null T))))
+    (struct.new T
+      (call_closure (param (ref null any)) (result (ref null any)) $clo (struct.get T 0 $l))
+      (call map $clo (struct.get T 1 $l))))
+
   (func sumToI64/acc (param $l (ref null T)) (param $clo (ref $Closure.Base)) (param $acc i64) (result i64)
     (if (ref.is_null $l)
       (then (return $acc)))
