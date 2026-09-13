@@ -1,0 +1,62 @@
+;; -*- mode: wat -*-
+(namespace $day05
+  (type Program (array (mut i32)))
+
+  (func readInput (param $lines (ref null $list<*>.T)) (result (ref Program))
+    (locals (ref Program) $prog)
+    (locals i32 $i)
+    (local.set $prog (array.new Program 0 (call $list<*>.len $lines)))
+    (loop $readInput
+      (when (! (ref.is_null $lines))
+        (array.set Program $prog $i
+          (call $parseI32 (ref.cast (ref $String) (call $list<*>.head $lines))))
+        (add! $i 1)
+        (local.set $lines (call $list<*>.tail $lines))
+        (br $readInput)))
+    $prog)
+
+  (indirect_func part0 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref Program) $prog)
+    (locals i32 $pc $steps $delta)
+
+    (local.set $prog (call readInput $lines))
+
+    (loop $execute
+      (when (i32.lt_u $pc (array.len $prog))
+        (array.set Program $prog $pc
+          (+ (local.tee $delta (array.get Program $prog $pc)) 1))
+        (add! $pc $delta)
+        (add! $steps 1)
+        (br $execute)))
+
+    (i64.extend_i32_s $steps))
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref Program) $prog)
+    (locals i32 $pc $steps $delta)
+
+    (local.set $prog (call readInput $lines))
+
+    (loop $execute
+      (when (i32.lt_u $pc (array.len $prog))
+        (local.set $delta (array.get Program $prog $pc))
+        (if (i32.lt_s $delta 3)
+          (then (array.set Program $prog $pc (+ $delta 1)))
+          (else (array.set Program $prog $pc (- $delta 1))))
+        (add! $pc $delta)
+        (add! $steps 1)
+        (br $execute)))
+
+    (i64.extend_i32_s $steps))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkI64
+        "day-05/input-ex0.txt"
+        (funcref part0) (i64 5)
+        (funcref part1) (i64 10))
+      (call $day-utils.checkI64
+        "day-05/input-real0.txt"
+        (funcref part0) (i64 364539)
+        (funcref part1) (i64 27477714))
+      0)))
