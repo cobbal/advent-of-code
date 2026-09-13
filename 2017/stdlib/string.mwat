@@ -16,17 +16,31 @@
 (func $strcmp (param $s0 i32) (param $s1 i32) (result i32)
   (locals i32 $c0 $c1)
   (loop $loop
-    (if
-      (i32.eq
+    (when
+      (=
         (local.tee $c0 (i32.load8_u $s0))
         (local.tee $c1 (i32.load8_u $s1)))
-      (then
-        (if $c0
-          (then
-            (local.set $s0 (i32.add $s0 1))
-            (local.set $s1 (i32.add $s1 1))
-            (br $loop)))
-        (return 0))))
+      (when $c0
+        (add! $s0 1)
+        (add! $s1 1)
+        (br $loop))
+      (return 0)))
+  (i32.sub $c0 $c1))
+
+(func $String.cmp (param $s0 (ref $String)) (param $s1 (ref $String)) (result i32)
+  (locals i32 $i $c0 $c1)
+  (loop $loop
+    (if (i32.lt_u $i (array.len $s0))
+      (then (local.set $c0 (array.get_u $String $s0 $i)))
+      (else (local.set $c0 0)))
+    (if (i32.lt_u $i (array.len $s1))
+      (then (local.set $c1 (array.get_u $String $s1 $i)))
+      (else (local.set $c1 0)))
+    (when (= $c0 $c1)
+      (when $c0
+        (add! $i 1)
+        (br $loop))
+      (return 0)))
   (i32.sub $c0 $c1))
 
 (func $memcmp (param $p0 i32) (param $p1 i32) (param $len i32) (result i32)
@@ -75,6 +89,8 @@
         (local.set $str (i32.add $str 1))
         (br $loop))))
   0)
+
+
 
 (func $rPad (param $ch i32) (param $str (ref $String)) (param $n i32) (result (ref $String))
   (if (ge_s (array.len $str) $n)

@@ -9,7 +9,6 @@
     (local.set $dx 1)
     (local.set $target (call $parseI32 (ref.cast (ref $String) (call $list<*>.head $lines))))
     (loop $loop
-      ;; (call $printI32 $cursor) (call $printI32 $x) (call $printI32 $y) (call $print.nl)
       (when (lt_s $cursor $target)
         (when (ge_s (+ $cursor $step) $target)
           (local.set $step (- $target $cursor)))

@@ -286,13 +286,13 @@
     [`(ref.null ,type) `(ref.null ,(lookup env type))]
     [`(ref.cast ,type ,value) `(ref.cast ,((process/type env) type) ,(recur value))]
 
-    [`(array.new ,type ,fill ,count) `(array.new ,type ,(recur fill) ,(recur count))]
-    [`(array.new_default ,type ,count) `(array.new_default ,type ,(recur count))]
-    [`(array.new_fixed ,type ,count . ,args) `(array.new_fixed ,type ,count ,@(map recur args))]
-    [`(array.set ,type ,arr ,idx ,value) `(array.set ,type ,(recur arr) ,(recur idx) ,(recur value))]
+    [`(array.new ,type ,fill ,count) `(array.new ,(lookup env type) ,(recur fill) ,(recur count))]
+    [`(array.new_default ,type ,count) `(array.new_default ,(lookup env type) ,(recur count))]
+    [`(array.new_fixed ,type ,count . ,args) `(array.new_fixed ,(lookup env type) ,count ,@(map recur args))]
+    [`(array.set ,type ,arr ,idx ,value) `(array.set ,(lookup env type) ,(recur arr) ,(recur idx) ,(recur value))]
     [`(,(? (one-of '(array.get array.get_u array.get_s)) op) ,type ,arr ,idx)
-      `(,op ,type ,(recur arr) ,(recur idx))]
-    [`(array.len ,type ,arr) `(array.len ,type ,(recur arr))]
+      `(,op ,(lookup env type) ,(recur arr) ,(recur idx))]
+    [`(array.len ,type ,arr) `(array.len ,(lookup env type) ,(recur arr))]
 
     [`(struct.new ,type . ,fields)
       `(struct.new ,(lookup env type) ,@(map recur fields))]

@@ -1,0 +1,94 @@
+;; -*- mode: wat -*-
+(namespace $day04
+  (type Hist (array (mut i32)))
+
+  (func listContains (param $target (ref $String)) (param $words (ref null $list<*>.T)) (result i32)
+    (when (ref.is_null $words) (return 0))
+    (when (= 0 (call $String.cmp $target (ref.cast (ref $String) (call $list<*>.head $words))))
+      (return 1))
+    (return_call listContains $target (call $list<*>.tail $words)))
+
+  (func allUnique (param $words (ref null $list<*>.T)) (result i32)
+    (locals (ref null $list<*>.T) $tail)
+    (when (ref.is_null $words) (return 1))
+    (local.set $tail (call $list<*>.tail $words))
+    (when (call listContains (ref.cast (ref $String) (call $list<*>.head $words)) $tail)
+      (return 0))
+    (return_call allUnique $tail))
+
+  (func listContains.hist (param $target (ref Hist)) (param $hists (ref null $list<*>.T)) (result i32)
+    (when (ref.is_null $hists) (return 0))
+    (when (call Hist.eq $target (ref.cast (ref Hist) (call $list<*>.head $hists)))
+      (return 1))
+    (return_call listContains.hist $target (call $list<*>.tail $hists)))
+
+  (func allUnique.hist (param $hists (ref null $list<*>.T)) (result i32)
+    (locals (ref null $list<*>.T) $tail)
+    (when (ref.is_null $hists) (return 1))
+    (local.set $tail (call $list<*>.tail $hists))
+    (when (call listContains.hist (ref.cast (ref Hist) (call $list<*>.head $hists)) $tail)
+      (return 0))
+    (return_call allUnique.hist $tail))
+
+  (func Hist.eq (param $h0 (ref Hist)) (param $h1 (ref Hist)) (result i32)
+    (locals i32 $i)
+    (loop $loop
+      (when (i32.lt_u $i 256)
+        (when (!= (array.get Hist $h0 $i) (array.get Hist $h1 $i))
+          (return 0))
+        (add! $i 1)
+        (br $loop)))
+    1)
+
+  (func histogram (param $str (ref $String)) (result (ref Hist))
+    (locals (ref Hist) $hist)
+    (locals i32 $i $c $count)
+    (local.set $hist (array.new Hist 0 256))
+    (loop $loop
+      (when (i32.lt_u $i (array.len $str))
+        (local.set $c (array.get_u $String $str $i))
+        (local.set $count (array.get Hist $hist $c))
+        (array.set Hist $hist $c (+ $count 1))
+        (add! $i 1)
+        (br $loop)))
+    $hist)
+
+  (indirect_func part0 (param $lines (ref null $list<*>.T)) (result i64)
+    (call $list<*>.sumToI64 $lines
+      (closure () (param $line.any (ref null any)) (result i64)
+        (locals (ref $String) $line)
+        (locals (ref null $list<*>.T) $words)
+        (locals i32 $n $min $max)
+        (local.set $line (ref.cast (ref $String) $line.any))
+        (local.set $words (call $split.ws $line 0))
+        (i64.extend_i32_s (call allUnique $words)))))
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
+    (call $list<*>.sumToI64 $lines
+      (closure () (param $line.any (ref null any)) (result i64)
+        (locals (ref $String) $line)
+        (locals (ref null $list<*>.T) $hists)
+        (locals i32 $n $min $max)
+        (local.set $line (ref.cast (ref $String) $line.any))
+        (local.set $hists
+          (call $list<*>.map
+            (closure () (param $word.any (ref null any)) (result (ref null any))
+              (call histogram (ref.cast (ref $String) $word.any)))
+            (call $split.ws $line 0)))
+        (i64.extend_i32_s (call allUnique.hist $hists)))))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkI64
+        "day-04/input-ex0.txt"
+        (funcref part0) (i64 2)
+        (funcref part1) (i64 2))
+      (call $day-utils.checkI64
+        "day-04/input-ex1.txt"
+        (funcref part0) (i64 5)
+        (funcref part1) (i64 3))
+      (call $day-utils.checkI64
+        "day-04/input-real0.txt"
+        (funcref part0) (i64 451)
+        (funcref part1) (i64 223))
+      0)))
