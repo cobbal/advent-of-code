@@ -1,0 +1,122 @@
+;; -*- mode: wat -*-
+(namespace $day06
+  (type Mem (array (mut i32)))
+
+  (func memDup (param $mem (ref Mem)) (result (ref Mem))
+    (locals (ref Mem) $result)
+    (local.set $result (array.new Mem 0 (array.len $mem)))
+    (array.copy Mem Mem $result 0 $mem 0 (array.len $mem))
+    $result)
+
+  (func memEq (param $mem0 (ref Mem)) (param $mem1 (ref Mem)) (result i32)
+    (locals i32 $i)
+    (loop $loop
+      (when (i32.lt_u $i (array.len $mem0))
+        (when (!= (array.get Mem $mem0 $i) (array.get Mem $mem1 $i))
+          (return 0))
+        (add! $i 1)
+        (br $loop)))
+    1)
+
+  (func printMem (param $mem (ref Mem))
+    (locals i32 $i)
+    (loop $loop
+      (when (i32.lt_u $i (array.len $mem))
+        (call $printI32 (array.get Mem $mem $i))
+        (add! $i 1)
+        (br $loop)))
+    (call $print.nl))
+
+  (func redistribute (param $mem (ref Mem))
+    (locals i32 $i $x $max $maxIndex)
+    (local.set $max 0)
+    (loop $findMax
+      (when (i32.lt_u $i (array.len $mem))
+        (when (i32.lt_u $max (local.tee $x (array.get Mem $mem $i)))
+          (local.set $max $x)
+          (local.set $maxIndex $i))
+        (add! $i 1)
+        (br $findMax)))
+
+    (local.set $x $max)
+    (local.set $i $maxIndex)
+    (array.set Mem $mem $i 0)
+    (loop $redistribute
+      (when (!= $x 0)
+        (local.set $i (i32.rem_u (+ $i 1) (array.len $mem)))
+        (array.set Mem $mem $i
+          (+ (array.get Mem $mem $i) 1))
+        (add! $x -1)
+        (br $redistribute))))
+
+  (func common (param $lines (ref null $list<*>.T)) (result i32 i32)
+    (locals (ref null $list<*>.T) $words)
+    (locals (ref Mem) $mem $tortoise $hare)
+    (locals i32 $i $startOfCycle)
+
+    (local.set $words
+      (call $split.ws (ref.cast (ref $String) (call $list<*>.head $lines)) 0))
+
+    (local.set $mem (array.new Mem 0 (call $list<*>.len $words)))
+
+    (loop $parse
+      (when (! (ref.is_null $words))
+        (array.set Mem $mem $i (call $parseI32 (ref.cast (ref $String) (call $list<*>.head $words))))
+        (local.set $words (call $list<*>.tail $words))
+        (add! $i 1)
+        (br $parse)))
+
+    (local.set $tortoise (call memDup $mem))
+    (local.set $hare (call memDup $mem))
+
+    (loop $findCycle
+      (call redistribute $tortoise)
+      (call redistribute $hare)
+      (call redistribute $hare)
+      (when (! (call memEq $tortoise $hare))
+        (br $findCycle)))
+
+    (local.set $tortoise (call memDup $mem))
+    (local.set $i 0)
+    (loop $findStart
+      (when (! (call memEq $tortoise $hare))
+        (call redistribute $tortoise)
+        (call redistribute $hare)
+        (add! $i 1)
+        (br $findStart)))
+
+    (local.set $startOfCycle $i)
+
+    (loop $findFirstRepeat
+      (call redistribute $hare)
+      (add! $i 1)
+      (when (! (call memEq $tortoise $hare))
+        (br $findFirstRepeat)))
+
+    $startOfCycle $i)
+
+  (indirect_func part0 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals i32 $startOfCycle $firstRepeat)
+    (local.set $startOfCycle
+      (local.set $firstRepeat
+        (call common $lines)))
+    (i64.extend_i32_s $firstRepeat))
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals i32 $startOfCycle $firstRepeat)
+    (local.set $startOfCycle
+      (local.set $firstRepeat
+        (call common $lines)))
+    (i64.extend_i32_s (- $firstRepeat $startOfCycle)))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkI64
+        "day-06/input-ex0.txt"
+        (funcref part0) (i64 5)
+        (funcref part1) (i64 4))
+      (call $day-utils.checkI64
+        "day-06/input-real0.txt"
+        (funcref part0) (i64 12841)
+        (funcref part1) (i64 8038))
+      0)))

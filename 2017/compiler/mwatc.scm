@@ -144,7 +144,7 @@
         params)
       (map
         (match-lambda
-          [`(,type) `(result ,((process/type env) type))]
+          [types `(result ,@(map (process/type env) types))]
           [form (error "unrecognized result form:" `(result ,@form))])
         results)
       forms)))
@@ -293,6 +293,9 @@
     [`(,(? (one-of '(array.get array.get_u array.get_s)) op) ,type ,arr ,idx)
       `(,op ,(lookup env type) ,(recur arr) ,(recur idx))]
     [`(array.len ,type ,arr) `(array.len ,(lookup env type) ,(recur arr))]
+    [`(array.copy ,type0 ,type1 ,arr0 ,d ,arr1 ,s ,n)
+      `(array.copy ,(lookup env type0) ,(lookup env type1)
+         ,(recur arr0) ,(recur d) ,(recur arr1) ,(recur s) ,(recur n))]
 
     [`(struct.new ,type . ,fields)
       `(struct.new ,(lookup env type) ,@(map recur fields))]
