@@ -1,0 +1,94 @@
+;; -*- mode: wat -*-
+(namespace $day03
+  (type GridCell (struct (field $x i32) (field $y i32) (field $content i32)))
+
+  (indirect_func part0 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals i32 $target $x $y $cursor $step $dx $dy $tmp)
+    (local.set $step 1)
+    (local.set $cursor 1)
+    (local.set $dx 1)
+    (local.set $target (call $parseI32 (ref.cast (ref $String) (call $list<*>.head $lines))))
+    (loop $loop
+      ;; (call $printI32 $cursor) (call $printI32 $x) (call $printI32 $y) (call $print.nl)
+      (when (lt_s $cursor $target)
+        (when (ge_s (+ $cursor $step) $target)
+          (local.set $step (- $target $cursor)))
+        (add! $x (* $dx $step))
+        (add! $y (* $dy $step))
+        (add! $cursor $step)
+        (local.set $tmp $dx)
+        (local.set $dx $dy)
+        (local.set $dy (- $tmp))
+        (when (!= $dx 0)
+          (add! $step 1))
+        (br $loop)))
+    (i64.extend_i32_s (+ (call $i32.abs $x) (call $i32.abs $y))))
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals i32 $target $x $y $step $dx $dy $tmp $i $sum)
+    (locals (ref null $list<*>.T) $grid)
+    (local.set $grid (ref.null $list<*>.T))
+    (local.set $step 1)
+    (local.set $dx 1)
+    (local.set $target (call $parseI32 (ref.cast (ref $String) (call $list<*>.head $lines))))
+    (loop $corner
+      (local.set $i 0)
+      (loop $straight
+        (when (lt_s $i $step)
+          ;; compute sum
+          (local.set $sum
+            (call $list<*>.sumToI32 $grid
+              (closure (($x i32) ($y i32)) (param $cell.any (ref null any)) (result i32)
+                (locals (ref GridCell) $cell)
+                (locals i32 $dx $dy)
+                (local.set $cell (ref.cast (ref GridCell) $cell.any))
+                (local.set $dx (call $i32.abs (- (struct.get GridCell $x $cell) $x)))
+                (local.set $dy (call $i32.abs (- (struct.get GridCell $y $cell) $y)))
+                (when (i32.le_s $dx 1)
+                  (when (i32.le_s $dy 1)
+                    (return (struct.get GridCell $content $cell))))
+                0)))
+          (when (= $sum 0)
+            (local.set $sum 1))
+          ;; if sum > target, return sum
+          (when (gt_s $sum $target)
+            (return (i64.extend_i32_s $sum)))
+          ;; store sum
+          (local.set $grid (call $list<*>.cons (struct.new GridCell $x $y $sum) $grid))
+
+          (add! $x $dx)
+          (add! $y $dy)
+          (add! $i 1)
+
+          (br $straight)))
+      (local.set $tmp $dx)
+      (local.set $dx $dy)
+      (local.set $dy (- $tmp))
+      (when (!= $dx 0)
+        (add! $step 1))
+      (br $corner))
+    unreachable)
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkI64
+        "day-03/input-ex0.txt"
+        (funcref part0) (i64 0)
+        (funcref part1) (i64 2))
+      (call $day-utils.checkI64
+        "day-03/input-ex1.txt"
+        (funcref part0) (i64 3)
+        (funcref part1) (i64 23))
+      (call $day-utils.checkI64
+        "day-03/input-ex2.txt"
+        (funcref part0) (i64 2)
+        (funcref part1) (i64 25))
+      (call $day-utils.checkI64
+        "day-03/input-ex3.txt"
+        (funcref part0) (i64 31)
+        (funcref part1) (i64 1968))
+      (call $day-utils.checkI64
+        "day-03/input-real0.txt"
+        (funcref part0) (i64 419)
+        (funcref part1) (i64 295229))
+      0)))

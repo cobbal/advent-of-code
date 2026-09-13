@@ -175,9 +175,17 @@
   (match-lambda
     [`(i32 . ,forms) (concatenate (map (process/instr* (set-env-i-width env 'i32)) forms))]
     [`(i64 . ,forms) (concatenate (map (process/instr* (set-env-i-width env 'i64)) forms))]
-    [`(locals ,ty . ,names) (map (cut list 'local <> ty) names)]
+    [`(locals ,ty . ,names)
+      (let ([ty ((process/type env) ty)])
+        (map (cut list 'local <> ty) names))]
     [`(when ,test . ,forms)
       `((if ,(recur test) (then ,@(concatenate (map recur* forms)))))]
+    [`(if ,test (then . ,then-forms))
+      `((if ,(recur test) (then ,@(concatenate (map recur* then-forms)))))]
+    [`(if ,test (then . ,then-forms) (else . ,else-forms))
+      `((if ,(recur test)
+          (then ,@(concatenate (map recur* then-forms)))
+          (else ,@(concatenate (map recur* else-forms)))))]
     [form (list ((process/instr env) form))]))
 
 (define (process/instr env)
@@ -230,17 +238,18 @@
                (param (ref $Closure.Base))
                ,@params
                ,@results
-               ,@(map
-                 (match-lambda
-                   [`(,var ,type) `(local ,var ,type)])
-                   closure-env)
-               ,@(map
-                 (match-lambda
-                   [`(,var ,type)
-                     `(local.set ,var
-                        (struct.get ,struct-id ,var (ref.cast (ref ,struct-id) (local.get 0))))])
-                   closure-env)
-               ,@(concatenate (map recur* forms))))
+               ,@(hoist-locals
+                   (map
+                     (match-lambda
+                       [`(,var ,type) `(local ,var ,type)])
+                     closure-env)
+                   (map
+                     (match-lambda
+                       [`(,var ,type)
+                         `(local.set ,var
+                            (struct.get ,struct-id ,var (ref.cast (ref ,struct-id) (local.get 0))))])
+                     closure-env)
+                   (concatenate (map recur* forms)))))
           `(struct.new ,struct-id (global.get ,(symbol-append '$fns. fn-name))
              ,@(map
                  (match-lambda
@@ -291,7 +300,7 @@
       `(struct.get ,(lookup env type) ,field ,(recur val))]
 
     [`(funcref ,name) `(global.get ,(symbol-append '$fns. (lookup env name)))]
-    [`(add! ,var ,n) (recur `(local.set ,var (+ ,var ,(recur n))))]
+    [`(add! ,var ,n) (recur `(local.set ,var (+ ,var ,n)))]
 
     ['drop '(drop)]
     ['unreachable '(unreachable)]
@@ -312,6 +321,19 @@
 
 (define (process* env forms)
   (concatenate (map (process/module env) forms)))
+
+(define (hoist-locals . bodies)
+  ;; Drag all locals of each form to top of group while preserving order
+  (define partitions
+    (map
+      (lambda (body)
+        (receive (locals statements)
+          (partition (lambda (x) (eq? (car-safe x) 'local)) body)
+          (cons locals statements)))
+      bodies))
+  (append
+    (concatenate (map car partitions))
+    (concatenate (map cdr partitions))))
 
 (define (hoist-top-levels forms static-allocator)
   (define strings (reverse (static-allocator-strings static-allocator)))

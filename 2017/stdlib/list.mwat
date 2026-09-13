@@ -33,6 +33,28 @@
       (call_closure (param (ref null any)) (result (ref null any)) $clo (struct.get T 0 $l))
       (call map $clo (struct.get T 1 $l))))
 
+  (func filter (param $clo (ref $Closure.Base)) (param $l (ref null T)) (result (ref null T))
+    (locals i32 $keep)
+    (locals (ref null any) $head)
+    (locals (ref null T) $newTail)
+    (if (ref.is_null $l)
+      (then (return (ref.null T))))
+    (local.set $head (struct.get T 0 $l))
+    (local.set $keep (call_closure (param (ref null any)) (result i32) $clo $head))
+    (local.set $newTail (call filter $clo (struct.get T 1 $l)))
+    (when $keep (return (struct.new T $head $newTail)))
+    $newTail)
+
+  (func sumToI32/acc (param $l (ref null T)) (param $clo (ref $Closure.Base)) (param $acc i32) (result i32)
+    (if (ref.is_null $l)
+      (then (return $acc)))
+    (call sumToI32/acc
+      (struct.get T 1 $l)
+      $clo
+      (i32 (+ $acc (call_closure (param (ref null any)) (result i32) $clo (struct.get T 0 $l))))))
+  (func sumToI32 (param $l (ref null T)) (param $clo (ref $Closure.Base)) (result i32)
+    (return_call sumToI32/acc $l $clo 0))
+
   (func sumToI64/acc (param $l (ref null T)) (param $clo (ref $Closure.Base)) (param $acc i64) (result i64)
     (if (ref.is_null $l)
       (then (return $acc)))
