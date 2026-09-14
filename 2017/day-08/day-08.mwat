@@ -1,0 +1,225 @@
+;; -*- mode: wat -*-
+(namespace $day08
+  (type Instr
+    (struct
+      (field $incReg i32)
+      (field $incConst i32)
+      (field $testReg i32)
+      (field $testOp i32)
+      (field $testConst i32)))
+  (type Reg
+    (struct
+      (field $name (ref $String))
+      (field $number i32)))
+  (type RegisterRegistry
+    (struct
+      (field $regs (mut (ref null $list<*>.T)))
+      (field $length (mut i32))))
+  (type RegFile (array (mut i32)))
+
+  (global LT i32 0)
+  (global EQ i32 1)
+  (global GT i32 2)
+  (global LE i32 3)
+  (global NE i32 4)
+  (global GE i32 5)
+
+  (func registerRegister (param $regReg (ref RegisterRegistry)) (param $name (ref $String)) (result i32)
+    (locals (ref null $list<*>.T) $regs)
+    (locals i32 $number)
+    (locals (ref Reg) $reg)
+
+    (local.set $regs (struct.get RegisterRegistry $regs $regReg))
+    (loop $searchForExisting
+      (when (! (ref.is_null $regs))
+        (local.set $reg (ref.cast (ref Reg) (call $list<*>.head $regs)))
+        (when (call $String.eq $name (struct.get Reg $name $reg))
+          (return (struct.get Reg $number $reg)))
+        (local.set $regs (call $list<*>.tail $regs))
+        (br $searchForExisting)))
+
+    ;; Not found, create a new entry
+    (local.set $number (struct.get RegisterRegistry $length $regReg))
+    (struct.set RegisterRegistry $length $regReg (+ $number 1))
+    (struct.set RegisterRegistry $regs $regReg
+      (call $list<*>.cons
+        (struct.new Reg $name $number)
+        (struct.get RegisterRegistry $regs $regReg)))
+    $number)
+
+  (func regName (param $regReg (ref RegisterRegistry)) (param $number i32) (result (ref $String))
+    (locals (ref Reg) $reg)
+    (locals (ref null $list<*>.T) $regs)
+    (local.set $regs (struct.get RegisterRegistry $regs $regReg))
+    (loop $loop
+      (local.set $reg (ref.cast (ref Reg) (call $list<*>.head $regs)))
+      (when (= $number (struct.get Reg $number $reg))
+        (return (struct.get Reg $name $reg)))
+      (local.set $regs (call $list<*>.tail $regs))
+      (br $loop))
+    unreachable)
+
+  (func parseLine (param $regReg (ref RegisterRegistry)) (param $line (ref $String)) (result (ref Instr))
+    (locals (ref null $list<*>.T) $words)
+    (locals (ref $String) $word)
+    (locals i32 $incReg $incConst $testReg $testOp $testConst)
+
+    (local.set $words (call $split.ws $line 0))
+    (local.set $word (ref.cast (ref $String) (call $list<*>.head $words)))
+    (local.set $incReg (call registerRegister $regReg $word))
+
+    (local.set $words (call $list<*>.tail $words))
+    (local.set $word (ref.cast (ref $String) (call $list<*>.head $words)))
+    (if (call $String.eq $word "inc")
+      (then (local.set $incConst 1))
+      (else
+        (call $assert (call $String.eq $word "dec"))
+        (local.set $incConst -1)))
+
+    (local.set $words (call $list<*>.tail $words))
+    (local.set $word (ref.cast (ref $String) (call $list<*>.head $words)))
+    (mul! $incConst (call $parseI32 $word))
+
+    (local.set $words (call $list<*>.tail $words))
+    (local.set $word (ref.cast (ref $String) (call $list<*>.head $words)))
+    (call $assert (call $String.eq $word "if"))
+
+    (local.set $words (call $list<*>.tail $words))
+    (local.set $word (ref.cast (ref $String) (call $list<*>.head $words)))
+    (local.set $testReg (call registerRegister $regReg $word))
+
+    (local.set $words (call $list<*>.tail $words))
+    (local.set $word (ref.cast (ref $String) (call $list<*>.head $words)))
+    (cond
+      [(call $String.eq $word  "<") (local.set $testOp (global.get LT))]
+      [(call $String.eq $word "==") (local.set $testOp (global.get EQ))]
+      [(call $String.eq $word  ">") (local.set $testOp (global.get GT))]
+      [(call $String.eq $word "<=") (local.set $testOp (global.get LE))]
+      [(call $String.eq $word "!=") (local.set $testOp (global.get NE))]
+      [(call $String.eq $word ">=") (local.set $testOp (global.get GE))]
+      [otherwise unreachable])
+
+    (local.set $words (call $list<*>.tail $words))
+    (local.set $word (ref.cast (ref $String) (call $list<*>.head $words)))
+    (local.set $testConst (call $parseI32 $word))
+
+    (local.set $words (call $list<*>.tail $words))
+    (call $assert (ref.is_null $words))
+
+    (struct.new Instr $incReg $incConst $testReg $testOp $testConst))
+
+  (func printInstr (param $regReg (ref RegisterRegistry)) (param $instr (ref Instr))
+    (locals i32 $op)
+    (call $printStr (call regName $regReg (struct.get Instr $incReg $instr)))
+    (call $printStr " inc ")
+    (call $printStr (call $formatI32 (struct.get Instr $incConst $instr)))
+    (call $printStr " if ")
+    (call $printStr (call regName $regReg (struct.get Instr $testReg $instr)))
+    (local.set $op (struct.get Instr $testOp $instr))
+    (cond
+      [(= $op (global.get LT)) (call $printStr " < ")]
+      [(= $op (global.get EQ)) (call $printStr " == ")]
+      [(= $op (global.get GT)) (call $printStr " > ")]
+      [(= $op (global.get LE)) (call $printStr " <= ")]
+      [(= $op (global.get NE)) (call $printStr " != ")]
+      [(= $op (global.get GE)) (call $printStr " >= ")]
+      [otherwise unreachable])
+    (call $printStr (call $formatI32 (struct.get Instr $testConst $instr)))
+    (call $print.nl))
+
+  (func printInstrs (param $regReg (ref RegisterRegistry)) (param $instrs (ref null $list<*>.T))
+    (call $print.nl)
+    (loop $loop
+      (when (! (ref.is_null $instrs))
+        (call printInstr $regReg (ref.cast (ref Instr) (call $list<*>.head $instrs)))
+        (local.set $instrs (call $list<*>.tail $instrs))
+        (br $loop))))
+
+  (func evalInstr (param $file (ref RegFile)) (param $instr (ref Instr)) (result i32)
+    (locals i32 $testValue $testOp $testConst $test $r $x $max)
+    (local.set $testValue (array.get RegFile $file (struct.get Instr $testReg $instr)))
+    (local.set $testOp (struct.get Instr $testOp $instr))
+    (local.set $testConst (struct.get Instr $testConst $instr))
+
+    (cond
+      [(= $testOp (global.get LT)) (local.set $test (i32.lt_s $testValue $testConst))]
+      [(= $testOp (global.get EQ)) (local.set $test (i32.eq $testValue $testConst))]
+      [(= $testOp (global.get GT)) (local.set $test (i32.gt_s $testValue $testConst))]
+      [(= $testOp (global.get LE)) (local.set $test (i32.le_s $testValue $testConst))]
+      [(= $testOp (global.get NE)) (local.set $test (i32.ne $testValue $testConst))]
+      [(= $testOp (global.get GE)) (local.set $test (i32.ge_s $testValue $testConst))]
+      [otherwise unreachable])
+    (when (! $test) (return 0))
+
+    (local.set $r (struct.get Instr $incReg $instr))
+    (local.set $x (array.get RegFile $file $r))
+    (add! $x (struct.get Instr $incConst $instr))
+    (array.set RegFile $file $r $x)
+    $x)
+
+  (indirect_func part0 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref null $list<*>.T) $instrs)
+    (locals (ref RegisterRegistry) $regReg)
+    (locals (ref RegFile) $file)
+    (locals i32 $i $max)
+
+    (local.set $regReg
+      (struct.new RegisterRegistry (ref.null $list<*>.T) 0))
+    (local.set $instrs
+      (call $list<*>.map
+        (closure (($regReg (ref RegisterRegistry))) (param $line.any (ref null any)) (result (ref null any))
+          (call parseLine $regReg (ref.cast (ref $String) $line.any)))
+        $lines))
+
+    (local.set $file (array.new RegFile 0 (struct.get RegisterRegistry $length $regReg)))
+    (loop $loop
+      (when (! (ref.is_null $instrs))
+        (call evalInstr $file (ref.cast (ref Instr) (call $list<*>.head $instrs)))
+        (local.set $instrs (call $list<*>.tail $instrs))
+        (br $loop)))
+
+    (loop $findMax
+      (when (i32.lt_u $i (array.len $file))
+        (local.set $max (call $i32.max $max (array.get RegFile $file $i)))
+        (add! $i 1)
+        (br $findMax)))
+
+    (i64.extend_i32_s $max))
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref null $list<*>.T) $instrs)
+    (locals (ref RegisterRegistry) $regReg)
+    (locals (ref RegFile) $file)
+    (locals i32 $i $max)
+
+    (local.set $regReg
+      (struct.new RegisterRegistry (ref.null $list<*>.T) 0))
+    (local.set $instrs
+      (call $list<*>.map
+        (closure (($regReg (ref RegisterRegistry))) (param $line.any (ref null any)) (result (ref null any))
+          (call parseLine $regReg (ref.cast (ref $String) $line.any)))
+        $lines))
+
+    (local.set $file (array.new RegFile 0 (struct.get RegisterRegistry $length $regReg)))
+    (loop $loop
+      (when (! (ref.is_null $instrs))
+        (local.set $max
+          (call $i32.max
+            $max
+            (call evalInstr $file (ref.cast (ref Instr) (call $list<*>.head $instrs)))))
+        (local.set $instrs (call $list<*>.tail $instrs))
+        (br $loop)))
+
+    (i64.extend_i32_s $max))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkI64
+        "day-08/input-ex0.txt"
+        (funcref part0) (i64 1)
+        (funcref part1) (i64 10))
+      (call $day-utils.checkI64
+        "day-08/input-real0.txt"
+        (funcref part0) (i64 7787)
+        (funcref part1) (i64 8997))
+      0)))

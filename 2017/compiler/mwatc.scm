@@ -163,7 +163,7 @@
               ,@params ,@results
               ,@(concatenate (map (process/instr* env) forms))))))]
     [`(global ,name ,ty ,value)
-      `((global ,name ,ty ,((process/instr env) value)))]
+      `((global ,(lookup env name) ,((process/type env) ty) ,((process/instr env) value)))]
     [`(type ,id ,def)
       `((type ,(lookup env id) ,((process/typedef env) def)))]
     [`(rec . ,types)
@@ -188,6 +188,13 @@
       `((if ,(recur test)
           (then ,@(concatenate (map recur* then-forms)))
           (else ,@(concatenate (map recur* else-forms)))))]
+    ;; Should non-otherwised conds be allowed? Let's test "no"
+    ;;[`(cond) '()]
+    [`(cond [otherwise . ,body]) (concatenate (map recur* body))]
+    [`(cond [,test . ,body] . ,rest)
+      `((if ,(recur test)
+          (then ,@(concatenate (map recur* body)))
+          (else ,@(recur* `(cond . ,rest)))))]
     [form (list ((process/instr env) form))]))
 
 (define (process/instr env)
@@ -228,35 +235,37 @@
     [`(!= ,form0 ,form1) (arith 'ne (recur form0) (recur form1))]
     [`(! ,form0) (arith 'eqz (recur form0))]
 
-    [`(closure ,closure-env . ,forms)
-      (let* ([fn-name (gensym "$closure")]
-              [struct-id (symbol-append fn-name '.Env)])
-        (match-let* ([`(,params ,results ,forms) (process/params-results-body env forms)])
-          (push-type! env
-            `(type ,struct-id
-               (sub $Closure.Base (struct (field i32) ,@(map (cut cons 'field <>) closure-env)))))
-          (push-indirect-fn! env fn-name
-            `(func ,fn-name
-               (param (ref $Closure.Base))
-               ,@params
-               ,@results
-               ,@(hoist-locals
-                   (map
-                     (match-lambda
-                       [`(,var ,type) `(local ,var ,type)])
-                     closure-env)
-                   (map
-                     (match-lambda
-                       [`(,var ,type)
-                         `(local.set ,var
-                            (struct.get ,struct-id ,var (ref.cast (ref ,struct-id) (local.get 0))))])
-                     closure-env)
-                   (concatenate (map recur* forms)))))
-          `(struct.new ,struct-id (global.get ,(symbol-append '$fns. fn-name))
-             ,@(map
-                 (match-lambda
-                   [`(,var ,type) `(local.get ,var)])
-                 closure-env))))]
+    [`(closure ,raw-closure-env . ,forms)
+      (define closure-env
+        (map (match-lambda [`(,var ,type) `(,var ,((process/type env) type))]) raw-closure-env))
+      (define fn-name (gensym "$closure"))
+      (define struct-id (symbol-append fn-name '.Env))
+      (match-let* ([`(,params ,results ,forms) (process/params-results-body env forms)])
+        (push-type! env
+          `(type ,struct-id
+             (sub $Closure.Base (struct (field i32) ,@(map (cut cons 'field <>) closure-env)))))
+        (push-indirect-fn! env fn-name
+          `(func ,fn-name
+             (param (ref $Closure.Base))
+             ,@params
+             ,@results
+             ,@(hoist-locals
+                 (map
+                   (match-lambda
+                     [`(,var ,type) `(local ,var ,type)])
+                   closure-env)
+                 (map
+                   (match-lambda
+                     [`(,var ,type)
+                       `(local.set ,var
+                          (struct.get ,struct-id ,var (ref.cast (ref ,struct-id) (local.get 0))))])
+                   closure-env)
+                 (concatenate (map recur* forms)))))
+        `(struct.new ,struct-id (global.get ,(symbol-append '$fns. fn-name))
+           ,@(map
+               (match-lambda
+                 [`(,var ,type) `(local.get ,var)])
+               closure-env)))]
     [`(call_closure . ,forms)
       (match-let* ([`(,params ,results (,clo-exp . ,forms)) (process/params-results-body env forms)])
         ;; TODO: figure out how to support arbitrary expressions here
@@ -308,6 +317,7 @@
 
     [`(funcref ,name) `(global.get ,(symbol-append '$fns. (lookup env name)))]
     [`(add! ,var ,n) (recur `(local.set ,var (+ ,var ,n)))]
+    [`(mul! ,var ,n) (recur `(local.set ,var (* ,var ,n)))]
 
     ['drop '(drop)]
     ['unreachable '(unreachable)]
@@ -364,17 +374,20 @@
   (define types (reverse (static-allocator-types static-allocator)))
   (receive (imports rest)
     (partition (lambda (x) (eq? (car-safe x) 'import)) forms)
-    `(,@imports
-       (data $_data.strings ,@strings)
-       ,@memory
-       ,@fn-table
-       ,@indirect-fn-defs
-       (rec
-         (type $Closure.Base (sub (struct (field $fnsIdx i32))))
-         ,@types)
-       (export "_start" (func $_start))
-       ;; (start $_start)
-       ,@rest)))
+    (receive (user-types rest)
+      (partition (lambda (x) (eq? (car-safe x) 'type)) rest)
+      `(,@imports
+         (data $_data.strings ,@strings)
+         ,@memory
+         ,@fn-table
+         ,@indirect-fn-defs
+         (rec
+           (type $Closure.Base (sub (struct (field $fnsIdx i32))))
+           ,@types
+           ,@user-types)
+         (export "_start" (func $_start))
+         ;; (start $_start)
+         ,@rest))))
 
 (define (process-inputs paths)
   (define out-wasm "build/2017.wat")

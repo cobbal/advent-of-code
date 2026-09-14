@@ -1,13 +1,12 @@
 ;; -*- mode: wat -*-
 (namespace $day07
-  (rec
-    (type Disc (array (mut (ref null Prog))))
-    (type Prog
-      (struct
-        (field $name (ref $String))
-        (field $weight i32)
-        (field $isChild (mut i32))
-        (field $children (ref Disc)))))
+  (type Disc (array (mut (ref null Prog))))
+  (type Prog
+    (struct
+      (field $name (ref $String))
+      (field $weight i32)
+      (field $isChild (mut i32))
+      (field $children (ref Disc))))
   (type Weights (array (mut i32)))
 
   (func getProg (param $programs (ref null $list<*>.T)) (param $name (ref $String)) (result (ref Prog))

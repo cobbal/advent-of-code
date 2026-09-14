@@ -14,3 +14,6 @@ build-wasm: build-wat
 
 compiler:
     guild compile -o build/mwatc.go compiler/mwatc.scm
+
+offsets: build-wasm
+    wasm-tools print -p build/2017.wasm > build/2017.offset.wat
