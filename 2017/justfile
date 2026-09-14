@@ -6,7 +6,7 @@ debug: build-wasm
 
 build-wat: compiler
     mkdir -p build
-    guile -c '(load-compiled "build/mwatc.go")' day-*/*.mwat main.mwat stdlib/*.mwat
+    guile -c '(load-compiled "build/mwatc.go")' stdlib/*.mwat day-*/*.mwat main.mwat
 
 build-wasm: build-wat
     wasm-tools parse -g build/2017.wat -o build/2017.wasm

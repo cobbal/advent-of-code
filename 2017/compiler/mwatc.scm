@@ -166,6 +166,8 @@
       `((global ,name ,ty ,((process/instr env) value)))]
     [`(type ,id ,def)
       `((type ,(lookup env id) ,((process/typedef env) def)))]
+    [`(rec . ,types)
+      `((rec ,@(concatenate (map (process/module env) types))))]
     [form (error "unrecognized form:" form)]))
 
 (define (process/instr* env)
@@ -301,6 +303,8 @@
       `(struct.new ,(lookup env type) ,@(map recur fields))]
     [`(struct.get ,type ,field ,val)
       `(struct.get ,(lookup env type) ,field ,(recur val))]
+    [`(struct.set ,type ,field ,val ,newVal)
+      `(struct.set ,(lookup env type) ,field ,(recur val) ,(recur newVal))]
 
     [`(funcref ,name) `(global.get ,(symbol-append '$fns. (lookup env name)))]
     [`(add! ,var ,n) (recur `(local.set ,var (+ ,var ,n)))]

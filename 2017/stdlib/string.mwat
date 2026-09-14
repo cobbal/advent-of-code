@@ -43,6 +43,9 @@
       (return 0)))
   (i32.sub $c0 $c1))
 
+(func $String.eq (param $s0 (ref $String)) (param $s1 (ref $String)) (result i32)
+  (= (call $String.cmp $s0 $s1) 0))
+
 (func $memcmp (param $p0 i32) (param $p1 i32) (param $len i32) (result i32)
   (locals i32 $c0 $c1)
   (loop $loop
@@ -89,8 +92,6 @@
         (local.set $str (i32.add $str 1))
         (br $loop))))
   0)
-
-
 
 (func $rPad (param $ch i32) (param $str (ref $String)) (param $n i32) (result (ref $String))
   (if (ge_s (array.len $str) $n)
@@ -221,3 +222,36 @@
             (br $loop))))))
   (if $negative (then (local.set $result (- $result))))
   $result)
+
+(func $formatI32 (param $n i32) (result (ref $String))
+  (locals i32 $negative $working $digits $i)
+  (locals (ref $String) $str)
+
+  ;; TODO; INT_MIN may need similar treatment
+  (when (= $n 0)
+    (return "0"))
+
+  (when (i32.lt_s $n 0)
+    (local.set $negative 1)
+    (local.set $n (- $n)))
+
+  (local.set $working $n)
+  (loop $countDigits
+    (when $working
+      (add! $digits 1)
+      (local.set $working (i32.div_s $working 10))
+      (br $countDigits)))
+
+  (local.set $str (array.new $String 0 (+ $negative $digits)))
+  (when $negative
+    (array.set $String $str 0 #\-))
+
+  (local.set $i (array.len $str))
+  (local.set $working $n)
+  (loop $writeDigits
+    (add! $i -1)
+    (when $working
+      (array.set $String $str $i (+ #\0 (i32.rem_s $working 10)))
+      (local.set $working (i32.div_s $working 10))
+      (br $writeDigits)))
+  $str)

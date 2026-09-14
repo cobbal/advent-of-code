@@ -42,4 +42,46 @@
       (then (call $printStr "  \u2705 good"))
       (else (call $printStr "  \u274c  bad")))
     (call $print.nl)
+    (! (bit-and $correct0 $correct1)))
+
+  (func checkStr
+    (param $path (ref $String))
+    (param $solver0 i32)
+    (param $expected0 (ref $String))
+    (param $solver1 i32)
+    (param $expected1 (ref $String))
+    (result i32)
+
+    (locals i32 $correct0 $correct1)
+    (locals (ref $String) $contents $result0 $result1)
+    (locals (ref null $list<*>.T) $lines)
+
+    ;; (call $printStr.pad $path 22)
+    (call $printStr (call $rPad #\space $path 23))
+    (call $printStr ": ")
+
+    (local.set $contents (call $readFile $path))
+    (if (gt_u (array.len $contents) 0)
+      (then
+        (if (= (array.get_u $String $contents (- (array.len $contents) 1)) #\newline)
+          (then
+            (local.set $contents (call $subString $contents 0 (- (array.len $contents) 1)))))))
+    (local.set $lines (call $split $contents #\newline 0))
+
+    (local.set $result0
+      (call_indirect (param (ref null $list<*>.T)) (result (ref $String)) $lines $solver0))
+    (call $printStr (call $rPad #\space $result0 20))
+    (call $printStr " ")
+
+    (local.set $result1
+      (call_indirect (param (ref null $list<*>.T)) (result (ref $String)) $lines $solver1))
+    (call $printStr (call $rPad #\space $result1 20))
+
+    (if (local.tee $correct0 (call $String.eq $result0 $expected0))
+      (then (call $printStr "  \u2705 good"))
+      (else (call $printStr "  \u274c  bad")))
+    (if (local.tee $correct1 (call $String.eq $result1 $expected1))
+      (then (call $printStr "  \u2705 good"))
+      (else (call $printStr "  \u274c  bad")))
+    (call $print.nl)
     (! (bit-and $correct0 $correct1))))

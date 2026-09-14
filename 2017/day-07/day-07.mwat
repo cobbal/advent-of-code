@@ -1,0 +1,154 @@
+;; -*- mode: wat -*-
+(namespace $day07
+  (rec
+    (type Disc (array (mut (ref null Prog))))
+    (type Prog
+      (struct
+        (field $name (ref $String))
+        (field $weight i32)
+        (field $isChild (mut i32))
+        (field $children (ref Disc)))))
+  (type Weights (array (mut i32)))
+
+  (func getProg (param $programs (ref null $list<*>.T)) (param $name (ref $String)) (result (ref Prog))
+    (locals (ref Prog) $prog)
+    (loop $loop
+      (local.set $prog (ref.cast (ref Prog) (call $list<*>.head $programs)))
+      (when (call $String.eq $name (struct.get Prog $name $prog))
+        (return $prog))
+      (local.set $programs (call $list<*>.tail $programs))
+      (br $loop))
+    unreachable)
+
+  (func parse (param $lines (ref null $list<*>.T)) (result (ref Prog))
+    (locals (ref null $list<*>.T) $programs $parents $words)
+    (locals (ref $String) $name)
+    (locals i32 $weight $i)
+    (locals (ref Prog) $child $prog)
+
+    ;; parse lines without building trees
+    (loop $lineLoop
+      (when (! (ref.is_null $lines))
+        (local.set $words
+          (call $split.fn (ref.cast (ref $String) (call $list<*>.head $lines))
+            (closure () (param $c i32) (result i32)
+              (bit-or (= #\space $c) (= #\( $c) (= #\) $c) (= #\, $c) (= #\- $c) (= #\> $c)))
+            0))
+        (local.set $name (ref.cast (ref $String) (call $list<*>.head $words)))
+        (local.set $words (call $list<*>.tail $words))
+        (local.set $weight (call $parseI32 (ref.cast (ref $String) (call $list<*>.head $words))))
+        (local.set $words (call $list<*>.tail $words))
+
+        (local.set $programs
+          (call $list<*>.cons
+            (struct.new Prog $name $weight 0
+              (array.new Disc (ref.null Prog) (call $list<*>.len $words)))
+            $programs))
+        (local.set $parents
+          (call $list<*>.cons
+            (call $list<*>.cons $name $words)
+            $parents))
+
+        (local.set $lines (call $list<*>.tail $lines))
+        (br $lineLoop)))
+
+    ;; attach children
+    (loop $attach
+      (when (! (ref.is_null $parents))
+        (local.set $words (ref.cast (ref null $list<*>.T) (call $list<*>.head $parents)))
+        (local.set $parents (call $list<*>.tail $parents))
+        (local.set $name (ref.cast (ref $String) (call $list<*>.head $words)))
+        (local.set $words (call $list<*>.tail $words))
+
+        (local.set $i 0)
+        (local.set $prog (call getProg $programs $name))
+        (loop $children
+          (when (! (ref.is_null $words))
+            (local.set $child
+              (call getProg $programs (ref.cast (ref $String) (call $list<*>.head $words))))
+            (struct.set Prog $isChild $child 1)
+            (array.set Disc (struct.get Prog $children $prog) $i $child)
+            (local.set $words (call $list<*>.tail $words))
+            (add! $i 1)
+            (br $children)))
+
+        (br $attach)))
+
+    (local.set $programs
+      (call $list<*>.filter
+        (closure () (param $prog.any (ref null any)) (result i32)
+          (! (struct.get Prog $isChild (ref.cast (ref Prog) $prog.any))))
+        $programs))
+    (call $assert (= (call $list<*>.len $programs) 1))
+    (ref.cast (ref Prog) (call $list<*>.head $programs)))
+
+  (indirect_func part0 (param $lines (ref null $list<*>.T)) (result (ref $String))
+    (locals (ref Prog) $root)
+    (local.set $root (call parse $lines))
+    (struct.get Prog $name $root))
+
+  ;; returns positive total weight if balanced, negative weight of problem node otherwise
+  (func weightOf (param $prog (ref Prog)) (result i32)
+    (locals (ref Disc) $children)
+    (locals (ref Weights) $totals)
+    (locals i32 $i $w $totalWeight $rightWeight)
+    (locals (ref Prog) $problemChild)
+
+    (local.set $children (struct.get Prog $children $prog))
+    (local.set $totals (array.new Weights 0 (array.len $children)))
+    (local.set $totalWeight (struct.get Prog $weight $prog))
+
+    (loop $fillTotals
+      (when (i32.lt_u $i (array.len $children))
+        (local.set $w (call weightOf (ref.cast (ref Prog) (array.get Disc $children $i))))
+        (when (i32.lt_s $w 0) (return $w))
+        (array.set Weights $totals $i $w)
+        (add! $totalWeight $w)
+        (add! $i 1)
+        (br $fillTotals)))
+
+    (when (i32.lt_s (array.len $children) 2)
+      (return $totalWeight))
+
+    (if (= (array.get Weights $totals 0)
+          (array.get Weights $totals 1))
+      (then (local.set $rightWeight (array.get Weights $totals 0)))
+      (else
+        ;; TODO: implement unbalanced 2 case if needed. Will need parent info :(
+        (call $assert (!= (array.len $children) 2))
+        (local.set $rightWeight (array.get Weights $totals 2))))
+
+    (local.set $i 0)
+    (loop $verifyWeights
+      (when (i32.lt_u $i (array.len $totals))
+        (when (!= $rightWeight (local.tee $w (array.get Weights $totals $i)))
+          (local.set $problemChild (ref.cast (ref Prog) (array.get Disc $children $i)))
+          (return
+            (-
+              (+
+                (struct.get Prog $weight $problemChild)
+                (- $rightWeight $w)))))
+        (add! $i 1)
+        (br $verifyWeights)))
+
+    $totalWeight)
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result (ref $String))
+    (locals (ref Prog) $root)
+    (locals i32 $w)
+    (local.set $root (call parse $lines))
+    (local.set $w (call weightOf $root))
+    (call $assert (i32.lt_s $w 0))
+    (call $formatI32 (- $w)))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkStr
+        "day-07/input-ex0.txt"
+        (funcref part0) "tknk"
+        (funcref part1) "60")
+      (call $day-utils.checkStr
+        "day-07/input-real0.txt"
+        (funcref part0) "vmpywg"
+        (funcref part1) "1674")
+      0)))
