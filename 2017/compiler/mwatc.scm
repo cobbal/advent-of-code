@@ -295,6 +295,7 @@
     [`(global.set ,name ,form) `(global.set ,(lookup env name) ,(recur form))]
 
     [`(ref.null ,type) `(ref.null ,(lookup env type))]
+    [`(ref.test ,type ,value) `(ref.test ,((process/type env) type) ,(recur value))]
     [`(ref.cast ,type ,value) `(ref.cast ,((process/type env) type) ,(recur value))]
 
     [`(array.new ,type ,fill ,count) `(array.new ,(lookup env type) ,(recur fill) ,(recur count))]

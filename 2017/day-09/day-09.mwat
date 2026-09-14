@@ -1,0 +1,140 @@
+;; -*- mode: wat -*-
+(namespace $day09
+  (type State
+    (struct
+      (field $pos (mut i32))
+      (field $str (ref $String))))
+  (type Group (struct (field (ref null $list<*>.T))))
+  (type Garbage (struct (field i32)))
+
+  (func peek (param $state (ref State)) (result i32)
+    (locals i32 $pos)
+    (locals (ref $String) $str)
+    (local.set $pos (struct.get State $pos $state))
+    (local.set $str (struct.get State $str $state))
+    (when (i32.ge_u $pos (array.len $str))
+      (return -1))
+    (array.get_u $String $str $pos))
+
+  (func skip (param $state (ref State)) (param $n i32)
+    (struct.set State $pos $state (+ (struct.get State $pos $state) $n)))
+
+  (func pop (param $state (ref State)) (result i32)
+    (locals i32 $res)
+    (local.set $res (call peek $state))
+    (call skip $state 1)
+    $res)
+
+  (func eat (param $state (ref State)) (param $expected i32)
+    (locals i32 $res)
+    (local.set $res (call pop $state))
+    (call $assert (= $res $expected)))
+
+  (func parseGroup (param $state (ref State)) (result (ref Group))
+    (locals (ref null $list<*>.T) $things)
+    (locals i32 $c)
+
+    (call eat $state #\{)
+    (loop $loop
+      (local.set $c (call peek $state))
+      (cond
+        [(= $c #\{)
+          (local.set $things (call $list<*>.cons (call parseGroup $state) $things))]
+        [(= $c #\})]
+        [(= $c #\<)
+          (local.set $things (call $list<*>.cons (call parseGarbage $state) $things))]
+        [(= $c #\!)
+          (call skip $state 2)
+          (br $loop)]
+        [otherwise unreachable])
+
+      (loop $postLoop
+        (local.set $c (call pop $state))
+        (cond
+          [(= $c #\,) (br $loop)]
+          [(= $c #\})
+            (return (struct.new Group $things))]
+          [(= $c #\!)
+            (call skip $state 1)
+            (br $postLoop)]
+          [otherwise unreachable])))
+    unreachable)
+
+  (func parseGarbage (param $state (ref State)) (result (ref Garbage))
+    (locals i32 $c $count)
+
+    (call eat $state #\<)
+    (loop $loop
+      (local.set $c (call pop $state))
+      (cond
+        [(= $c #\!)
+          (call skip $state 1)
+          (br $loop)]
+        [(= $c #\>)
+          (return (struct.new Garbage $count))]
+        [otherwise
+          (add! $count 1)
+          (br $loop)]))
+    unreachable)
+
+  (func scoreGroups (param $group (ref Group)) (param $value i32) (result i32)
+    (locals i32 $score)
+    (locals (ref null $list<*>.T) $children)
+    (locals (ref null any) $child)
+
+    (local.set $score $value)
+    (local.set $children (struct.get Group 0 $group))
+    (add! $value 1)
+    (loop $loop
+      (when (! (ref.is_null $children))
+        (local.set $child (call $list<*>.head $children))
+        (local.set $children (call $list<*>.tail $children))
+        (when (ref.test (ref Garbage) $child)
+          (br $loop))
+        (add! $score (call scoreGroups (ref.cast (ref Group) $child) $value))
+        (br $loop)))
+    $score)
+
+  (func scoreGarbage (param $group (ref Group)) (result i32)
+    (locals i32 $score)
+    (locals (ref null $list<*>.T) $children)
+    (locals (ref null any) $child)
+
+    (local.set $children (struct.get Group 0 $group))
+    (loop $loop
+      (when (! (ref.is_null $children))
+        (local.set $child (call $list<*>.head $children))
+        (local.set $children (call $list<*>.tail $children))
+        (if (ref.test (ref Garbage) $child)
+          (then (add! $score (struct.get Garbage 0 (ref.cast (ref Garbage) $child))))
+          (else (add! $score (call scoreGarbage (ref.cast (ref Group) $child)))))
+        (br $loop)))
+    $score)
+
+  (indirect_func part0 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref $String) $line)
+    (locals (ref Group) $root)
+    (call $assert (= (call $list<*>.len $lines) 1))
+    (local.set $line (ref.cast (ref $String) (call $list<*>.head $lines)))
+    (local.set $root (call parseGroup (struct.new State 0 $line)))
+    (i64.extend_i32_s (call scoreGroups $root 1)))
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref $String) $line)
+    (locals (ref Group) $root)
+    (call $assert (= (call $list<*>.len $lines) 1))
+    (local.set $line (ref.cast (ref $String) (call $list<*>.head $lines)))
+    (local.set $root (call parseGroup (struct.new State 0 $line)))
+    (i64.extend_i32_s (call scoreGarbage $root)))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkI64
+        "day-09/input-ex0.txt"
+        (funcref part0) (i64 3)
+        (funcref part1) (i64 17))
+      (call $day-utils.checkI64
+        "day-09/input-real0.txt"
+        (funcref part0) (i64 14190)
+        (funcref part1) (i64 7053))
+      0)))
