@@ -1,0 +1,89 @@
+;; -*- mode: wat -*-
+(namespace $day11
+  (type Coord
+    (struct
+      (field $se i32)
+      (field $n i32)))
+
+  (func parseUnit (param $dir (ref $String)) (result (ref null Coord))
+    (cond
+      [(call $String.eq $dir "n") (return (struct.new Coord 0 1))]
+      [(call $String.eq $dir "ne") (return (struct.new Coord 1 1))]
+      [(call $String.eq $dir "se") (return (struct.new Coord 1 0))]
+      [(call $String.eq $dir "s") (return (struct.new Coord 0 -1))]
+      [(call $String.eq $dir "sw") (return (struct.new Coord -1 -1))]
+      [(call $String.eq $dir "nw") (return (struct.new Coord -1 0))]
+      [otherwise])
+    unreachable)
+
+  (func coordPlus (param $c0 (ref Coord)) (param $c1 (ref Coord)) (result (ref Coord))
+    (struct.new Coord
+      (+ (struct.get Coord $se $c0) (struct.get Coord $se $c1))
+      (+ (struct.get Coord $n $c0) (struct.get Coord $n $c1))))
+
+  (func coordMag (param $c (ref Coord)) (result i32)
+    (locals i32 $se $n $destructive $dist)
+    (local.set $destructive
+      (i32.lt_s 0
+        (*
+          (local.tee $se (struct.get Coord $se $c))
+          (local.tee $n (struct.get Coord $n $c)))))
+    (local.set $dist
+      (+
+        (local.tee $se (call $i32.abs $se))
+        (local.tee $n (call $i32.abs $n))))
+    (when $destructive
+      (sub! $dist (call $i32.min $se $n)))
+    $dist)
+
+  (indirect_func part0 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref null $list<*>.T) $steps)
+    (locals (ref Coord) $pos)
+    (local.set $steps
+      (call $list<*>.map
+        (closure () (param $str.any (ref null any)) (result (ref null any))
+          (call parseUnit (ref.cast (ref $String) $str.any)))
+        (call $split (ref.cast (ref $String) (call $list<*>.head $lines)) #\, 0)))
+
+    (local.set $pos (struct.new Coord 0 0))
+    (loop $sum
+      (when (! (ref.is_null $steps))
+        (local.set $pos
+          (call coordPlus $pos (ref.cast (ref Coord) (call $list<*>.head $steps))))
+        (local.set $steps (call $list<*>.tail $steps))
+        (br $sum)))
+
+    (i64.extend_i32_s (call coordMag $pos)))
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref null $list<*>.T) $steps)
+    (locals (ref Coord) $pos)
+    (locals i32 $maxDist)
+    (local.set $steps
+      (call $list<*>.map
+        (closure () (param $str.any (ref null any)) (result (ref null any))
+          (call parseUnit (ref.cast (ref $String) $str.any)))
+        (call $split (ref.cast (ref $String) (call $list<*>.head $lines)) #\, 0)))
+
+    (local.set $pos (struct.new Coord 0 0))
+    (loop $sum
+      (when (! (ref.is_null $steps))
+        (local.set $pos
+          (call coordPlus $pos (ref.cast (ref Coord) (call $list<*>.head $steps))))
+        (local.set $maxDist (call $i32.max $maxDist (call coordMag $pos)))
+        (local.set $steps (call $list<*>.tail $steps))
+        (br $sum)))
+
+    (i64.extend_i32_s $maxDist))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkI64
+        "day-11/input-ex0.txt"
+        (funcref part0) (i64 3)
+        (funcref part1) (i64 3))
+      (call $day-utils.checkI64
+        "day-11/input-real0.txt"
+        (funcref part0) (i64 784)
+        (funcref part1) (i64 1558))
+      0)))

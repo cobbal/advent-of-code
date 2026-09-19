@@ -171,6 +171,21 @@
       (br $loop)))
   (call $printStr "]"))
 
+(func $printStrList (param $list (ref null $list<*>.T))
+  (locals i32 $needsComma)
+  (call $printStr "[")
+  (loop $loop
+    (when (! (ref.is_null $list))
+      (when $needsComma
+        (call $printStr ", "))
+      (call $printStr "\"")
+      (call $printStr (ref.cast (ref $String) (call $list<*>.head $list)))
+      (call $printStr "\"")
+      (local.set $list (call $list<*>.tail $list))
+      (local.set $needsComma 1)
+      (br $loop)))
+  (call $printStr "]"))
+
 ;; string -> (string, size)
 (func $readFile (param $path (ref $String)) (result (ref $String))
   (locals i32 $mempath $err $fd $len $buffer $i)

@@ -63,6 +63,8 @@
     (string-for-each
       (lambda (c)
         (cond
+          [(eq? c #\")
+            (format port "\\\"")]
           [(not (eq? (char-general-category c) 'Cc))
             (format port "~c" c)]
           [(< (char->integer c) #x100)
@@ -279,7 +281,7 @@
            (struct.get $Closure.Base $fnsIdx ,(recur clo-exp))))]
 
     [`(,(? (one-of '(call return_call)) op) ,name . ,args)
-      `(call ,(lookup env name) ,@(map recur args))]
+      `(,op ,(lookup env name) ,@(map recur args))]
     [`(,(? (one-of '(call_indirect return_call_indirect)) op) . ,forms)
       (match-let* ([`(,params ,results ,forms) (process/params-results-body env forms)])
         `(,op ,@params ,@results ,@(map recur forms)))]
@@ -318,6 +320,7 @@
 
     [`(funcref ,name) `(global.get ,(symbol-append '$fns. (lookup env name)))]
     [`(add! ,var ,n) (recur `(local.set ,var (+ ,var ,n)))]
+    [`(sub! ,var ,n) (recur `(local.set ,var (- ,var ,n)))]
     [`(mul! ,var ,n) (recur `(local.set ,var (* ,var ,n)))]
 
     ['drop '(drop)]
