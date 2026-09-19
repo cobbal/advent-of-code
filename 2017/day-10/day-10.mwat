@@ -1,0 +1,168 @@
+;; -*- mode: wat -*-
+(namespace $day10
+
+  (indirect_func part0.ex (param $lines (ref null $list<*>.T)) (result (ref $String))
+    (call part0.common 5 $lines))
+
+  (indirect_func part0.real (param $lines (ref null $list<*>.T)) (result (ref $String))
+    (call part0.common 256 $lines))
+
+  (indirect_func part0.na (param $lines (ref null $list<*>.T)) (result (ref $String))
+    "n/a")
+
+  (func printRing (param $ring (ref $String))
+    (locals i32 $i)
+    (call $printStr "[")
+    (loop $loop
+      (when (i32.lt_u $i (array.len $ring))
+        (when $i
+          (call $printStr ", "))
+        (call $printStr (call $formatI32 (array.get_u $String $ring $i)))
+        (add! $i 1)
+        (br $loop)))
+    (call $printStr.nl "]"))
+
+  (func newRing (param $size i32) (result (ref $String))
+    (locals (ref $String) $ring)
+    (locals i32 $i)
+    (local.set $ring (array.new $String 0 $size))
+    (loop $loop
+      (when (i32.lt_u $i $size)
+        (array.set $String $ring $i $i)
+        (add! $i 1)
+        (br $loop)))
+    $ring)
+
+  (func part0.common (param $size i32) (param $lines (ref null $list<*>.T)) (result (ref $String))
+    (locals (ref $String) $ring)
+    (locals (ref null $list<*>.T) $lengths)
+
+    (local.set $ring (call newRing $size))
+
+    (local.set $lengths
+      (call $list<*>.map
+        (closure () (param $str (ref null any)) (result (ref null any))
+          (ref.i31 (call $parseI32 (ref.cast (ref $String) $str))))
+        (call $split.fn
+          (ref.cast (ref $String) (call $list<*>.head $lines))
+          (closure () (param $c i32) (result i32)
+            (bit-or (= #\space $c) (= #\, $c)))
+          0)))
+
+    (drop (drop (call hashRound $lengths 0 0 $ring)))
+
+    (call $formatI32 (* (array.get_u $String $ring 0) (array.get_u $String $ring 1))))
+
+  (func twist (param $ring (ref $String)) (param $i i32) (param $len i32)
+    (locals i32 $size $j $n $tmp)
+    (local.set $size (array.len $ring))
+    (local.set $j (i32.rem_u (+ $i $len -1) $size))
+    (local.set $n (i32.shr_u $len 1))
+    (loop $loop
+      (when (!= $n 0)
+        (local.set $tmp (array.get_u $String $ring $i))
+        (array.set $String $ring $i (array.get_u $String $ring $j))
+        (array.set $String $ring $j $tmp)
+
+        (local.set $i (i32.rem_u (+ $i 1) $size))
+        (local.set $j (i32.rem_u (+ $j $size -1) $size))
+        (add! $n -1)
+        (br $loop))))
+
+  (func hashRound
+    (param $lengths (ref null $list<*>.T))
+    (param $pos i32)
+    (param $skip i32)
+    (param $ring (ref $String))
+    (result i32 i32)
+
+    (locals i32 $len)
+
+    (loop $loop
+      (when (! (ref.is_null $lengths))
+        (local.set $len (i31.get_s (ref.cast i31ref (call $list<*>.head $lengths))))
+        (call twist $ring $pos $len)
+        (local.set $pos (i32.rem_u (+ $pos $len $skip) (array.len $ring)))
+        (add! $skip 1)
+        (local.set $lengths (call $list<*>.tail $lengths))
+        (br $loop)))
+    $pos $skip)
+
+  (func densify (param $ring (ref $String)) (result (ref $String))
+    (locals i32 $i $j)
+    (locals (ref $String) $result)
+    (local.set $result (array.new $String 0 (i32.div_u (+ (array.len $ring) 15) 16)))
+    (loop $loop
+      (when (i32.lt_u $i 256)
+        (local.set $j (i32.div_u $i 16))
+        (array.set $String $result $j
+          (i32.xor
+            (array.get_u $String $result $j)
+            (array.get_u $String $ring $i)))
+        (add! $i 1)
+        (br $loop)))
+    $result)
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result (ref $String))
+    (locals (ref $String) $line $ring)
+    (locals (ref null $list<*>.T) $lengths)
+    (locals i32 $i $pos $skip)
+
+    (local.set $ring (call newRing 256))
+    (local.set $lengths
+      (call $list<*>.cons (ref.i31 17)
+        (call $list<*>.cons (ref.i31 31)
+          (call $list<*>.cons (ref.i31 73)
+            (call $list<*>.cons (ref.i31 47)
+              (call $list<*>.cons (ref.i31 23)
+                (ref.null $list<*>.T)))))))
+
+    (local.set $line "")
+    (when (! (ref.is_null $lines))
+      (local.set $line (ref.cast (ref $String) (call $list<*>.head $lines))))
+    (local.set $i (array.len $line))
+    (loop $initLengths
+      (when $i
+        (add! $i -1)
+        (local.set $lengths
+          (call $list<*>.cons (ref.i31 (array.get_u $String $line $i)) $lengths))
+        (br $initLengths)))
+
+    (local.set $i 0)
+    (loop $loopRounds
+      (when (i32.lt_u $i 64)
+        (local.set $pos
+          (local.set $skip
+            (call hashRound $lengths $pos $skip $ring)))
+        (add! $i 1)
+        (br $loopRounds)))
+
+    (call $stringHex (call densify $ring)))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkStr
+        "day-10/input-ex0.txt"
+        (funcref part0.ex) "12"
+        (funcref part1) "00423f1d90f800d9c7a913fd7cd6df24")
+      (call $day-utils.checkStr
+        "day-10/input-ex1.txt"
+        (funcref part0.na) "n/a"
+        (funcref part1) "a2582a3a0e66e6e86e3812dcb672a272")
+      (call $day-utils.checkStr
+        "day-10/input-ex2.txt"
+        (funcref part0.na) "n/a"
+        (funcref part1) "33efeb34ea91902bb2f59c9920caa6cd")
+      (call $day-utils.checkStr
+        "day-10/input-ex3.txt"
+        (funcref part0.na) "n/a"
+        (funcref part1) "3efbe78a8d82f29979031a4aa0b16a9d")
+      (call $day-utils.checkStr
+        "day-10/input-ex4.txt"
+        (funcref part0.na) "n/a"
+        (funcref part1) "63960835bcdc130f0b66d7ff4f6a5a8e")
+      (call $day-utils.checkStr
+        "day-10/input-real0.txt"
+        (funcref part0.real) "4114"
+        (funcref part1) "2f8c3d2100fdd57cec130d928b0fd2dd")
+      0)))

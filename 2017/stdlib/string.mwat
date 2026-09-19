@@ -138,6 +138,41 @@
         (br $fill))))
   $result)
 
+(func $append (param $s0 (ref $String)) (param $s1 (ref $String)) (result (ref $String))
+  (locals (ref $String) $result)
+  (local.set $result (array.new_default $String (+ (array.len $s0) (array.len $s1))))
+  (array.copy $String $String $result 0 $s0 0 (array.len $s0))
+  (array.copy $String $String $result (array.len $s0) $s1 0 (array.len $s1))
+  $result)
+
+(func $join (param $sep (ref $String)) (param $list (ref null $list<*>.T)) (result (ref $String))
+  (locals (ref null $list<*>.T) $countList)
+  (locals (ref $String) $str $result)
+  (locals i32 $i)
+
+  (local.set $countList $list)
+  (loop $count
+    (when (! (ref.is_null $countList))
+      (add! $i (array.len (ref.cast (ref $String) (call $list<*>.head $countList))))
+      (local.set $countList (call $list<*>.tail $countList))
+      (when (! (ref.is_null $countList))
+        (add! $i (array.len $sep)))
+      (br $count)))
+
+  (local.set $result (array.new_default $String $i))
+  (local.set $i 0)
+  (loop $loop
+    (when (! (ref.is_null $list))
+      (local.set $str (ref.cast (ref $String) (call $list<*>.head $list)))
+      (array.copy $String $String $result $i $str 0 (array.len $str))
+      (add! $i (array.len $str))
+      (local.set $list (call $list<*>.tail $list))
+      (when (! (ref.is_null $list))
+        (array.copy $String $String $result $i $sep 0 (array.len $sep))
+        (add! $i (array.len $sep)))
+      (br $loop)))
+  $result)
+
 (func $split.fn
   (param $str (ref $String)) (param $pred (ref $Closure.Base)) (param $allowEmpty i32)
   (result (ref null $list<*>.T))
@@ -255,3 +290,33 @@
       (local.set $working (i32.div_s $working 10))
       (br $writeDigits)))
   $str)
+
+(func $formatI32.hex (param $digits i32) (param $n i32) (result (ref $String))
+  (locals (ref $String) $str)
+
+  (local.set $str (array.new $String 0 $digits))
+  (when $digits
+    (loop $writeDigits
+      (add! $digits -1)
+      (array.set $String $str $digits (call $asciiHex (i32.and $n #xf)))
+      (local.set $n (i32.shr_u $n 4))
+      (br_if $writeDigits $digits)))
+  $str)
+
+(func $stringToList (param $str (ref $String)) (result (ref null $list<*>.T))
+  (locals (ref null $list<*>.T) $result)
+  (locals i32 $i)
+  (local.set $i (array.len $str))
+  (when $i
+    (loop $loop
+      (add! $i -1)
+      (local.set $result (call $list<*>.cons (ref.i31 (array.get_u $String $str $i)) $result))
+      (br_if $loop $i)))
+  $result)
+
+(func $stringHex (param $str (ref $String)) (result (ref $String))
+  (call $join ""
+    (call $list<*>.map
+      (closure () (param $chr.any (ref null any)) (result (ref null any))
+        (call $formatI32.hex 2 (i31.get_u (ref.cast i31ref $chr.any))))
+      (call $stringToList $str))))
