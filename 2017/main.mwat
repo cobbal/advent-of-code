@@ -25,7 +25,7 @@
       (call $start.runDay 11 (funcref $day11.main) $fast)
       (call $start.runDay 12 (funcref $day12.main) $fast)
       (call $start.runDay 13 (funcref $day13.main) $fast)
-      ;; (call $start.runDay 14 (funcref $day14.main) $fast)
+      (call $start.runDay 14 (funcref $day14.main) $fast)
       ;; (call $start.runDay 15 (funcref $day15.main) $fast)
       ;; (call $start.runDay 16 (funcref $day16.main) $fast)
       ;; (call $start.runDay 17 (funcref $day17.main) $fast)

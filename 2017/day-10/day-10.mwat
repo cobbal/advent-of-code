@@ -34,15 +34,24 @@
     $ring)
 
   (func part0.common (param $size i32) (param $lines (ref null $list<*>.T)) (result (ref $String))
-    (locals (ref $String) $ring)
+    (locals (ref $String) $input $ring)
     (locals (ref null $list<*>.T) $lengths)
+    (locals i32 $i)
 
     (local.set $ring (call newRing $size))
 
     (local.set $lengths
       (call $split.toI31s (ref.cast (ref $String) (call $list<*>.head $lines))))
 
-    (drop (drop (call hashRound $lengths 0 0 $ring)))
+    (local.set $input (array.new_default $String (call $list<*>.len $lengths)))
+    (loop $fillInput
+      (when (i32.lt_u $i (array.len $input))
+        (array.set $String $input $i (i31.get_s (ref.cast i31ref (call $list<*>.head $lengths))))
+        (add! $i 1)
+        (local.set $lengths (call $list<*>.tail $lengths))
+        (br $fillInput)))
+
+    (drop (drop (call hashRound $input 0 0 $ring)))
 
     (call $formatI32 (* (array.get_u $String $ring 0) (array.get_u $String $ring 1))))
 
@@ -63,21 +72,21 @@
         (br $loop))))
 
   (func hashRound
-    (param $lengths (ref null $list<*>.T))
+    (param $input (ref $String))
     (param $pos i32)
     (param $skip i32)
     (param $ring (ref $String))
     (result i32 i32)
 
-    (locals i32 $len)
+    (locals i32 $i $len)
 
     (loop $loop
-      (when (! (ref.is_null $lengths))
-        (local.set $len (i31.get_s (ref.cast i31ref (call $list<*>.head $lengths))))
+      (when (i32.lt_u $i (array.len $input))
+        (local.set $len (array.get_u $String $input $i))
         (call twist $ring $pos $len)
         (local.set $pos (i32.rem_u (+ $pos $len $skip) (array.len $ring)))
         (add! $skip 1)
-        (local.set $lengths (call $list<*>.tail $lengths))
+        (add! $i 1)
         (br $loop)))
     $pos $skip)
 
@@ -96,41 +105,31 @@
         (br $loop)))
     $result)
 
-  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result (ref $String))
-    (locals (ref $String) $line $ring)
-    (locals (ref null $list<*>.T) $lengths)
+  ;; Also used in day 14
+  (func knotHash (param $str (ref $String)) (result (ref $String))
+    (locals (ref $String) $ring)
     (locals i32 $i $pos $skip)
 
+    (local.set $str
+      (call $append $str "\x11\x1f\x49\x2f\x17"))
     (local.set $ring (call newRing 256))
-    (local.set $lengths
-      (call $list<*>.cons (ref.i31 17)
-        (call $list<*>.cons (ref.i31 31)
-          (call $list<*>.cons (ref.i31 73)
-            (call $list<*>.cons (ref.i31 47)
-              (call $list<*>.cons (ref.i31 23)
-                (ref.null $list<*>.T)))))))
 
-    (local.set $line "")
-    (when (! (ref.is_null $lines))
-      (local.set $line (ref.cast (ref $String) (call $list<*>.head $lines))))
-    (local.set $i (array.len $line))
-    (loop $initLengths
-      (when $i
-        (add! $i -1)
-        (local.set $lengths
-          (call $list<*>.cons (ref.i31 (array.get_u $String $line $i)) $lengths))
-        (br $initLengths)))
-
-    (local.set $i 0)
     (loop $loopRounds
       (when (i32.lt_u $i 64)
         (local.set $pos
           (local.set $skip
-            (call hashRound $lengths $pos $skip $ring)))
+            (call hashRound $str $pos $skip $ring)))
         (add! $i 1)
         (br $loopRounds)))
 
-    (call $stringHex (call densify $ring)))
+    (call densify $ring))
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result (ref $String))
+    (locals (ref $String) $line)
+    (local.set $line "")
+    (when (! (ref.is_null $lines))
+      (local.set $line (ref.cast (ref $String) (call $list<*>.head $lines))))
+    (call $stringHex (call knotHash $line)))
 
   (indirect_func main (result i32)
     (+

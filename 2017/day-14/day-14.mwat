@@ -1,0 +1,98 @@
+;; -*- mode: wat -*-
+(namespace $day14
+  (type Grid (array (mut i8)))
+
+  (func genGrid (param $lines (ref null $list<*>.T)) (result (ref Grid))
+    (locals (ref Grid) $grid)
+    (locals (ref $String) $key $hashee $hash)
+    (locals i32 $i $j $sum)
+
+    (local.set $key
+      (call $append (ref.cast (ref $String) (call $list<*>.head $lines)) "-"))
+    (local.set $grid (array.new_default Grid (* 128 128)))
+
+    (loop $loop
+      (when (i32.lt_u $i 128)
+        (local.set $hashee (call $append $key (call $formatI32 $i)))
+        (local.set $hash (call $day10.knotHash $hashee))
+
+        (local.set $j 0)
+        (loop $fillRow
+          (when (i32.lt_u $j (* (array.len $hash) 8))
+            (array.set Grid $grid (+ (* $i 128) $j)
+              (i32.and 1
+                (i32.shr_u
+                  (array.get_u $String $hash (i32.div_u $j 8))
+                  (- 7 (i32.rem_u $j 8)))))
+            (add! $j 1)
+            (br $fillRow)))
+
+        (add! $i 1)
+        (br $loop)))
+
+    $grid)
+
+  (indirect_func part0 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref Grid) $grid)
+    (locals i32 $i $sum)
+
+    (local.set $grid (call genGrid $lines))
+    (loop $countBits
+      (when (i32.lt_u $i (array.len $grid))
+        (add! $sum (array.get_u Grid $grid $i))
+        (add! $i 1)
+        (br $countBits)))
+    (i64.extend_i32_s $sum))
+
+  (func dfs (param $grid (ref Grid)) (param $loc i32) (result i32)
+    (locals i32 $y $x $size)
+    (when (! (array.get_u Grid $grid $loc))
+      (return 0))
+    (array.set Grid $grid $loc 0)
+
+    (local.set $y (i32.div_u $loc 128))
+    (local.set $x (i32.rem_u $loc 128))
+    (when $y
+      (add! $size (call dfs $grid (- $loc 128))))
+    (when (i32.lt_u $y 127)
+      (add! $size (call dfs $grid (+ $loc 128))))
+    (when $x
+      (add! $size (call dfs $grid (- $loc 1))))
+    (when (i32.lt_u $x 127)
+      (add! $size (call dfs $grid (+ $loc 1))))
+    $size)
+
+  (func unvisited (param $grid (ref Grid)) (result i32)
+    (locals i32 $i)
+    (loop $loop
+      (when (i32.lt_s $i (array.len $grid))
+        (when (array.get_u Grid $grid $i)
+          (return $i))
+        (add! $i 1)
+        (br $loop)))
+    -1)
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref Grid) $grid)
+    (locals i32 $start $count)
+    (local.set $grid (call genGrid $lines))
+
+    (loop $component
+      (local.set $start (call unvisited $grid))
+      (when (i32.ge_s $start 0)
+        (drop (call dfs $grid $start))
+        (add! $count 1)
+        (br $component)))
+    (i64.extend_i32_s $count))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkI64
+        "day-14/input-ex0.txt"
+        (funcref part0) (i64 8108)
+        (funcref part1) (i64 1242))
+      (call $day-utils.checkI64
+        "day-14/input-real0.txt"
+        (funcref part0) (i64 8250)
+        (funcref part1) (i64 1113))
+      0)))
