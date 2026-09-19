@@ -1,0 +1,60 @@
+;; -*- mode: wat -*-
+(namespace $day15
+  (func step (param $factor i64) (param $x i64) (result i64)
+    (i64 (i64.rem_u (* $x $factor) 2147483647)))
+
+  (indirect_func part0 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref null $list<*>.T) $words)
+    (locals i64 $a $b)
+    (locals i32 $i $matches)
+    (local.set $words (call $split.toI31s (ref.cast (ref $String) (call $list<*>.head $lines))))
+    (local.set $a (i64.extend_i32_s (i31.get_s (ref.cast i31ref (call $list<*>.head $words)))))
+    (local.set $lines (call $list<*>.tail $lines))
+    (local.set $words (call $split.toI31s (ref.cast (ref $String) (call $list<*>.head $lines))))
+    (local.set $b (i64.extend_i32_s (i31.get_s (ref.cast i31ref (call $list<*>.head $words)))))
+
+    (loop $loop
+      (when (i32.lt_u $i 40000000)
+        (local.set $a (i64 (i64.rem_u (* $a 16807) 2147483647)))
+        (local.set $b (i64 (i64.rem_u (* $b 48271) 2147483647)))
+        (when (i64 (= (i64.and $a #xffff) (i64.and $b #xffff)))
+          (add! $matches 1))
+        (add! $i 1)
+        (br $loop)))
+    (i64.extend_i32_s $matches))
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref null $list<*>.T) $words)
+    (locals i64 $a $b)
+    (locals i32 $i $matches)
+    (local.set $words (call $split.toI31s (ref.cast (ref $String) (call $list<*>.head $lines))))
+    (local.set $a (i64.extend_i32_s (i31.get_s (ref.cast i31ref (call $list<*>.head $words)))))
+    (local.set $lines (call $list<*>.tail $lines))
+    (local.set $words (call $split.toI31s (ref.cast (ref $String) (call $list<*>.head $lines))))
+    (local.set $b (i64.extend_i32_s (i31.get_s (ref.cast i31ref (call $list<*>.head $words)))))
+
+    (loop $loop
+      (when (i32.lt_u $i 5000000)
+        (loop $pickA
+          (local.set $a (call step (i64 16807) $a))
+          (br_if $pickA (i32.and (i32.wrap_i64 $a) 3)))
+        (loop $pickB
+          (local.set $b (call step (i64 48271) $b))
+          (br_if $pickB (i32.and (i32.wrap_i64 $b) 7)))
+        (when (i64 (= (i64.and $a #xffff) (i64.and $b #xffff)))
+          (add! $matches 1))
+        (add! $i 1)
+        (br $loop)))
+    (i64.extend_i32_s $matches))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkI64
+        "day-15/input-ex0.txt"
+        (funcref part0) (i64 588)
+        (funcref part1) (i64 309))
+      (call $day-utils.checkI64
+        "day-15/input-real0.txt"
+        (funcref part0) (i64 567)
+        (funcref part1) (i64 323))
+      0)))
