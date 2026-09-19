@@ -7,11 +7,7 @@
         (locals (ref null $list<*>.T) $words)
         (locals i32 $n $min $max)
         (local.set $line (ref.cast (ref $String) $line.any))
-        (local.set $words
-          (call $list<*>.map
-            (closure () (param $str.any (ref null any)) (result (ref null any))
-              (ref.i31 (call $parseI32 (ref.cast (ref $String) $str.any))))
-            (call $split.ws $line 0)))
+        (local.set $words (call $split.toI31s $line))
 
         (local.set $min #x7fffffff)
         (local.set $max #x80000000)
@@ -32,11 +28,7 @@
         (locals (ref null $list<*>.T) $words $innerList)
         (locals i32 $x $y)
         (local.set $line (ref.cast (ref $String) $line.any))
-        (local.set $words
-          (call $list<*>.map
-            (closure () (param $str (ref null any)) (result (ref null any))
-              (ref.i31 (call $parseI32 (ref.cast (ref $String) $str))))
-            (call $split.ws $line 0)))
+        (local.set $words (call $split.toI31s $line))
 
         (loop $outer
           (when (! (ref.is_null $words))

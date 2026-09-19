@@ -40,14 +40,7 @@
     (local.set $ring (call newRing $size))
 
     (local.set $lengths
-      (call $list<*>.map
-        (closure () (param $str.any (ref null any)) (result (ref null any))
-          (ref.i31 (call $parseI32 (ref.cast (ref $String) $str.any))))
-        (call $split.fn
-          (ref.cast (ref $String) (call $list<*>.head $lines))
-          (closure () (param $c i32) (result i32)
-            (bit-or (= #\space $c) (= #\, $c)))
-          0)))
+      (call $split.toI31s (ref.cast (ref $String) (call $list<*>.head $lines))))
 
     (drop (drop (call hashRound $lengths 0 0 $ring)))
 

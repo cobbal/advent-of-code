@@ -1,0 +1,69 @@
+;; -*- mode: wat -*-
+(namespace $day13
+  (type Scanner (struct (field $DEPTH i32) (field $RANGE i32)))
+  (type System (array (mut (ref Scanner))))
+
+  (func parse (param $lines (ref null $list<*>.T)) (result (ref System))
+    (locals (ref null $list<*>.T) $words)
+    (locals (ref Scanner) $scanner)
+    (locals (ref System) $system)
+    (locals i32 $n $i $depth $range)
+
+    (local.set $n (call $list<*>.len $lines))
+    (local.set $system (array.new System (struct.new Scanner 0 0) $n))
+    (loop $lineLoop
+      (when (! (ref.is_null $lines))
+        (local.set $words (call $split.toI31s (ref.cast (ref $String) (call $list<*>.head $lines))))
+        (local.set $depth (i31.get_s (ref.cast i31ref (call $list<*>.head $words))))
+        (local.set $range (i31.get_s (ref.cast i31ref (call $list<*>.head (call $list<*>.tail $words)))))
+        (array.set System $system $i (struct.new Scanner $depth $range))
+
+        (local.set $lines (call $list<*>.tail $lines))
+        (add! $i 1)
+        (br $lineLoop)))
+
+    $system)
+
+  (indirect_func part0 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref System) $system)
+    (locals i32 $i $depth $range $sum)
+    (local.set $system (call parse $lines))
+    (loop $loop
+      (when (i32.lt_u $i (array.len $system))
+        (local.set $depth (struct.get Scanner $DEPTH (array.get System $system $i)))
+        (local.set $range (struct.get Scanner $RANGE (array.get System $system $i)))
+        (when (! (i32.rem_u $depth (* 2 (- $range 1))))
+          (add! $sum (* $depth $range)))
+        (add! $i 1)
+        (br $loop)))
+    (i64.extend_i32_s $sum))
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref System) $system)
+    (locals i32 $delay $i $depth $range $sum)
+    (local.set $system (call parse $lines))
+    (loop $wait
+      (local.set $i 0)
+      (loop $loop
+        (when (i32.ge_u $i (array.len $system))
+          (return (i64.extend_i32_s $delay)))
+        (local.set $depth (struct.get Scanner $DEPTH (array.get System $system $i)))
+        (local.set $range (struct.get Scanner $RANGE (array.get System $system $i)))
+        (when (! (i32.rem_u (+ $delay $depth) (* 2 (- $range 1))))
+          (add! $delay 1)
+          (br $wait))
+        (add! $i 1)
+        (br $loop)))
+    unreachable)
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkI64
+        "day-13/input-ex0.txt"
+        (funcref part0) (i64 24)
+        (funcref part1) (i64 10))
+      (call $day-utils.checkI64
+        "day-13/input-real0.txt"
+        (funcref part0) (i64 1632)
+        (funcref part1) (i64 3834136))
+      0)))

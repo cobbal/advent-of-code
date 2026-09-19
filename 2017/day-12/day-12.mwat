@@ -29,14 +29,7 @@
     (loop $readGraph
       (when (! (ref.is_null $lines))
         (local.set $words
-          (call $list<*>.map
-            (closure () (param $str.any (ref null any)) (result (ref null any))
-              (ref.i31 (call $parseI32 (ref.cast (ref $String) $str.any))))
-            (call $split.fn
-              (ref.cast (ref $String) (call $list<*>.head $lines))
-              (closure () (param $c i32) (result i32)
-                (bit-or (= #\space $c) (= #\, $c) (= #\< $c) (= #\- $c) (= #\> $c)))
-              0)))
+          (call $split.toI31s (ref.cast (ref $String) (call $list<*>.head $lines))))
         (local.set $u (i31.get_u (ref.cast i31ref (call $list<*>.head $words))))
         (local.set $uSet (array.new_default NodeSet $n))
         (local.set $words (call $list<*>.tail $words))

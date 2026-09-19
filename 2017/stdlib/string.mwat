@@ -210,6 +210,15 @@
       (bit-or (= #\space $c) (= #\newline $c) (= #\tab $c)))
     $allowEmpty))
 
+(func $split.toI31s (param $str (ref $String)) (result (ref null $list<*>.T))
+  (call $list<*>.map
+    (closure () (param $str.any (ref null any)) (result (ref null any))
+      (ref.i31 (call $parseI32 (ref.cast (ref $String) $str.any))))
+    (call $split.fn $str
+      (closure () (param $c i32) (result i32)
+        (i32.ge_u (- $c #\0) 10))
+      0)))
+
 (func $split
   (param $str (ref $String)) (param $sep i32) (param $allowEmpty i32)
   (result (ref null $list<*>.T))
