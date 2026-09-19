@@ -1,0 +1,109 @@
+;; -*- mode: wat -*-
+(namespace $day12
+  (type NodeSet (array (mut i8)))
+  (type Graph (array (mut (ref NodeSet))))
+
+  (func dfs (param $graph (ref Graph)) (param $visited (ref NodeSet)) (param $u i32)
+    (locals i32 $v)
+    (locals (ref NodeSet) $row)
+    (when (array.get_u NodeSet $visited $u)
+      (return))
+    (array.set NodeSet $visited $u 1)
+    (local.set $row (array.get Graph $graph $u))
+    (loop $vLoop
+      (when (i32.lt_u $v (array.len $row))
+        (when (array.get_u NodeSet $row $v)
+          (call dfs $graph $visited $v))
+        (add! $v 1)
+        (br $vLoop))))
+
+  (func parseGraph (param $lines (ref null $list<*>.T)) (result (ref Graph))
+    (locals (ref Graph) $graph)
+    (locals (ref NodeSet) $uSet)
+    (locals (ref null $list<*>.T) $words)
+    (locals i32 $n $i $u $v)
+
+    (local.set $n (call $list<*>.len $lines))
+    (local.set $graph (array.new Graph (array.new_default NodeSet 0) $n))
+
+    (loop $readGraph
+      (when (! (ref.is_null $lines))
+        (local.set $words
+          (call $list<*>.map
+            (closure () (param $str.any (ref null any)) (result (ref null any))
+              (ref.i31 (call $parseI32 (ref.cast (ref $String) $str.any))))
+            (call $split.fn
+              (ref.cast (ref $String) (call $list<*>.head $lines))
+              (closure () (param $c i32) (result i32)
+                (bit-or (= #\space $c) (= #\, $c) (= #\< $c) (= #\- $c) (= #\> $c)))
+              0)))
+        (local.set $u (i31.get_u (ref.cast i31ref (call $list<*>.head $words))))
+        (local.set $uSet (array.new_default NodeSet $n))
+        (local.set $words (call $list<*>.tail $words))
+        (loop $vs
+          (when (! (ref.is_null $words))
+            (local.set $v (i31.get_u (ref.cast i31ref (call $list<*>.head $words))))
+            (array.set NodeSet $uSet $v 1)
+            (local.set $words (call $list<*>.tail $words))
+            (br $vs)))
+        (array.set Graph $graph $i $uSet)
+        (add! $i 1)
+        (local.set $lines (call $list<*>.tail $lines))
+        (br $readGraph)))
+    $graph)
+
+  (indirect_func part0 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref Graph) $graph)
+    (locals (ref NodeSet) $visited)
+    (locals (ref null $list<*>.T) $words)
+    (locals i32 $i $sum)
+
+    (local.set $graph (call parseGraph $lines))
+    (local.set $visited (array.new_default NodeSet (array.len $graph)))
+    (call dfs $graph $visited 0)
+
+    (loop $count
+      (when (i32.lt_u $i (array.len $graph))
+        (add! $sum (array.get_u NodeSet $visited $i))
+        (add! $i 1)
+        (br $count)))
+
+    (i64.extend_i32_s $sum))
+
+  (func unvisited (param $visited (ref NodeSet)) (result i32)
+    (locals i32 $i)
+    (loop $loop
+      (when (i32.lt_s $i (array.len $visited))
+        (when (! (array.get_u NodeSet $visited $i))
+          (return $i))
+        (add! $i 1)
+        (br $loop)))
+    -1)
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref Graph) $graph)
+    (locals (ref NodeSet) $visited)
+    (locals (ref null $list<*>.T) $words)
+    (locals i32 $start $count)
+
+    (local.set $graph (call parseGraph $lines))
+    (local.set $visited (array.new_default NodeSet (array.len $graph)))
+    (loop $component
+      (local.set $start (call unvisited $visited))
+      (when (i32.ge_s $start 0)
+        (call dfs $graph $visited $start)
+        (add! $count 1)
+        (br $component)))
+    (i64.extend_i32_s $count))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkI64
+        "day-12/input-ex0.txt"
+        (funcref part0) (i64 6)
+        (funcref part1) (i64 2))
+      (call $day-utils.checkI64
+        "day-12/input-real0.txt"
+        (funcref part0) (i64 283)
+        (funcref part1) (i64 195))
+      0)))

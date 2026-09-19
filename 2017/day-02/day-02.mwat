@@ -9,8 +9,8 @@
         (local.set $line (ref.cast (ref $String) $line.any))
         (local.set $words
           (call $list<*>.map
-            (closure () (param $str (ref null any)) (result (ref null any))
-              (ref.i31 (call $parseI32 (ref.cast (ref $String) $str))))
+            (closure () (param $str.any (ref null any)) (result (ref null any))
+              (ref.i31 (call $parseI32 (ref.cast (ref $String) $str.any))))
             (call $split.ws $line 0)))
 
         (local.set $min #x7fffffff)
