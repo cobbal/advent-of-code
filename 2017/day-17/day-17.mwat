@@ -1,0 +1,63 @@
+;; -*- mode: wat -*-
+(namespace $day17
+  (type Buffer (array (mut i32)))
+
+  (func insert (param $buf (ref Buffer)) (param $len i32) (param $after i32) (param $val i32)
+    (locals i32 $target)
+    (local.set $target (+ $after 1))
+
+    (array.copy Buffer Buffer $buf (+ $target 1) $buf $target (- $len $target))
+    (array.set Buffer $buf $target $val))
+
+  (func printBuffer (param $buf (ref Buffer)) (param $len i32) (param $at i32)
+    (locals i32 $i)
+    (loop $loop
+      (when (i32.lt_u $i $len)
+        (when $i (call $printStr " "))
+        (when (= $i $at) (call $printStr "("))
+        (call $printStr (call $formatI32 (array.get Buffer $buf $i)))
+        (when (= $i $at) (call $printStr ")"))
+        (add! $i 1)
+        (br $loop)))
+    (call $print.nl))
+
+  (indirect_func part0 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref Buffer) $buf)
+    (locals i32 $skip $pos $i)
+    (local.set $skip (call $parseI32 (ref.cast (ref $String) (call $list<*>.head $lines))))
+    (local.set $buf (array.new_default Buffer 2018))
+    (loop $loop
+      (when (i32.lt_u $i 2017)
+        (add! $i 1)
+        (local.set $pos (i32.rem_u (+ $pos $skip) $i))
+        (call insert $buf $i $pos $i)
+        (add! $pos 1)
+        (br $loop)))
+
+    (i64.extend_i32_s (array.get Buffer $buf (+ $pos 1))))
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals i32 $skip $pos $afterZero $i)
+    (local.set $skip (call $parseI32 (ref.cast (ref $String) (call $list<*>.head $lines))))
+    (loop $loop
+      (when (i32.lt_u $i 50000000)
+        (add! $i 1)
+        (local.set $pos (i32.rem_u (+ $pos $skip) $i))
+        (when (! $pos)
+          (local.set $afterZero $i))
+        (add! $pos 1)
+        (br $loop)))
+
+    (i64.extend_i32_s $afterZero))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkI64
+        "day-17/input-ex0.txt"
+        (funcref part0) (i64 638)
+        (funcref part1) (i64 1222153))
+      (call $day-utils.checkI64
+        "day-17/input-real0.txt"
+        (funcref part0) (i64 204)
+        (funcref part1) (i64 28954211))
+      0)))
