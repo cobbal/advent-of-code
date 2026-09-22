@@ -313,8 +313,8 @@
 
     [`(struct.new ,type . ,fields)
       `(struct.new ,(lookup env type) ,@(map recur fields))]
-    [`(struct.get ,type ,field ,val)
-      `(struct.get ,(lookup env type) ,field ,(recur val))]
+    [`(,(? (one-of '(struct.get struct.get_u struct.get_s)) op) ,type ,field ,val)
+      `(,op ,(lookup env type) ,field ,(recur val))]
     [`(struct.set ,type ,field ,val ,newVal)
       `(struct.set ,(lookup env type) ,field ,(recur val) ,(recur newVal))]
 

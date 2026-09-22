@@ -248,6 +248,28 @@
     (br_if $loop (i32.ne $read $last)))
   (return_call $memrotate.left $write $nextRead $last))
 
+(func $String.rotate.left (param $str (ref $String)) (param $first i32) (param $middle i32) (param $last i32)
+  (locals i32 $read $write $nextRead $tmp)
+
+  (if (i32.eq $first $middle)
+    (then (return)))
+  (if (i32.eq $middle $last)
+    (then (return)))
+
+  (local.set $write $first)
+  (local.set $nextRead $first)
+  (local.set $read $middle)
+  (loop $loop
+    (if (i32.eq $write $nextRead)
+      (then (local.set $nextRead $read)))
+    (local.set $tmp (array.get_u $String $str $write))
+    (array.set $String $str $write (array.get_u $String $str $read))
+    (array.set $String $str $read $tmp)
+    (local.set $write (i32.add $write 1))
+    (local.set $read (i32.add $read 1))
+    (br_if $loop (i32.ne $read $last)))
+  (return_call $String.rotate.left $str $write $nextRead $last))
+
 (func $parseI32 (param $str (ref $String)) (result i32)
   (locals i32 $result $digit $negative $offset $n)
   (local.set $n (array.len $str))

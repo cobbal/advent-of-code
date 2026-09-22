@@ -1,0 +1,128 @@
+;; -*- mode: wat -*-
+(namespace $day16
+  (type Instr
+    (struct
+      (field $op i8)
+      (field $a0 i8)
+      (field $a1 i8)))
+
+  (func parseInstr (param $str (ref $String)) (result (ref Instr))
+    (locals i32 $op)
+    (locals (ref null $list<*>.T) $parts)
+    (locals (ref $String) $s0 $s1)
+
+    (local.set $op (array.get_u $String $str 0))
+    (local.set $str (call $subString $str 1 (array.len $str)))
+    (when (= $op #\s)
+      (return (struct.new Instr $op (call $parseI32 $str) 0)))
+    (local.set $parts (call $split $str #\/ 0))
+    (call $assert (= (call $list<*>.len $parts) 2))
+    (local.set $s0 (ref.cast (ref $String) (call $list<*>.head $parts)))
+    (local.set $s1 (ref.cast (ref $String) (call $list<*>.head (call $list<*>.tail $parts))))
+    (when (= $op #\x)
+      (return
+        (struct.new Instr
+          $op
+          (call $parseI32 $s0)
+          (call $parseI32 $s1))))
+    (when (= $op #\p)
+      (return
+        (struct.new Instr
+          $op
+          (array.get_u $String $s0 0)
+          (array.get_u $String $s1 0))))
+    unreachable)
+
+  (func exec (param $mem (ref $String)) (param $ignoreP i32) (param $instr (ref Instr))
+    (locals i32 $op $a0 $a1 $tmp $i)
+    (local.set $op (struct.get_u Instr $op $instr))
+    (local.set $a0 (struct.get_u Instr $a0 $instr))
+    (local.set $a1 (struct.get_u Instr $a1 $instr))
+    (cond
+      [(= $op #\s)
+        (call $String.rotate.left $mem 0 (- (array.len $mem) $a0) (array.len $mem))]
+      [(= $op #\x)
+        (local.set $tmp (array.get_u $String $mem $a0))
+        (array.set $String $mem $a0 (array.get_u $String $mem $a1))
+        (array.set $String $mem $a1 $tmp)]
+      [(= $op #\p)
+        (when (! $ignoreP)
+          (loop $loop
+            (when (i32.lt_u $i (array.len $mem))
+              (cond
+                [(= (array.get_u $String $mem $i) $a0)
+                  (array.set $String $mem $i $a1)]
+                [(= (array.get_u $String $mem $i) $a1)
+                  (array.set $String $mem $i $a0)]
+                [otherwise])
+              (add! $i 1)
+              (br $loop))))]
+      [otherwise unreachable]))
+
+  (func part0.common (param $lines (ref null $list<*>.T)) (param $len i32) (param $ignoreP i32) (result (ref $String))
+    (locals (ref null $list<*>.T) $instrs)
+    (locals (ref $String) $mem)
+    (local.set $mem (call $subString "abcdefghijklmnop" 0 $len))
+    (local.set $instrs
+      (call $list<*>.map
+        (closure (($mem (ref $String))) (param $str.any (ref null any)) (result (ref null any))
+          (call parseInstr (ref.cast (ref $String) $str.any)))
+        (call $split (ref.cast (ref $String) (call $list<*>.head $lines)) #\, 0)))
+
+    (loop $loop
+      (when (! (ref.is_null $instrs))
+        (call exec $mem $ignoreP (ref.cast (ref Instr) (call $list<*>.head $instrs)))
+        (local.set $instrs (call $list<*>.tail $instrs))
+        (br $loop)))
+
+    $mem)
+
+  (indirect_func part0.ex (param $lines (ref null $list<*>.T)) (result (ref $String))
+    (call part0.common $lines 5 0))
+
+  (indirect_func part0.real (param $lines (ref null $list<*>.T)) (result (ref $String))
+    (call part0.common $lines 16 0))
+
+  ;; No idea if it's a left or right compose. Doesn't matter for this problem.
+  (func compose (param $p0 (ref $String)) (param $p1 (ref $String)) (result (ref $String))
+    (locals (ref $String) $result)
+    (locals i32 $i)
+    (local.set $result (array.new_default $String (array.len $p0)))
+    (loop $loop
+      (when (i32.lt_u $i (array.len $result))
+        (array.set $String $result $i
+          (array.get_u $String $p0
+            (- (array.get_u $String $p1 $i) #\a)))
+        (add! $i 1)
+        (br $loop)))
+    $result)
+
+  (func exp (param $perm (ref $String)) (param $n i32) (param $acc (ref $String)) (result (ref $String))
+    (when (! $n) (return $acc))
+    (when (i32.and $n 1)
+      (local.set $acc (call compose $acc $perm)))
+    (return_call exp (call compose $perm $perm) (i32.shr_u $n 1) $acc))
+
+  (func part1.common (param $lines (ref null $list<*>.T)) (param $len i32) (result (ref $String))
+    (call exp
+      (call part0.common $lines $len 1)
+      1000000000
+      (call $subString "abcdefghijklmnop" 0 $len)))
+
+  (indirect_func part1.ex (param $lines (ref null $list<*>.T)) (result (ref $String))
+    (call part1.common $lines 5))
+
+  (indirect_func part1.real (param $lines (ref null $list<*>.T)) (result (ref $String))
+    (call part1.common $lines 16))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkStr
+        "day-16/input-ex0.txt"
+        (funcref part0.ex) "baedc"
+        (funcref part1.ex) "abcde")
+      (call $day-utils.checkStr
+        "day-16/input-real0.txt"
+        (funcref part0.real) "pkgnhomelfdibjac"
+        (funcref part1.real) "pogbjfihclkemadn")
+      0)))
