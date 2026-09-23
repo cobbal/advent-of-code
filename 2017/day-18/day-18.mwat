@@ -1,0 +1,265 @@
+;; -*- mode: wat -*-
+(namespace $day18
+  (type RegFile (array (mut i64)))
+
+  (type Program (array (mut (ref Instr))))
+
+  (type Instr
+    (struct
+      (field $op i8)
+      (field $xIsReg i8)
+      (field $yIsReg i8)
+      (field $x i32)
+      (field $y i32)))
+
+  (type Config
+    (struct
+      (field $prog (ref Program))
+      (field $file (ref RegFile))
+      (field $pc (mut i32))
+      (field $txq (mut (ref $queue<*>.T)))
+      (field $result (mut i64))))
+
+  (type I64 (struct (field i64)))
+
+  (func parseReg (param $tail (ref null $list<*>.T)) (result i32 i32)
+    (locals (ref $String) $word)
+    (when (ref.is_null $tail)
+      (return 0 0))
+    (local.set $word (call $list<$String>.head $tail))
+    (when (i32.lt_u (- (array.get_u $String $word 0) #\a) 26)
+      (return 1 (array.get_u $String $word 0)))
+    (return 0 (call $parseI32 $word)))
+
+  (func parseInstr (param $line (ref $String)) (result (ref Instr))
+    (locals (ref null $list<*>.T) $words)
+    (locals (ref $String) $word)
+    (locals i32 $op $xIsReg $yIsReg $x $y)
+
+    (local.set $words (call $split.ws $line 0))
+    (local.set $word (call $list<$String>.head $words))
+    (local.set $words (call $list<*>.tail $words))
+    (local.set $xIsReg (local.set $x (call parseReg $words)))
+    (local.set $words (call $list<*>.tail $words))
+    (local.set $yIsReg (local.set $y (call parseReg $words)))
+
+    (cond
+      [(call $String.eq $word "snd")
+        (local.set $op 0)]
+      [(call $String.eq $word "set")
+        (local.set $op 1)]
+      [(call $String.eq $word "add")
+        (local.set $op 2)]
+      [(call $String.eq $word "mul")
+        (local.set $op 3)]
+      [(call $String.eq $word "mod")
+        (local.set $op 4)]
+      [(call $String.eq $word "rcv")
+        (local.set $op 5)]
+      [(call $String.eq $word "jgz")
+        (local.set $op 6)]
+      [otherwise unreachable])
+
+    (struct.new Instr $op $xIsReg $yIsReg $x $y))
+
+  (func part0.step (param $config (ref Config)) (result i32)
+    (locals (ref Instr) $instr)
+    (locals (ref RegFile) $file)
+    (locals i32 $pc $op $dest $xReg $yReg)
+    (locals i64 $x $y)
+
+    (local.set $pc (struct.get Config $pc $config))
+    (local.set $file (struct.get Config $file $config))
+    (local.set $instr (array.get Program (struct.get Config $prog $config) $pc))
+
+    (local.set $op (struct.get_u Instr $op $instr))
+
+    (local.set $xReg (local.tee $dest (struct.get Instr $x $instr)))
+    (if (struct.get_u Instr $xIsReg $instr)
+      (then (local.set $x (array.get RegFile $file $xReg)))
+      (else (local.set $x (i64.extend_i32_s $xReg))))
+
+    (local.set $yReg (struct.get Instr $y $instr))
+    (if (struct.get_u Instr $yIsReg $instr)
+      (then (local.set $y (array.get RegFile $file $yReg)))
+      (else (local.set $y (i64.extend_i32_s $yReg))))
+
+    (cond
+      [(= $op 0) ;; snd X
+        (struct.set Config $result $config $x)
+        (add! $pc 1)]
+      [(= $op 1) ;; set X Y
+        (array.set RegFile $file $dest $y)
+        (add! $pc 1)]
+      [(= $op 2) ;; add X Y
+        (array.set RegFile $file $dest (i64 (+ $x $y)))
+        (add! $pc 1)]
+      [(= $op 3) ;; mul X Y
+        (array.set RegFile $file $dest (i64 (* $x $y)))
+        (add! $pc 1)]
+      [(= $op 4) ;; mod X Y
+        (array.set RegFile $file $dest (i64.rem_s $x $y))
+        (add! $pc 1)]
+      [(= $op 5) ;; rcv X
+        (when (i64 (!= $x 0)) (return 1))
+        (add! $pc 1)]
+      [(= $op 6) ;; jgz X Y
+        (if (i64 (i64.gt_s $x 0))
+          (then (add! $pc (i32.wrap_i64 $y)))
+          (else (add! $pc 1)))]
+      [otherwise unreachable])
+
+    (struct.set Config $pc $config $pc)
+    0)
+
+  (func part1.halfStep (param $config (ref Config)) (param $rxq (ref $queue<*>.T)) (result i32 (ref $queue<*>.T))
+    (locals (ref Instr) $instr)
+    (locals (ref RegFile) $file)
+    (locals (ref $queue<*>.T) $txq)
+    (locals i32 $pc $op $dest $xReg $yReg)
+    (locals i64 $x $y)
+    (locals anyref $box.any)
+
+    (local.set $file (struct.get Config $file $config))
+    (local.set $pc (struct.get Config $pc $config))
+    (local.set $txq (struct.get Config $txq $config))
+
+    (local.set $instr (array.get Program (struct.get Config $prog $config) $pc))
+    (local.set $op (struct.get_u Instr $op $instr))
+
+    (local.set $xReg (local.tee $dest (struct.get Instr $x $instr)))
+    (if (struct.get_u Instr $xIsReg $instr)
+      (then (local.set $x (array.get RegFile $file $xReg)))
+      (else (local.set $x (i64.extend_i32_s $xReg))))
+
+    (local.set $yReg (struct.get Instr $y $instr))
+    (if (struct.get_u Instr $yIsReg $instr)
+      (then (local.set $y (array.get RegFile $file $yReg)))
+      (else (local.set $y (i64.extend_i32_s $yReg))))
+
+    (cond
+      [(= $op 0) ;; snd X
+        (local.set $txq (call $queue<*>.pushFront (struct.new I64 $x) $txq))
+        (struct.set Config $result $config
+          (i64 (+ (struct.get Config $result $config) 1)))
+        (add! $pc 1)]
+      [(= $op 1) ;; set X Y
+        (array.set RegFile $file $dest $y)
+        (add! $pc 1)]
+      [(= $op 2) ;; add X Y
+        (array.set RegFile $file $dest (i64 (+ $x $y)))
+        (add! $pc 1)]
+      [(= $op 3) ;; mul X Y
+        (array.set RegFile $file $dest (i64 (* $x $y)))
+        (add! $pc 1)]
+      [(= $op 4) ;; mod X Y
+        (array.set RegFile $file $dest (i64.rem_s $x $y))
+        (add! $pc 1)]
+      [(= $op 5) ;; rcv X
+        (when (call $queue<*>.isEmpty $rxq)
+          (return 0 $rxq))
+        (local.set $rxq
+          (local.set $box.any
+            (call $queue<*>.popBack $rxq)))
+        (array.set RegFile $file $dest
+          (struct.get I64 0
+            (ref.cast (ref I64) $box.any)))
+        (add! $pc 1)]
+      [(= $op 6) ;; jgz X Y
+        (if (i64 (i64.gt_s $x 0))
+          (then (add! $pc (i32.wrap_i64 $y)))
+          (else (add! $pc 1)))]
+      [otherwise unreachable])
+
+    (struct.set Config $pc $config $pc)
+    (struct.set Config $txq $config $txq)
+
+    1 $rxq)
+
+  (func part1.step (param $config0 (ref Config)) (param $config1 (ref Config)) (result i32)
+    (locals (ref $queue<*>.T) $q0 $q1)
+    (locals i32 $progress0 $progress1)
+
+    (local.set $q1 (struct.get Config $txq $config1))
+    (local.set $progress0
+      (local.set $q1
+        (call part1.halfStep $config0 $q1)))
+    (struct.set Config $txq $config1 $q1)
+
+    (local.set $q0 (struct.get Config $txq $config0))
+    (local.set $progress1
+      (local.set $q0
+        (call part1.halfStep $config1 $q0)))
+    (struct.set Config $txq $config0 $q0)
+
+    (! (i32.or $progress0 $progress1)))
+
+  (func readProg (param $lines (ref null $list<*>.T)) (result (ref Config))
+    (locals (ref Program) $prog)
+    (locals i32 $i)
+
+    (local.set $prog (array.new Program (struct.new Instr 0 0 0 0 0) (call $list<*>.len $lines)))
+    (loop $readInstrs
+      (when (! (ref.is_null $lines))
+        (array.set Program $prog $i (call parseInstr (call $list<$String>.head $lines)))
+        (add! $i 1)
+        (local.set $lines (call $list<*>.tail $lines))
+        (br $readInstrs)))
+
+    (struct.new Config
+      $prog
+      (array.new_default RegFile 128)
+      0
+      (call $queue<*>.empty)
+      (i64 0)))
+
+  (indirect_func part0 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref Config) $config)
+
+    (local.set $config (call readProg $lines))
+
+    (loop $eval
+      (when (call part0.step $config)
+        (return (struct.get Config $result $config)))
+      (br $eval))
+    unreachable)
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref Config) $config0 $config1)
+
+    (local.set $config0 (call readProg $lines))
+    (local.set $config1
+      (struct.new Config
+        (struct.get Config $prog $config0)
+        (array.new_default RegFile 128)
+        0
+        (call $queue<*>.empty)
+        (i64 0)))
+
+    (array.set RegFile (struct.get Config $file $config0) #\p (i64 0))
+    (array.set RegFile (struct.get Config $file $config1) #\p (i64 1))
+
+    (loop $eval
+      (when (call part1.step $config0 $config1)
+        (return (struct.get Config $result $config1)))
+      (br $eval))
+    unreachable)
+
+  (indirect_func notTested (param $lines (ref null $list<*>.T)) (result i64)
+    (i64 0))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkI64
+        "day-18/input-ex0.txt"
+        (funcref part0) (i64 4)
+        (funcref notTested) (i64 0))
+      (call $day-utils.checkI64
+        "day-18/input-ex1.txt"
+        (funcref notTested) (i64 0)
+        (funcref part1) (i64 3))
+      (call $day-utils.checkI64
+        "day-18/input-real0.txt"
+        (funcref part0) (i64 3423)
+        (funcref part1) (i64 7493))
+      0)))

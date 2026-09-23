@@ -65,11 +65,11 @@
     (locals i32 $incReg $incConst $testReg $testOp $testConst)
 
     (local.set $words (call $split.ws $line 0))
-    (local.set $word (ref.cast (ref $String) (call $list<*>.head $words)))
+    (local.set $word (call $list<$String>.head $words))
     (local.set $incReg (call registerRegister $regReg $word))
 
     (local.set $words (call $list<*>.tail $words))
-    (local.set $word (ref.cast (ref $String) (call $list<*>.head $words)))
+    (local.set $word (call $list<$String>.head $words))
     (if (call $String.eq $word "inc")
       (then (local.set $incConst 1))
       (else
@@ -77,19 +77,19 @@
         (local.set $incConst -1)))
 
     (local.set $words (call $list<*>.tail $words))
-    (local.set $word (ref.cast (ref $String) (call $list<*>.head $words)))
+    (local.set $word (call $list<$String>.head $words))
     (mul! $incConst (call $parseI32 $word))
 
     (local.set $words (call $list<*>.tail $words))
-    (local.set $word (ref.cast (ref $String) (call $list<*>.head $words)))
+    (local.set $word (call $list<$String>.head $words))
     (call $assert (call $String.eq $word "if"))
 
     (local.set $words (call $list<*>.tail $words))
-    (local.set $word (ref.cast (ref $String) (call $list<*>.head $words)))
+    (local.set $word (call $list<$String>.head $words))
     (local.set $testReg (call registerRegister $regReg $word))
 
     (local.set $words (call $list<*>.tail $words))
-    (local.set $word (ref.cast (ref $String) (call $list<*>.head $words)))
+    (local.set $word (call $list<$String>.head $words))
     (cond
       [(call $String.eq $word  "<") (local.set $testOp (global.get LT))]
       [(call $String.eq $word "==") (local.set $testOp (global.get EQ))]
@@ -100,7 +100,7 @@
       [otherwise unreachable])
 
     (local.set $words (call $list<*>.tail $words))
-    (local.set $word (ref.cast (ref $String) (call $list<*>.head $words)))
+    (local.set $word (call $list<$String>.head $words))
     (local.set $testConst (call $parseI32 $word))
 
     (local.set $words (call $list<*>.tail $words))

@@ -43,7 +43,7 @@
       (call $list<*>.map
         (closure () (param $str.any (ref null any)) (result (ref null any))
           (call parseUnit (ref.cast (ref $String) $str.any)))
-        (call $split (ref.cast (ref $String) (call $list<*>.head $lines)) #\, 0)))
+        (call $split (call $list<$String>.head $lines) #\, 0)))
 
     (local.set $pos (struct.new Coord 0 0))
     (loop $sum
@@ -63,7 +63,7 @@
       (call $list<*>.map
         (closure () (param $str.any (ref null any)) (result (ref null any))
           (call parseUnit (ref.cast (ref $String) $str.any)))
-        (call $split (ref.cast (ref $String) (call $list<*>.head $lines)) #\, 0)))
+        (call $split (call $list<$String>.head $lines) #\, 0)))
 
     (local.set $pos (struct.new Coord 0 0))
     (loop $sum

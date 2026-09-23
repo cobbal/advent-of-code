@@ -7,7 +7,7 @@
     (local.set $step 1)
     (local.set $cursor 1)
     (local.set $dx 1)
-    (local.set $target (call $parseI32 (ref.cast (ref $String) (call $list<*>.head $lines))))
+    (local.set $target (call $parseI32 (call $list<$String>.head $lines)))
     (loop $loop
       (when (lt_s $cursor $target)
         (when (ge_s (+ $cursor $step) $target)
@@ -29,7 +29,7 @@
     (local.set $grid (ref.null $list<*>.T))
     (local.set $step 1)
     (local.set $dx 1)
-    (local.set $target (call $parseI32 (ref.cast (ref $String) (call $list<*>.head $lines))))
+    (local.set $target (call $parseI32 (call $list<$String>.head $lines)))
     (loop $corner
       (local.set $i 0)
       (loop $straight

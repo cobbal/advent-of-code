@@ -115,7 +115,7 @@
     (locals (ref $String) $line)
     (locals (ref Group) $root)
     (call $assert (= (call $list<*>.len $lines) 1))
-    (local.set $line (ref.cast (ref $String) (call $list<*>.head $lines)))
+    (local.set $line (call $list<$String>.head $lines))
     (local.set $root (call parseGroup (struct.new State 0 $line)))
     (i64.extend_i32_s (call scoreGroups $root 1)))
 
@@ -123,7 +123,7 @@
     (locals (ref $String) $line)
     (locals (ref Group) $root)
     (call $assert (= (call $list<*>.len $lines) 1))
-    (local.set $line (ref.cast (ref $String) (call $list<*>.head $lines)))
+    (local.set $line (call $list<$String>.head $lines))
     (local.set $root (call parseGroup (struct.new State 0 $line)))
     (i64.extend_i32_s (call scoreGarbage $root)))
 

@@ -24,7 +24,7 @@
   (indirect_func part0 (param $lines (ref null $list<*>.T)) (result i64)
     (locals (ref Buffer) $buf)
     (locals i32 $skip $pos $i)
-    (local.set $skip (call $parseI32 (ref.cast (ref $String) (call $list<*>.head $lines))))
+    (local.set $skip (call $parseI32 (call $list<$String>.head $lines)))
     (local.set $buf (array.new_default Buffer 2018))
     (loop $loop
       (when (i32.lt_u $i 2017)
@@ -38,7 +38,7 @@
 
   (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
     (locals i32 $skip $pos $afterZero $i)
-    (local.set $skip (call $parseI32 (ref.cast (ref $String) (call $list<*>.head $lines))))
+    (local.set $skip (call $parseI32 (call $list<$String>.head $lines)))
     (loop $loop
       (when (i32.lt_u $i 50000000)
         (add! $i 1)

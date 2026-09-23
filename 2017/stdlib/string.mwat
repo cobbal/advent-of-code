@@ -153,7 +153,7 @@
   (local.set $countList $list)
   (loop $count
     (when (! (ref.is_null $countList))
-      (add! $i (array.len (ref.cast (ref $String) (call $list<*>.head $countList))))
+      (add! $i (array.len (call $list<$String>.head $countList)))
       (local.set $countList (call $list<*>.tail $countList))
       (when (! (ref.is_null $countList))
         (add! $i (array.len $sep)))
@@ -163,7 +163,7 @@
   (local.set $i 0)
   (loop $loop
     (when (! (ref.is_null $list))
-      (local.set $str (ref.cast (ref $String) (call $list<*>.head $list)))
+      (local.set $str (call $list<$String>.head $list))
       (array.copy $String $String $result $i $str 0 (array.len $str))
       (add! $i (array.len $str))
       (local.set $list (call $list<*>.tail $list))

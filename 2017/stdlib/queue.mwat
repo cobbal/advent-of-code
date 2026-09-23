@@ -1,0 +1,34 @@
+;; -*- mode: wat -*-
+
+(namespace $queue<*>
+  (type T (struct (field $front (ref null $list<*>.T)) (field $backRev (ref null $list<*>.T))))
+
+  (func isEmpty (param $q (ref T)) (result i32)
+    (when (ref.is_null (struct.get T $front $q))
+      (return (ref.is_null (struct.get T $backRev $q))))
+    0)
+
+  (func empty (result (ref T))
+    (struct.new T (ref.null $list<*>.T) (ref.null $list<*>.T)))
+
+  (func len (param $q (ref T)) (result i32)
+    (+
+      (call $list<*>.len (struct.get T $front $q))
+      (call $list<*>.len (struct.get T $backRev $q))))
+
+  (func pushFront (param $elem anyref) (param $q (ref T)) (result (ref T))
+    (struct.new T
+      (call $list<*>.cons $elem (struct.get T $front $q))
+      (struct.get T $backRev $q)))
+
+  (func popBack (param $q (ref T)) (result (ref T) anyref)
+    (locals (ref null $list<*>.T) $front $backRev)
+    (local.set $front (struct.get T $front $q))
+    (local.set $backRev (struct.get T $backRev $q))
+    (when (ref.is_null $backRev)
+      (local.set $backRev (call $list<*>.rev $front))
+      (local.set $front (ref.null $list<*>.T)))
+    (return
+      (struct.new T $front (call $list<*>.tail $backRev))
+      (call $list<*>.head $backRev)))
+  )

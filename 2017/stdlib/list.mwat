@@ -75,3 +75,9 @@
       (i64 (+ $acc (call_closure (param (ref null any)) (result i64) $clo (struct.get T 0 $l))))))
   (func sumToI64 (param $l (ref null T)) (param $clo (ref $Closure.Base)) (result i64)
     (return_call sumToI64/acc $l $clo (i64 0))))
+
+(func $list<$String>.head (param $pair (ref null $list<*>.T)) (result (ref $String))
+  (ref.cast (ref $String) (struct.get $list<*>.T 0 $pair)))
+
+(func $list<i31>.head (param $pair (ref null $list<*>.T)) (result i31ref)
+  (ref.cast i31ref (struct.get $list<*>.T 0 $pair)))

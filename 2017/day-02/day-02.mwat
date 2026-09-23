@@ -13,7 +13,7 @@
         (local.set $max #x80000000)
         (loop $loop
           (when (! (ref.is_null $words))
-            (local.set $n (i31.get_s (ref.cast i31ref (call $list<*>.head $words))))
+            (local.set $n (i31.get_s (call $list<i31>.head $words)))
             (local.set $min (call $i32.min $min $n))
             (local.set $max (call $i32.max $max $n))
             (local.set $words (call $list<*>.tail $words))
@@ -32,11 +32,11 @@
 
         (loop $outer
           (when (! (ref.is_null $words))
-            (local.set $x (i31.get_s (ref.cast i31ref (call $list<*>.head $words))))
+            (local.set $x (i31.get_s (call $list<i31>.head $words)))
             (local.set $innerList (call $list<*>.tail $words))
             (loop $inner
               (when (! (ref.is_null $innerList))
-                (local.set $y (i31.get_s (ref.cast i31ref (call $list<*>.head $innerList))))
+                (local.set $y (i31.get_s (call $list<i31>.head $innerList)))
                 (when (! (rem_u $x $y))
                   ;; (debugger)
                   (return (i64.extend_i32_s (div_u $x $y))))

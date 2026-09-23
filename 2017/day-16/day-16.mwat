@@ -17,8 +17,8 @@
       (return (struct.new Instr $op (call $parseI32 $str) 0)))
     (local.set $parts (call $split $str #\/ 0))
     (call $assert (= (call $list<*>.len $parts) 2))
-    (local.set $s0 (ref.cast (ref $String) (call $list<*>.head $parts)))
-    (local.set $s1 (ref.cast (ref $String) (call $list<*>.head (call $list<*>.tail $parts))))
+    (local.set $s0 (call $list<$String>.head $parts))
+    (local.set $s1 (call $list<$String>.head (call $list<*>.tail $parts)))
     (when (= $op #\x)
       (return
         (struct.new Instr
@@ -67,7 +67,7 @@
       (call $list<*>.map
         (closure (($mem (ref $String))) (param $str.any (ref null any)) (result (ref null any))
           (call parseInstr (ref.cast (ref $String) $str.any)))
-        (call $split (ref.cast (ref $String) (call $list<*>.head $lines)) #\, 0)))
+        (call $split (call $list<$String>.head $lines) #\, 0)))
 
     (loop $loop
       (when (! (ref.is_null $instrs))

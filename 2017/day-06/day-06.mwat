@@ -55,13 +55,13 @@
     (locals i32 $i $startOfCycle)
 
     (local.set $words
-      (call $split.ws (ref.cast (ref $String) (call $list<*>.head $lines)) 0))
+      (call $split.ws (call $list<$String>.head $lines) 0))
 
     (local.set $mem (array.new Mem 0 (call $list<*>.len $words)))
 
     (loop $parse
       (when (! (ref.is_null $words))
-        (array.set Mem $mem $i (call $parseI32 (ref.cast (ref $String) (call $list<*>.head $words))))
+        (array.set Mem $mem $i (call $parseI32 (call $list<$String>.head $words)))
         (local.set $words (call $list<*>.tail $words))
         (add! $i 1)
         (br $parse)))

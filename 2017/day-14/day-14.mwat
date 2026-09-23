@@ -8,7 +8,7 @@
     (locals i32 $i $j $sum)
 
     (local.set $key
-      (call $append (ref.cast (ref $String) (call $list<*>.head $lines)) "-"))
+      (call $append (call $list<$String>.head $lines) "-"))
     (local.set $grid (array.new_default Grid (* 128 128)))
 
     (loop $loop

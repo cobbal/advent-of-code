@@ -4,7 +4,7 @@
 
   (func listContains (param $target (ref $String)) (param $words (ref null $list<*>.T)) (result i32)
     (when (ref.is_null $words) (return 0))
-    (when (= 0 (call $String.cmp $target (ref.cast (ref $String) (call $list<*>.head $words))))
+    (when (= 0 (call $String.cmp $target (call $list<$String>.head $words)))
       (return 1))
     (return_call listContains $target (call $list<*>.tail $words)))
 
@@ -12,7 +12,7 @@
     (locals (ref null $list<*>.T) $tail)
     (when (ref.is_null $words) (return 1))
     (local.set $tail (call $list<*>.tail $words))
-    (when (call listContains (ref.cast (ref $String) (call $list<*>.head $words)) $tail)
+    (when (call listContains (call $list<$String>.head $words) $tail)
       (return 0))
     (return_call allUnique $tail))
 
