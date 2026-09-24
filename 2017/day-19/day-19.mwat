@@ -1,0 +1,121 @@
+;; -*- mode: wat -*-
+(namespace $day19
+  (type Grid (array (mut (ref $String))))
+
+  (func readGrid (param $lines (ref null $list<*>.T)) (result (ref Grid))
+    (locals i32 $w $h $i)
+    (locals (ref Grid) $grid)
+    (locals (ref $String) $line $padded)
+    (local.set $h (call $list<*>.len $lines))
+    (local.set $grid (array.new Grid "" (+ $h 2)))
+    (loop $fillGrid
+      (when (i32.lt_u $i $h)
+        (array.set Grid $grid (+ $i 1) (local.tee $line (call $list<$String>.head $lines)))
+        (local.set $w (call $i32.max $w (array.len $line)))
+        (local.set $lines (call $list<*>.tail $lines))
+        (add! $i 1)
+        (br $fillGrid)))
+
+    (local.set $i 0)
+    (add! $w 2)
+    (add! $h 2)
+    (loop $padLines
+      (when (i32.lt_u $i $h)
+        (local.set $line (array.get Grid $grid $i))
+        (local.set $padded (array.new $String #\space $w))
+        (array.copy $String $String $padded 1 $line 0 (array.len $line))
+        (array.set Grid $grid $i $padded)
+        (add! $i 1)
+        (br $padLines)))
+
+    $grid)
+
+  (func printGrid (param $grid (ref Grid))
+    (locals i32 $i)
+
+    (call $print.nl)
+    (loop $loop
+      (when (i32.lt_u $i (array.len $grid))
+        (call $printStr "<")
+        (call $printStr (array.get Grid $grid $i))
+        (call $printStr.nl ">")
+        (add! $i 1)
+        (br $loop))))
+
+  (func get (param $grid (ref Grid)) (param $y i32) (param $x i32) (result i32)
+    (array.get_u $String (array.get Grid $grid $y) $x))
+
+  (func collect (param $letters (ref null $list<*>.T)) (result (ref $String))
+    (locals (ref $String) $str)
+    (locals i32 $i)
+    (local.set $str (array.new_default $String (call $list<*>.len $letters)))
+    (loop $loop
+      (when (! (ref.is_null $letters))
+        (array.set $String $str $i (i31.get_u (call $list<i31>.head $letters)))
+        (local.set $letters (call $list<*>.tail $letters))
+        (add! $i 1)
+        (br $loop)))
+    $str)
+
+  (func common (param $lines (ref null $list<*>.T)) (result (ref null $list<*>.T))
+    (locals (ref Grid) $grid)
+    (locals i32 $x $y $dir $c)
+    (locals (ref null $list<*>.T) $letters)
+
+    (local.set $grid (call readGrid $lines))
+
+    (local.set $y 1)
+    (local.set $dir 2)
+    (loop $findStart
+      (when (!= (call get $grid $y $x) #\| )
+        (add! $x 1)
+        (br $findStart)))
+
+    (loop $walk
+      (local.set $c (call get $grid $y $x))
+      (local.set $letters (call $list<*>.cons (ref.i31 $c) $letters))
+      (cond
+        [(= $c #\+)
+          (if (i32.and $dir 1)
+            (then
+              (if (= (call get $grid (- $y 1) $x) #\space)
+                (then (local.set $dir 2))
+                (else (local.set $dir 0))))
+            (else
+              (if (= (call get $grid $y (- $x 1)) #\space)
+                (then (local.set $dir 1))
+                (else (local.set $dir 3)))))]
+        [(= $c #\space)
+          (return $letters)]
+        [otherwise])
+      (cond
+        [(= $dir 0) (add! $y -1)]
+        [(= $dir 1) (add! $x 1)]
+        [(= $dir 2) (add! $y 1)]
+        [(= $dir 3) (add! $x -1)]
+        [otherwise unreachable])
+      (br $walk))
+    unreachable)
+
+  (indirect_func part0 (param $lines (ref null $list<*>.T)) (result (ref $String))
+    (return_call collect
+      (call $list<*>.rev
+        (call $list<*>.filter
+          (closure () (param $c.any (ref null any)) (result i32)
+            (i32.lt_u (- (i31.get_u (ref.cast i31ref $c.any)) #\A) 26))
+          (call common $lines)))))
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result (ref $String))
+    (call $formatI32 (- (call $list<*>.len (call common $lines)) 1)))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkStr
+        "day-19/input-ex0.txt"
+        (funcref part0) "ABCDEF"
+        (funcref part1) "38")
+      (call $day-utils.checkStr
+        "day-19/input-real0.txt"
+        (funcref part0) "VEBTPXCHLI"
+        (funcref part1) "18702")
+      0)))
