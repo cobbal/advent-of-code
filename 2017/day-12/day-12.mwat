@@ -30,12 +30,12 @@
       (when (! (ref.is_null $lines))
         (local.set $words
           (call $split.toI31s (call $list<$String>.head $lines)))
-        (local.set $u (i31.get_u (call $list<i31>.head $words)))
+        (local.set $u (call $list<i31>.head $words))
         (local.set $uSet (array.new_default NodeSet $n))
         (local.set $words (call $list<*>.tail $words))
         (loop $vs
           (when (! (ref.is_null $words))
-            (local.set $v (i31.get_u (call $list<i31>.head $words)))
+            (local.set $v (call $list<i31>.head $words))
             (array.set NodeSet $uSet $v 1)
             (local.set $words (call $list<*>.tail $words))
             (br $vs)))

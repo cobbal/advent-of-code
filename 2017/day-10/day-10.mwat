@@ -41,12 +41,12 @@
     (local.set $ring (call newRing $size))
 
     (local.set $lengths
-      (call $split.toI31s (ref.cast (ref $String) (call $list<*>.head $lines))))
+      (call $split.toI31s (call $list<$String>.head $lines)))
 
     (local.set $input (array.new_default $String (call $list<*>.len $lengths)))
     (loop $fillInput
       (when (i32.lt_u $i (array.len $input))
-        (array.set $String $input $i (i31.get_s (ref.cast i31ref (call $list<*>.head $lengths))))
+        (array.set $String $input $i (call $list<i31>.head $lengths))
         (add! $i 1)
         (local.set $lengths (call $list<*>.tail $lengths))
         (br $fillInput)))

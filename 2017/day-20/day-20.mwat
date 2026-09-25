@@ -1,0 +1,282 @@
+;; -*- mode: wat -*-
+(namespace $day20
+  (type Vec (struct (field i32) (field i32) (field i32)))
+  (type Particle
+    (struct
+      (field $i i32)
+      (field $p (mut (ref Vec)))
+      (field $v (mut (ref Vec)))
+      (field $a (mut (ref Vec)))))
+  (type Sim (array (mut (ref Particle))))
+  (type Collision
+    (struct
+      (field $p0 i32)
+      (field $p1 i32)
+      (field $time i32)))
+  (type I32s (array (mut i32)))
+
+  (global allTimes i32 #x7fffffff)
+
+  (func vec.sub (param $v0 (ref Vec)) (param $v1 (ref Vec)) (result (ref Vec))
+    (struct.new Vec
+      (- (struct.get Vec 0 $v0) (struct.get Vec 0 $v1))
+      (- (struct.get Vec 1 $v0) (struct.get Vec 1 $v1))
+      (- (struct.get Vec 2 $v0) (struct.get Vec 2 $v1))))
+
+  (func vec.manhatnitude (param $v (ref Vec)) (result i32)
+    (+
+      (call $i32.abs (struct.get Vec 0 $v))
+      (call $i32.abs (struct.get Vec 1 $v))
+      (call $i32.abs (struct.get Vec 2 $v))))
+
+  (func particle.lt (param $p0 (ref Particle)) (param $p1 (ref Particle)) (result i32)
+    (locals i32 $cmp)
+    (local.set $cmp
+      (-
+        (call vec.manhatnitude (struct.get Particle $a $p0))
+        (call vec.manhatnitude (struct.get Particle $a $p1))))
+    (when (i32.lt_s $cmp 0) (return 1))
+    (when (i32.gt_s $cmp 0) (return 0))
+    (local.set $cmp
+      (-
+        (call vec.manhatnitude (struct.get Particle $v $p0))
+        (call vec.manhatnitude (struct.get Particle $v $p1))))
+    (when (i32.lt_s $cmp 0) (return 1))
+    (when (i32.gt_s $cmp 0) (return 0))
+    (local.set $cmp
+      (-
+        (call vec.manhatnitude (struct.get Particle $p $p0))
+        (call vec.manhatnitude (struct.get Particle $p $p1))))
+    (when (i32.lt_s $cmp 0) (return 1))
+    0)
+
+  (func parse (param $lines (ref null $list<*>.T)) (result (ref Sim))
+    (locals (ref null $list<*>.T) $nums)
+    (locals (ref Sim) $sim)
+    (locals (ref Vec) $v)
+    (locals i32 $i)
+
+    (local.set $v (struct.new Vec 0 0 0))
+    (local.set $sim (array.new Sim (struct.new Particle 0 $v $v $v) (call $list<*>.len $lines)))
+    (loop $fillSim
+      (when (i32.lt_u $i (array.len $sim))
+        (local.set $nums (call $split.toI31s (call $list<$String>.head $lines)))
+        (array.set Sim $sim $i
+          (struct.new Particle
+            $i
+            (struct.new Vec
+              (call $list<i31>.nth 0 $nums)
+              (call $list<i31>.nth 1 $nums)
+              (call $list<i31>.nth 2 $nums))
+            (struct.new Vec
+              (call $list<i31>.nth 3 $nums)
+              (call $list<i31>.nth 4 $nums)
+              (call $list<i31>.nth 5 $nums))
+            (struct.new Vec
+              (call $list<i31>.nth 6 $nums)
+              (call $list<i31>.nth 7 $nums)
+              (call $list<i31>.nth 8 $nums))))
+        (add! $i 1)
+        (local.set $lines (call $list<*>.tail $lines))
+        (br $fillSim)))
+    $sim)
+
+  (indirect_func part0 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref Sim) $sim)
+    (locals i32 $i)
+    (locals (ref Particle) $bestPart)
+
+    (local.set $sim (call parse $lines))
+
+    (local.set $i 1)
+    (local.set $bestPart (array.get Sim $sim 0))
+    (loop $findMin
+      (when (i32.lt_u $i (array.len $sim))
+        (when (call particle.lt (array.get Sim $sim $i) $bestPart)
+          (local.set $bestPart (array.get Sim $sim $i)))
+        (add! $i 1)
+        (br $findMin)))
+
+    (i64.extend_i32_s (struct.get Particle $i $bestPart)))
+
+  (func roots (param $pos i32) (param $vel i32) (param $acc i32) (result i32 i32)
+    ;; pos[t] = pos[0] + t * vel[0] + t(t+1)/2 * acc
+    ;;        = (acc / 2)t^2 + (vel[0] + acc / 2)t + pos[0]
+    ;; t = (-b ± √b²-4ac) / 2a
+    ;;   = (-2b ± √(2b)²-16ac) / 4a
+
+    (locals i32 $4a $2b $disc $sqrtDisc $r0 $r1)
+
+    (when (! $acc)
+      (when (! $vel)
+        (when (! $pos)
+          (return (global.get allTimes) -1))
+        (return -1 -1))
+      ;; 0 = pos[0] + t * vel[0]
+      ;; t = -pos[0] / vel[0]
+      (when (i32.rem_s $pos $vel)
+        (return -1 -1))
+      (return (i32.div_s (- $pos) $vel) -1))
+
+    (local.set $4a (* 2 $acc))
+    (local.set $2b (+ (* 2 $vel) $acc))
+    (local.set $disc (- (* $2b $2b) (* 4 $4a $pos)))
+
+    (when (i32.lt_s $disc 0)
+      (return -1 -1))
+
+    (local.set $sqrtDisc
+      (i32.trunc_f64_s (f64.nearest (f64.sqrt (f64.convert_i32_s $disc)))))
+    (when (!= (* $sqrtDisc $sqrtDisc) $disc)
+      (return -1 -1))
+
+    (local.set $r0 (+ (- $2b) $sqrtDisc))
+    (local.set $r1 (- (- $2b) $sqrtDisc))
+
+    (if (i32.rem_s $r0 $4a)
+      (then (local.set $r0 -1))
+      (else (local.set $r0 (i32.div_s $r0 $4a))))
+
+    (if (i32.rem_s $r1 $4a)
+      (then (local.set $r1 -1))
+      (else (local.set $r1 (i32.div_s $r1 $4a))))
+
+    (when (i32.lt_u $r0 $r1)
+      (return $r0 $r1))
+    $r1 $r0)
+
+  (func agreedTimes (param $x0 i32) (param $x1 i32) (param $y0 i32) (param $y1 i32) (result i32 i32)
+    (cond
+      [(= $x0 (global.get allTimes)) (return $y0 $y1)]
+      [(= $y0 (global.get allTimes)) (return $x0 $x1)]
+      [(= $x0 $y0)
+        (if (= $x1 $y1)
+          (then (return $x0 $x1))
+          (else (return $x0 -1)))]
+      [(= $x0 $y1) (return $x0 -1)]
+      [(= $x1 $y0) (return $x1 -1)]
+      [(= $x1 $y1) (return $x1 -1)]
+      [otherwise])
+    (return -1 -1))
+
+  (func collide (param $p0 (ref Particle)) (param $p1 (ref Particle)) (result i32)
+    (locals (ref Vec) $vec)
+    (locals i32 $px $vx $ax $py $vy $ay $pz $vz $az)
+    (locals i32 $t0 $t1 $r0 $r1)
+
+    (local.set $vec (call vec.sub (struct.get Particle $p $p1) (struct.get Particle $p $p0)))
+    (local.set $px (struct.get Vec 0 $vec))
+    (local.set $py (struct.get Vec 1 $vec))
+    (local.set $pz (struct.get Vec 2 $vec))
+
+    (local.set $vec (call vec.sub (struct.get Particle $v $p1) (struct.get Particle $v $p0)))
+    (local.set $vx (struct.get Vec 0 $vec))
+    (local.set $vy (struct.get Vec 1 $vec))
+    (local.set $vz (struct.get Vec 2 $vec))
+
+    (local.set $vec (call vec.sub (struct.get Particle $a $p1) (struct.get Particle $a $p0)))
+    (local.set $ax (struct.get Vec 0 $vec))
+    (local.set $ay (struct.get Vec 1 $vec))
+    (local.set $az (struct.get Vec 2 $vec))
+
+    (local.set $t0 (local.set $t1 (call roots $px $vx $ax)))
+
+    (when (i32.and (i32.lt_s $t0 0) (i32.lt_s $t1 0))
+      (return -1))
+
+    (local.set $r0 (local.set $r1 (call roots $py $vy $ay)))
+    (local.set $t0 (local.set $t1 (call agreedTimes $t0 $t1 $r0 $r1)))
+
+    (local.set $r0 (local.set $r1 (call roots $pz $vz $az)))
+    (local.set $t0 (local.set $t1 (call agreedTimes $t0 $t1 $r0 $r1)))
+
+    $t0)
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref Sim) $sim)
+    (locals (ref null $list<*>.T) $collisionList)
+    (locals (ref Collision) $collision)
+    (locals (ref $AnyArray) $collisions)
+    (locals (ref I32s) $diedAt)
+    (locals i32 $i $p0 $p1 $t $living)
+
+    (local.set $sim (call parse $lines))
+
+    (loop $fillOuter
+      (when (i32.lt_u $p0 (array.len $sim))
+        (local.set $p1 (+ $p0 1))
+        (loop $fillInner
+          (when (i32.lt_u $p1 (array.len $sim))
+            (local.set $t
+              (call collide (array.get Sim $sim $p0) (array.get Sim $sim $p1)))
+            (when (i32.ge_s $t 0)
+              (local.set $collisionList
+                (call $list<*>.cons
+                  (struct.new Collision $p0 $p1 $t)
+                  $collisionList)))
+            (add! $p1 1)
+            (br $fillInner)))
+        (add! $p0 1)
+        (br $fillOuter)))
+
+    (local.set $collisions (array.new_default $AnyArray (call $list<*>.len $collisionList)))
+    (loop $fillCollisions
+      (when (! (ref.is_null $collisionList))
+        (array.set $AnyArray $collisions $i
+          (ref.cast (ref Collision) (call $list<*>.head $collisionList)))
+        (add! $i 1)
+        (local.set $collisionList (call $list<*>.tail $collisionList))
+        (br $fillCollisions)))
+
+    (call $sort
+      (closure () (param $x.any anyref) (param $y.any anyref) (result i32)
+        (-
+          (struct.get Collision $time (ref.cast (ref Collision) $x.any))
+          (struct.get Collision $time (ref.cast (ref Collision) $y.any))))
+      (ref.cast (ref $AnyArray) $collisions))
+
+    (local.set $diedAt (array.new I32s -1 (array.len $sim)))
+    (local.set $i 0)
+    (loop $loop
+      (when (i32.lt_u $i (array.len $collisions))
+        (local.set $collision
+          (ref.cast (ref Collision)
+            (array.get $AnyArray $collisions $i)))
+        (local.set $p0 (struct.get Collision $p0 $collision))
+        (local.set $p1 (struct.get Collision $p1 $collision))
+        (local.set $t (struct.get Collision $time $collision))
+
+        (block $avoided
+          (br_if $avoided (i32.lt_u (array.get I32s $diedAt $p0) $t))
+          (br_if $avoided (i32.lt_u (array.get I32s $diedAt $p1) $t))
+          (array.set I32s $diedAt $p0 $t)
+          (array.set I32s $diedAt $p1 $t))
+
+        (add! $i 1)
+        (br $loop)))
+
+    (local.set $p0 0)
+    (loop $countLiving
+      (when (i32.lt_u $p0 (array.len $diedAt))
+        (when (= (array.get I32s $diedAt $p0) -1)
+          (add! $living 1))
+        (add! $p0 1)
+        (br $countLiving)))
+
+    (i64.extend_i32_s $living))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkI64
+        "day-20/input-ex0.txt"
+        (funcref part0) (i64 0)
+        (funcref part1) (i64 2))
+      (call $day-utils.checkI64
+        "day-20/input-ex1.txt"
+        (funcref part0) (i64 2)
+        (funcref part1) (i64 1))
+      (call $day-utils.checkI64
+        "day-20/input-real0.txt"
+        (funcref part0) (i64 376)
+        (funcref part1) (i64 574))
+      0)))

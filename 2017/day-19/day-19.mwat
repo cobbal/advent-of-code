@@ -51,7 +51,7 @@
     (local.set $str (array.new_default $String (call $list<*>.len $letters)))
     (loop $loop
       (when (! (ref.is_null $letters))
-        (array.set $String $str $i (i31.get_u (call $list<i31>.head $letters)))
+        (array.set $String $str $i (call $list<i31>.head $letters))
         (local.set $letters (call $list<*>.tail $letters))
         (add! $i 1)
         (br $loop)))

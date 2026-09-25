@@ -216,6 +216,7 @@
       (ref.i31 (call $parseI32 (ref.cast (ref $String) $str.any))))
     (call $split.fn $str
       (closure () (param $c i32) (result i32)
+        (when (= $c #\-) (return 0))
         (i32.ge_u (- $c #\0) 10))
       0)))
 

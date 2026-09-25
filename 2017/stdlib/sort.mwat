@@ -1,0 +1,71 @@
+;; -*- mode: wat -*-
+
+(type $AnyArray (array (mut anyref)))
+
+;; based on https://en.wikipedia.org/w/index.php?title=Heapsort&oldid=1318342787#Standard_implementation
+;; procedure heapsort(a, count) is
+;;     input: an unordered array a of length count
+(func $sort (param $cmp (ref $Closure.Base)) (param $arr (ref $AnyArray))
+  (locals anyref $tmp0 $tmp1)
+  (locals i32 $start $end $root $root.leftChild $child)
+
+  (local.set $start (i32.shr_u (array.len $arr) 1))
+  ;; start ← floor(count/2)
+  (local.set $end (array.len $arr))
+  ;; end ← count
+
+  ;; while end > 1 do
+  (loop $outer
+    (when $end
+      ;; if start > 0 then    (Heap construction)
+      (if $start
+        ;; start ← start − 1
+        (then (local.set $start (- $start 1)))
+        ;; else                 (Heap extraction)
+        (else
+          ;; end ← end − 1
+          (local.set $end (- $end 1))
+          ;; swap(a[end], a[0])
+          (local.set $tmp0 (array.get $AnyArray $arr 0))
+          (array.set $AnyArray $arr 0 (array.get $AnyArray $arr $end))
+          (array.set $AnyArray $arr $end $tmp0)))
+
+      ;; (The following is siftDown(a, start, end))
+      ;; root ← start
+      (local.set $root $start)
+      ;; while iLeftChild(root) < end do
+      (loop $inner
+        (local.set $root.leftChild (+ (i32.shl $root 1) 1))
+        (when (i32.lt_u $root.leftChild $end)
+          ;; child ← iLeftChild(root)
+          (local.set $child $root.leftChild)
+          ;; (If there is a right child and that child is greater)
+          ;; if child+1 < end and a[child] < a[child+1] then
+          (when (i32.lt_u (+ $child 1) $end)
+            (if
+              (i32.lt_s
+                (call_closure (param anyref anyref) (result i32) $cmp
+                  (array.get $AnyArray $arr $child)
+                  (array.get $AnyArray $arr (+ $child 1)))
+                0)
+              (then
+                ;; child ← child + 1
+                (local.set $child (+ $child 1)))))
+
+          ;; if a[root] < a[child] then
+          (when
+            (i32.lt_s
+              (call_closure (param anyref anyref) (result i32) $cmp
+                (local.tee $tmp0 (array.get $AnyArray $arr $root))
+                (local.tee $tmp1 (array.get $AnyArray $arr $child)))
+              0)
+              ;; swap(a[root], a[child])
+              (array.set $AnyArray $arr $root $tmp1)
+              (array.set $AnyArray $arr $child $tmp0)
+              ;; root ← child         (repeat to continue sifting down the child now)
+              (local.set $root $child)
+              (br $inner)
+            ;; else
+            ;;     break                (return to outer loop)
+            )))
+        (br $outer))))

@@ -8,10 +8,10 @@
     (locals i64 $a $b)
     (locals i32 $i $matches)
     (local.set $words (call $split.toI31s (call $list<$String>.head $lines)))
-    (local.set $a (i64.extend_i32_s (i31.get_s (call $list<i31>.head $words))))
+    (local.set $a (i64.extend_i32_s (call $list<i31>.head $words)))
     (local.set $lines (call $list<*>.tail $lines))
     (local.set $words (call $split.toI31s (call $list<$String>.head $lines)))
-    (local.set $b (i64.extend_i32_s (i31.get_s (call $list<i31>.head $words))))
+    (local.set $b (i64.extend_i32_s (call $list<i31>.head $words)))
 
     (loop $loop
       (when (i32.lt_u $i 40000000)
@@ -28,10 +28,10 @@
     (locals i64 $a $b)
     (locals i32 $i $matches)
     (local.set $words (call $split.toI31s (call $list<$String>.head $lines)))
-    (local.set $a (i64.extend_i32_s (i31.get_s (call $list<i31>.head $words))))
+    (local.set $a (i64.extend_i32_s (call $list<i31>.head $words)))
     (local.set $lines (call $list<*>.tail $lines))
     (local.set $words (call $split.toI31s (call $list<$String>.head $lines)))
-    (local.set $b (i64.extend_i32_s (i31.get_s (call $list<i31>.head $words))))
+    (local.set $b (i64.extend_i32_s (call $list<i31>.head $words)))
 
     (loop $loop
       (when (i32.lt_u $i 5000000)

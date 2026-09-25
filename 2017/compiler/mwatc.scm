@@ -127,7 +127,9 @@
       `(struct
          ,@(map
              (match-lambda
+               [`(field ,id (mut ,type)) `(field ,(lookup env id) (mut ,((process/type env) type)))]
                [`(field ,id ,type) `(field ,(lookup env id) ,((process/type env) type))]
+               [`(field (mut ,type)) `(field (mut ,((process/type env) type)))]
                [`(field ,type) `(field ,((process/type env) type))]
                [form (error "unrecognized field form:" form)])
              fields))]

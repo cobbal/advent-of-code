@@ -165,7 +165,7 @@
     (when (! (ref.is_null $list))
       (when $needsComma
         (call $printStr ", "))
-      (call $printStr (call $formatI32 (i31.get_s (call $list<i31>.head $list))))
+      (call $printStr (call $formatI32 (call $list<i31>.head $list)))
       (local.set $list (call $list<*>.tail $list))
       (local.set $needsComma 1)
       (br $loop)))
