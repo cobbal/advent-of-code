@@ -1,11 +1,11 @@
 ;; -*- mode: wat -*-
 
 (namespace $list<*>
-  (type T (struct (field (ref null any)) (field (ref null T))))
-  (type _Scratch (array (mut (ref null any))))
-  (func cons (param $head (ref null any)) (param $tail (ref null T)) (result (ref T))
+  (type T (struct (field anyref) (field (ref null T))))
+  (type _Scratch (array (mut anyref)))
+  (func cons (param $head anyref) (param $tail (ref null T)) (result (ref T))
     (struct.new T $head $tail))
-  (func head (param $pair (ref null T)) (result (ref null any))
+  (func head (param $pair (ref null T)) (result anyref)
     (struct.get T 0 $pair))
   (func tail (param $pair (ref null T)) (result (ref null T))
     (struct.get T 1 $pair))
@@ -17,7 +17,7 @@
   (func len (param $l (ref null T)) (result i32)
     (return_call len/acc $l 0))
 
-  (func nth (param $n i32) (param $l (ref null T)) (result (ref null any))
+  (func nth (param $n i32) (param $l (ref null T)) (result anyref)
     (when $n (return_call nth (- $n 1) (struct.get T 1 $l)))
     (return (struct.get T 0 $l)))
 
@@ -40,36 +40,44 @@
     (return_call map.acc $clo
       (struct.get T 1 $l)
       (struct.new T
-        (call_closure (param (ref null any)) (result (ref null any)) $clo (struct.get T 0 $l))
+        (call_closure (param anyref) (result anyref) $clo (struct.get T 0 $l))
         $acc)))
 
   (func map (param $clo (ref $Closure.Base)) (param $l (ref null T)) (result (ref null T))
     ;; (when (ref.is_null $l)
     ;;   (return (ref.null T)))
     ;; (struct.new T
-    ;;   (call_closure (param (ref null any)) (result (ref null any)) $clo (struct.get T 0 $l))
+    ;;   (call_closure (param anyref) (result anyref) $clo (struct.get T 0 $l))
     ;;   (call map $clo (struct.get T 1 $l))))
     (return_call map.acc $clo $l (ref.null T)))
 
   (func filter.acc (param $clo (ref $Closure.Base)) (param $l (ref null T)) (param $acc (ref null T)) (result (ref null T))
     (when (ref.is_null $l)
       (return_call rev $acc))
-    (when (call_closure (param (ref null any)) (result i32) $clo (struct.get T 0 $l))
+    (when (call_closure (param anyref) (result i32) $clo (struct.get T 0 $l))
       (local.set $acc (struct.new T (struct.get T 0 $l) $acc)))
     (return_call filter.acc $clo (call $list<*>.tail $l) $acc))
 
   (func filter (param $clo (ref $Closure.Base)) (param $l (ref null T)) (result (ref null T))
     ;; (locals i32 $keep)
-    ;; (locals (ref null any) $head)
+    ;; (locals anyref $head)
     ;; (locals (ref null T) $newTail)
     ;; (when (ref.is_null $l)
     ;;   (return (ref.null T)))
     ;; (local.set $head (struct.get T 0 $l))
-    ;; (local.set $keep (call_closure (param (ref null any)) (result i32) $clo $head))
+    ;; (local.set $keep (call_closure (param anyref) (result i32) $clo $head))
     ;; (local.set $newTail (call filter $clo (struct.get T 1 $l)))
     ;; (when $keep (return (struct.new T $head $newTail)))
     ;; $newTail)
     (return_call filter.acc $clo $l (ref.null T)))
+
+  (func last/acc (param $l (ref null T)) (param $acc anyref) (result anyref)
+    (when (ref.is_null $l)
+      (return $acc))
+    (return_call last/acc (struct.get T 1 $l) (struct.get T 0 $l)))
+
+  (func last (param $l (ref null T)) (result anyref)
+    (return_call last/acc $l (ref.null any)))
 
   (func sumToI32/acc (param $l (ref null T)) (param $clo (ref $Closure.Base)) (param $acc i32) (result i32)
     (when (ref.is_null $l)
@@ -77,7 +85,7 @@
     (call sumToI32/acc
       (struct.get T 1 $l)
       $clo
-      (i32 (+ $acc (call_closure (param (ref null any)) (result i32) $clo (struct.get T 0 $l))))))
+      (i32 (+ $acc (call_closure (param anyref) (result i32) $clo (struct.get T 0 $l))))))
   (func sumToI32 (param $l (ref null T)) (param $clo (ref $Closure.Base)) (result i32)
     (return_call sumToI32/acc $l $clo 0))
 
@@ -87,7 +95,7 @@
     (call sumToI64/acc
       (struct.get T 1 $l)
       $clo
-      (i64 (+ $acc (call_closure (param (ref null any)) (result i64) $clo (struct.get T 0 $l))))))
+      (i64 (+ $acc (call_closure (param anyref) (result i64) $clo (struct.get T 0 $l))))))
   (func sumToI64 (param $l (ref null T)) (param $clo (ref $Closure.Base)) (result i64)
     (return_call sumToI64/acc $l $clo (i64 0))))
 
@@ -97,6 +105,9 @@
 (func $list<$String>.nth (param $n i32) (param $l (ref null $list<*>.T)) (result (ref $String))
   (ref.cast (ref $String) (call $list<*>.nth $n $l)))
 
+(func $list<$String>.last! (param $l (ref null $list<*>.T)) (result (ref $String))
+  (ref.cast (ref $String) (call $list<*>.last $l)))
+
 (func $list<i31>.head (param $pair (ref null $list<*>.T)) (result i32)
   (i31.get_s (ref.cast i31ref (struct.get $list<*>.T 0 $pair))))
 
@@ -105,3 +116,8 @@
 
 (func $list<i31>.cons (param $head i32) (param $tail (ref null $list<*>.T)) (result (ref null $list<*>.T))
   (struct.new $list<*>.T (ref.i31 $head) $tail))
+
+(func $list<i31>.sum (param $l (ref null $list<*>.T)) (result i32)
+  (call $list<*>.sumToI32 $l
+    (closure () (param $i.any anyref) (result i32)
+      (i31.get_s (ref.cast i31ref $i.any)))))

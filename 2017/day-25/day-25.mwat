@@ -1,0 +1,202 @@
+;; -*- mode: wat -*-
+(namespace $day25
+
+  (type Action
+    (struct
+      (field $write i8)
+      (field $move i8)
+      (field $next i8)))
+
+  (type Decision
+    (struct
+      (field $if0 (ref Action))
+      (field $if1 (ref Action))))
+
+  (type Decisions (array (mut (ref Decision))))
+
+  (type ParseState (struct (field (mut (ref null $list<*>.T)))))
+
+  (type TM
+    (struct
+      (field $decs (ref Decisions))
+      (field $leftTape (mut (ref null $list<*>.T)))
+      (field $state (mut i8))
+      (field $cursor (mut i8))
+      (field $rightTape (mut (ref null $list<*>.T)))))
+
+  (func eatLine (param $state (ref ParseState)) (result (ref null $list<*>.T))
+    (locals (ref $String) $line)
+    (local.set $line (call $list<$String>.head (struct.get ParseState 0 $state)))
+    (struct.set ParseState 0 $state
+      (call $list<*>.tail (struct.get ParseState 0 $state)))
+    (call $split.chars $line " :."))
+
+  (func parseLastInt (param $state (ref ParseState)) (result i32)
+    (call $parseI32 (call $list<$String>.last! (call eatLine $state))))
+
+  (func parseDirection (param $state (ref ParseState)) (result i32)
+    (locals (ref $String) $word)
+    (local.set $word (call $list<$String>.last! (call eatLine $state)))
+    (cond
+      [(call $String.eq $word "left") (return -1)]
+      [(call $String.eq $word "right") (return 1)]
+      [otherwise])
+    unreachable)
+
+  (func parseState (param $state (ref ParseState)) (result i32)
+    (locals (ref $String) $word)
+    (local.set $word (call $list<$String>.last! (call eatLine $state)))
+    (call $assert (= (array.len $word) 1))
+    (- (array.get_u $String $word 0) #\A))
+
+  (func parseDecision (param $state (ref ParseState)) (result (ref Decision))
+    (locals i32 $write0 $dir0 $next0 $write1 $dir1 $next1)
+
+    (drop (call parseState $state))
+
+    (call $assert (= (call parseLastInt $state) 0))
+    (local.set $write0 (call parseLastInt $state))
+    (local.set $dir0 (call parseDirection $state))
+    (local.set $next0 (call parseState $state))
+
+    (call $assert (= (call parseLastInt $state) 1))
+    (local.set $write1 (call parseLastInt $state))
+    (local.set $dir1 (call parseDirection $state))
+    (local.set $next1 (call parseState $state))
+
+    (struct.new Decision
+      (struct.new Action $write0 $dir0 $next0)
+      (struct.new Action $write1 $dir1 $next1)))
+
+  (func parseDecisions (param $state (ref ParseState)) (result (ref Decisions))
+    (locals (ref Decisions) $decisions)
+    (locals i32 $i)
+
+    (local.set $decisions
+      (array.new Decisions
+        (struct.new Decision (struct.new Action 0 0 0) (struct.new Action 0 0 0))
+        (i32.div_u (call $list<*>.len (struct.get ParseState 0 $state)) 9)))
+
+    (loop $loop
+      (when (i32.lt_u $i (array.len $decisions))
+        (array.set Decisions $decisions $i
+          (call parseDecision $state))
+        (add! $i 1)
+        (br $loop)))
+    $decisions)
+
+  (func parseTM (param $lines (ref null $list<*>.T)) (result (ref TM) i32)
+    (locals (ref ParseState) $state)
+    (locals i32 $begin $stepCount)
+    (local.set $state (struct.new ParseState $lines))
+
+    (local.set $begin (call parseState $state))
+    (local.set $stepCount (call $parseI32 (call $list<$String>.nth 5 (call eatLine $state))))
+
+    (struct.new TM
+      (call parseDecisions $state)
+      (ref.null $list<*>.T)
+      $begin 0
+      (ref.null $list<*>.T))
+    $stepCount)
+
+  (func printTM (param $tm (ref TM))
+    (locals i32 $state $cursor)
+    (locals (ref null $list<*>.T) $left $right)
+
+    (local.set $left (call $list<*>.rev (struct.get TM $leftTape $tm)))
+    (local.set $state (struct.get_u TM $state $tm))
+    (local.set $cursor (struct.get_u TM $cursor $tm))
+    (local.set $right (struct.get TM $rightTape $tm))
+
+    (call $printStr "...")
+    (loop $leftLoop
+      (when (! (ref.is_null $left))
+        (call $printChr #\space)
+        (call $printChr (+ #\0 (call $list<i31>.head $left)))
+        (call $printChr #\space)
+        (local.set $left (call $list<*>.tail $left))
+        (br $leftLoop)))
+    (call $printChr (+ #\A $state))
+    (call $printChr #\[)
+    (call $printChr (+ #\0 $cursor))
+    (call $printChr #\])
+    (loop $rightLoop
+      (when (! (ref.is_null $right))
+        (call $printChr #\space)
+        (call $printChr (+ #\0 (call $list<i31>.head $right)))
+        (call $printChr #\space)
+        (local.set $right (call $list<*>.tail $right))
+        (br $rightLoop)))
+    (call $printStr.nl "..."))
+
+  (func step (param $tm (ref TM))
+    (locals (ref null Action) $act)
+    (locals (ref Decision) $dec)
+    (locals i32 $write $move $next)
+    (locals (ref null $list<*>.T) $left $right)
+
+    (local.set $dec
+      (array.get Decisions
+        (struct.get TM $decs $tm)
+        (struct.get_u TM $state $tm)))
+
+    (if (! (struct.get_u TM $cursor $tm))
+      (then (local.set $act (struct.get Decision $if0 $dec)))
+      (else (local.set $act (struct.get Decision $if1 $dec))))
+
+    (local.set $write (struct.get_u Action $write $act))
+    (local.set $move (struct.get_s Action $move $act))
+    (local.set $next (struct.get_u Action $next $act))
+    (local.set $left (struct.get TM $leftTape $tm))
+    (local.set $right (struct.get TM $rightTape $tm))
+
+    (when (ref.is_null $left)
+      (local.set $left (call $list<i31>.cons 0 $left)))
+    (when (ref.is_null $right)
+      (local.set $right (call $list<i31>.cons 0 $right)))
+
+    (cond
+      [(= $move -1) ;; move left
+        (struct.set TM $leftTape $tm (call $list<*>.tail $left))
+        (struct.set TM $state $tm $next)
+        (struct.set TM $cursor $tm (call $list<i31>.head $left))
+        (struct.set TM $rightTape $tm (call $list<i31>.cons $write $right))]
+      [(= $move 1) ;; move right
+        (struct.set TM $leftTape $tm (call $list<i31>.cons $write $left))
+        (struct.set TM $state $tm $next)
+        (struct.set TM $cursor $tm (call $list<i31>.head $right))
+        (struct.set TM $rightTape $tm (call $list<*>.tail $right))]
+      [otherwise unreachable]))
+
+  (indirect_func part0 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref TM) $tm)
+    (locals i32 $i $steps)
+
+    (local.set $tm (local.set $steps (call parseTM $lines)))
+    (loop $loop
+      (when (i32.lt_u $i $steps)
+        (call step $tm)
+        (add! $i 1)
+        (br $loop)))
+
+    (i64.extend_i32_s
+      (+
+        (struct.get_u TM $cursor $tm)
+        (call $list<i31>.sum (struct.get TM $leftTape $tm))
+        (call $list<i31>.sum (struct.get TM $rightTape $tm)))))
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
+    (i64 0))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkI64
+        "day-25/input-ex0.txt"
+        (funcref part0) (i64 3)
+        (funcref part1) (i64 0))
+      (call $day-utils.checkI64
+        "day-25/input-real0.txt"
+        (funcref part0) (i64 2794)
+        (funcref part1) (i64 0))
+      0)))

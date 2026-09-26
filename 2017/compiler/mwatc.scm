@@ -107,15 +107,15 @@
       (list (reverse matches) lst))))
 
 (define (lookup env name)
-  (let ([str (symbol->string name)])
-    (if (string-prefix? "$" str)
-      name
-      (string->symbol (string-append (env-namespace env) str)))))
+  (match name
+    ['any 'any]
+    [_ (let ([str (symbol->string name)])
+         (if (string-prefix? "$" str)
+           name
+           (string->symbol (string-append (env-namespace env) str))))]))
 
 (define (process/type env)
   (match-lambda
-    [`(ref any) `(ref any)]
-    [`(ref null any) `(ref null any)]
     [`(ref ,id) `(ref ,(lookup env id))]
     [`(ref null ,id) `(ref null ,(lookup env id))]
     [t t]))
