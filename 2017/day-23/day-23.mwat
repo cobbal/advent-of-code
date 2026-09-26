@@ -1,0 +1,145 @@
+;; -*- mode: wat -*-
+(namespace $day23
+  (type Config
+    (struct
+      (field $prog (ref $day18.Program))
+      (field $file (ref $day18.RegFile))
+      (field $pc (mut i32))
+      (field $result (mut i64))))
+
+  (func parseInstr (param $line (ref $String)) (result (ref $day18.Instr))
+    (locals (ref null $list<*>.T) $words)
+    (locals (ref $String) $word)
+    (locals i32 $op $xIsReg $yIsReg $x $y)
+
+    (local.set $words (call $split.ws $line 0))
+    (local.set $word (call $list<$String>.head $words))
+    (local.set $words (call $list<*>.tail $words))
+    (local.set $xIsReg (local.set $x (call $day18.parseReg $words)))
+    (local.set $words (call $list<*>.tail $words))
+    (local.set $yIsReg (local.set $y (call $day18.parseReg $words)))
+
+    (cond
+      [(call $String.eq $word "set")
+        (local.set $op 0)]
+      [(call $String.eq $word "sub")
+        (local.set $op 1)]
+      [(call $String.eq $word "mul")
+        (local.set $op 2)]
+      [(call $String.eq $word "jnz")
+        (local.set $op 3)]
+      [otherwise unreachable])
+
+    (struct.new $day18.Instr $op $xIsReg $yIsReg $x $y))
+
+  (func readProg (param $lines (ref null $list<*>.T)) (result (ref Config))
+    (locals (ref $day18.Program) $prog)
+    (locals i32 $i)
+
+    (local.set $prog (array.new $day18.Program (struct.new $day18.Instr 0 0 0 0 0) (call $list<*>.len $lines)))
+    (loop $readInstrs
+      (when (! (ref.is_null $lines))
+        (array.set $day18.Program $prog $i (call parseInstr (call $list<$String>.head $lines)))
+        (add! $i 1)
+        (local.set $lines (call $list<*>.tail $lines))
+        (br $readInstrs)))
+
+    (struct.new Config
+      $prog
+      (array.new_default $day18.RegFile 128)
+      0
+      (i64 0)))
+
+  (func step (param $config (ref Config)) (result i32)
+    (locals (ref $day18.Instr) $instr)
+    (locals (ref $day18.RegFile) $file)
+    (locals i32 $pc $op $dest $xReg $yReg)
+    (locals i64 $x $y)
+
+    (local.set $pc (struct.get Config $pc $config))
+    (local.set $file (struct.get Config $file $config))
+
+    (when (i32.ge_u $pc (array.len (struct.get Config $prog $config)))
+      (return 1))
+
+    (local.set $instr (array.get $day18.Program (struct.get Config $prog $config) $pc))
+
+    (local.set $op (struct.get_u $day18.Instr $op $instr))
+
+    (local.set $xReg (local.tee $dest (struct.get $day18.Instr $x $instr)))
+    (if (struct.get_u $day18.Instr $xIsReg $instr)
+      (then (local.set $x (array.get $day18.RegFile $file $xReg)))
+      (else (local.set $x (i64.extend_i32_s $xReg))))
+
+    (local.set $yReg (struct.get $day18.Instr $y $instr))
+    (if (struct.get_u $day18.Instr $yIsReg $instr)
+      (then (local.set $y (array.get $day18.RegFile $file $yReg)))
+      (else (local.set $y (i64.extend_i32_s $yReg))))
+
+    ;; (debugger)
+
+    (cond
+      [(= $op 0) ;; set X Y
+        (array.set $day18.RegFile $file $dest $y)
+        (add! $pc 1)]
+      [(= $op 1) ;; sub X Y
+        (array.set $day18.RegFile $file $dest (i64 (- $x $y)))
+        (add! $pc 1)]
+      [(= $op 2) ;; mul X Y
+        (array.set $day18.RegFile $file $dest (i64 (* $x $y)))
+        (struct.set Config $result $config (i64 (+ 1 (struct.get Config $result $config))))
+        (add! $pc 1)]
+      [(= $op 3) ;; jnz X Y
+        (if (i64 (!= $x 0))
+          (then (add! $pc (i32.wrap_i64 $y)))
+          (else (add! $pc 1)))]
+      [otherwise unreachable])
+
+    (struct.set Config $pc $config $pc)
+    0)
+
+  (indirect_func part0 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals (ref Config) $config)
+
+    (local.set $config (call readProg $lines))
+
+    (loop $eval
+      (when (call step $config)
+        (return (struct.get Config $result $config)))
+      (br $eval))
+    unreachable)
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
+    ;; sadly this one isn't general across inputs, but it really was an eyes-on-input style problem.
+    (locals i32 $b $c $d $e $h)
+
+    (local.set $b 108100)
+    (local.set $c 125100)
+    (loop $bLoop
+      (when (i32.le_u $b $c)
+        (local.set $d 2)
+        (loop $dLoop
+          (when (i32.le_u (* $d $d) $b)
+            (local.set $e 2)
+            (loop $eLoop
+              (when (i32.le_u (* $d $e) $b)
+                (when (= (* $d $e) $b)
+                  (add! $h 1)
+                  (add! $b 17)
+                  (br $bLoop))
+                (add! $e 1)
+                (br $eLoop)))
+            (add! $d 1)
+            (br $dLoop)))
+        (add! $b 17)
+        (br $bLoop)))
+
+    (i64.extend_i32_s $h))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkI64
+        "day-23/input-real0.txt"
+        (funcref part0) (i64 6241)
+        (funcref part1) (i64 909))
+      0)))
