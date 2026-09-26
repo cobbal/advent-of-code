@@ -3,74 +3,121 @@
   (type Pos (struct (field $y i32) (field $x i32)))
   (type State
     (struct
-      (field $grid (ref $map.T))
+      (field $grid (ref Grid))
       (field $pos (mut (ref Pos)))
       (field $dir (mut i32))))
 
-  (func parse (param $lines (ref null $list<*>.T)) (param $mark i32) (result (ref $map.T))
-    (locals (ref $map.T) $grid)
-    (locals (ref $String) $line)
-    (locals i32 $y $x)
+  (type StringArray (array (mut (ref $String))))
+  (type Grid
+    (struct
+      (field $offset (mut i32))
+      (field $size (mut i32))
+      (field $strings (mut (ref StringArray)))))
 
-    (local.set $grid
-      (call $map.empty
-        (closure () (param $k0.any anyref) (param $k1.any anyref) (result i32)
-          (locals (ref Pos) $k0 $k1)
-          (local.set $k0 (ref.cast (ref Pos) $k0.any))
-          (local.set $k1 (ref.cast (ref Pos) $k1.any))
-          (when (= (struct.get Pos $y $k0) (struct.get Pos $y $k1))
-            (return (- (struct.get Pos $x $k0) (struct.get Pos $x $k1))))
-          (- (struct.get Pos $y $k0) (struct.get Pos $y $k1)))))
-
-    (loop $loopY
-      (when (! (ref.is_null $lines))
-        (local.set $line (call $list<$String>.head $lines))
-        (local.set $x 0)
-        (loop $loopX
-          (when (i32.lt_u $x (array.len $line))
-            (when (= (array.get_u $String $line $x) #\#)
-              (drop (call $map.insert! $grid (struct.new Pos $y $x) (ref.i31 $mark))))
-            (add! $x 1)
-            (br $loopX)))
-        (add! $y 1)
-        (local.set $lines (call $list<*>.tail $lines))
-        (br $loopY)))
-
-    $grid)
-
-  (func printMap (param $map (ref $map.T))
-    (locals (ref $map.KVArray) $kvs)
-    (locals (ref $map.KV) $kv)
-    (locals (ref Pos) $pos)
+  (func printGrid (param $grid (ref Grid))
     (locals i32 $i)
-
-    (local.set $kvs (call $map.elements $map))
-
+    (call $print.nl)
     (loop $loop
-      (when (i32.lt_u $i (array.len $kvs))
-        (local.set $kv (ref.cast (ref $map.KV) (array.get $map.KVArray $kvs $i)))
-        (local.set $pos (ref.cast (ref Pos) (struct.get $map.KV $key $kv)))
-        (when (i31.get_u (ref.cast i31ref (struct.get $map.KV $value $kv)))
-          (call printPos $pos)
-          (call $print.nl))
-
+      (when (i32.lt_u $i (array.len (struct.get Grid $strings $grid)))
+        (call $printStr.nl (array.get StringArray (struct.get Grid $strings $grid) $i))
         (add! $i 1)
         (br $loop))))
 
-  (func printPos (param $pos (ref Pos))
-    (call $printStr "(")
-    (call $printStr (call $formatI32 (struct.get Pos $y $pos)))
-    (call $printStr ",")
-    (call $printStr (call $formatI32 (struct.get Pos $x $pos)))
-    (call $printStr ")"))
+  (func gridGet (param $grid (ref Grid)) (param $pos (ref Pos)) (result i32)
+    (locals i32 $size $offset $y $x)
+    (locals (ref StringArray) $strings)
 
-  (func printState (param $state (ref State))
-    (call $printStr "\n=== ")
-    (call printPos (struct.get State $pos $state))
-    (call $printStr " ")
-    (call $printChr (array.get_u $String "NESW" (struct.get State $dir $state)))
-    (call $printStr.nl " ===")
-    (call printMap (struct.get State $grid $state)))
+    (local.set $offset (struct.get Grid $offset $grid))
+    (local.set $size (struct.get Grid $size $grid))
+    (local.set $strings (struct.get Grid $strings $grid))
+
+    (local.set $y (+ $offset (struct.get Pos $y $pos)))
+    (local.set $x (+ $offset (struct.get Pos $x $pos)))
+
+    (when (i32.ge_u $y $size)
+      (call growGrid $grid)
+      (return_call gridGet $grid $pos))
+
+    (when (i32.ge_u $x $size)
+      (call growGrid $grid)
+      (return_call gridGet $grid $pos))
+
+    (array.get_u $String (array.get StringArray $strings $y) $x))
+
+  (func gridSet (param $grid (ref Grid)) (param $pos (ref Pos)) (param $newValue i32)
+    (locals i32 $size $offset $y $x)
+    (locals (ref StringArray) $strings)
+
+    (local.set $offset (struct.get Grid $offset $grid))
+    (local.set $size (struct.get Grid $size $grid))
+    (local.set $strings (struct.get Grid $strings $grid))
+
+    (local.set $y (+ $offset (struct.get Pos $y $pos)))
+    (local.set $x (+ $offset (struct.get Pos $x $pos)))
+
+    (when (i32.ge_u $y $size)
+      (call growGrid $grid)
+      (return_call gridSet $grid $pos $newValue))
+
+    (when (i32.ge_u $x $size)
+      (call growGrid $grid)
+      (return_call gridSet $grid $pos $newValue))
+
+    (array.set $String (array.get StringArray $strings $y) $x $newValue))
+
+  (func growGrid (param $grid (ref Grid))
+    (locals i32 $size $newSize $offset $newOffset $delta $y)
+    (locals (ref StringArray) $strings $newStrings)
+
+    (local.set $offset (struct.get Grid $offset $grid))
+    (local.set $size (struct.get Grid $size $grid))
+    (local.set $strings (struct.get Grid $strings $grid))
+
+    (local.set $newOffset (* 2 $offset))
+    (local.set $newSize (- (* 2 $size) 1))
+    (local.set $newStrings (array.new StringArray "" $newSize))
+
+    (loop $allocStrings
+      (when (i32.lt_u $y $newSize)
+        (array.set StringArray $newStrings $y
+          (array.new $String #\. $newSize))
+        (add! $y 1)
+        (br $allocStrings)))
+
+    (local.set $delta (- $newOffset $offset))
+
+    (local.set $y 0)
+    (loop $copyY
+      (when (i32.lt_u $y $size)
+        (array.copy $String $String
+          (array.get StringArray $newStrings (+ $delta $y)) $delta
+          (array.get StringArray $strings $y) 0
+          $size)
+        (add! $y 1)
+        (br $copyY)))
+
+    (struct.set Grid $offset $grid $newOffset)
+    (struct.set Grid $size $grid $newSize)
+    (struct.set Grid $strings $grid $newStrings))
+
+  (func parse (param $lines (ref null $list<*>.T)) (result (ref Grid))
+    (locals (ref StringArray) $strings)
+    (locals (ref $String) $line)
+    (locals i32 $i $n)
+
+    (local.set $n (call $list<*>.len $lines))
+
+    (local.set $strings (array.new StringArray "" $n))
+
+    (loop $fill
+      (when (! (ref.is_null $lines))
+        (array.set StringArray $strings $i
+          (call $subString (call $list<$String>.head $lines) 0 $n))
+        (local.set $lines (call $list<*>.tail $lines))
+        (add! $i 1)
+        (br $fill)))
+
+    (struct.new Grid (i32.shr_u $n 1) $n $strings))
 
   (func forward (param $pos (ref Pos)) (param $dir i32) (result (ref Pos))
     (locals i32 $y $x)
@@ -85,42 +132,42 @@
     (return (struct.new Pos $y $x)))
 
   (func part0.step (param $state (ref State)) (result i32)
-    (locals (ref $map.T) $grid)
+    (locals (ref Grid) $grid)
     (locals (ref Pos) $pos)
-    (locals i32 $isInfected $dir)
-    (locals (ref null $map.KV) $kv)
+    (locals i32 $cell $dir)
 
     (local.set $grid (struct.get State $grid $state))
     (local.set $pos (struct.get State $pos $state))
     (local.set $dir (struct.get State $dir $state))
 
-    (local.set $kv (call $map.lookup $grid $pos))
-    (when (! (ref.is_null $kv))
-      (local.set $isInfected (i31.get_u (ref.cast i31ref (struct.get $map.KV $value $kv)))))
+    (local.set $cell (call gridGet $grid $pos))
 
-    (if $isInfected
-      (then (add! $dir 1))
-      (else (add! $dir -1)))
+    (cond
+      [(= $cell #\.)
+        (add! $dir -1)
+        (local.set $cell #\#)]
+      [(= $cell #\#)
+        (add! $dir 1)
+        (local.set $cell #\.)]
+      [otherwise unreachable])
+    (call gridSet $grid $pos $cell)
     (local.set $dir (i32.and $dir 3))
-    (drop (call $map.insert! $grid $pos (ref.i31 (! $isInfected))))
     (local.set $pos (call forward $pos $dir))
 
     (struct.set State $pos $state $pos)
     (struct.set State $dir $state $dir)
 
-    (! $isInfected))
+    (= $cell #\#))
 
   (indirect_func part0 (param $lines (ref null $list<*>.T)) (result i64)
     (locals (ref State) $state)
     (locals (ref $map.T) $grid)
     (locals i32 $mid $i $total)
 
-    (local.set $mid (i32.shr_u (call $list<*>.len $lines) 1))
-
     (local.set $state
       (struct.new State
-        (call parse $lines 1)
-        (struct.new Pos $mid $mid)
+        (call parse $lines)
+        (struct.new Pos 0 0)
         0))
 
     (loop $loop
@@ -132,44 +179,47 @@
     (i64.extend_i32_s $total))
 
   (func part1.step (param $state (ref State)) (result i32)
-    (locals (ref $map.T) $grid)
+    (locals (ref Grid) $grid)
     (locals (ref Pos) $pos)
-    (locals i32 $nodeState $dir)
-    (locals (ref null $map.KV) $kv)
+    (locals i32 $cell $dir)
 
     (local.set $grid (struct.get State $grid $state))
     (local.set $pos (struct.get State $pos $state))
     (local.set $dir (struct.get State $dir $state))
 
-    (local.set $kv (call $map.lookup $grid $pos))
-    (when (! (ref.is_null $kv))
-      (local.set $nodeState (i31.get_u (ref.cast i31ref (struct.get $map.KV $value $kv)))))
+    (local.set $cell (call gridGet $grid $pos))
 
-    (add! $dir (- $nodeState 1))
+    (cond
+      [(= $cell #\.)
+        (add! $dir -1)
+        (local.set $cell #\W)]
+      [(= $cell #\W)
+        (local.set $cell #\#)]
+      [(= $cell #\#)
+        (add! $dir 1)
+        (local.set $cell #\F)]
+      [(= $cell #\F)
+        (add! $dir 2)
+        (local.set $cell #\.)]
+      [otherwise unreachable])
+    (call gridSet $grid $pos $cell)
     (local.set $dir (i32.and $dir 3))
-
-    (add! $nodeState 1)
-    (local.set $nodeState (i32.and $nodeState 3))
-
-    (drop (call $map.insert! $grid $pos (ref.i31 $nodeState)))
     (local.set $pos (call forward $pos $dir))
 
     (struct.set State $pos $state $pos)
     (struct.set State $dir $state $dir)
 
-    (= $nodeState 2))
+    (= $cell #\#))
 
   (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
     (locals (ref State) $state)
     (locals (ref $map.T) $grid)
-    (locals i32 $mid $i $total)
-
-    (local.set $mid (i32.shr_u (call $list<*>.len $lines) 1))
+    (locals i32 $i $total)
 
     (local.set $state
       (struct.new State
-        (call parse $lines 2)
-        (struct.new Pos $mid $mid)
+        (call parse $lines)
+        (struct.new Pos 0 0)
         0))
 
     (loop $loop
