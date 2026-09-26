@@ -8,6 +8,7 @@
     (struct
       (field $key (mut (ref null any)))
       (field $value (mut (ref null any)))))
+  (type KVArray (array (mut (ref null KV))))
   (type _Node
     (struct
       (field $color (mut i8))
@@ -309,7 +310,7 @@
     $replacedKV)
 
   (func _fillElements
-    (param $tree (ref null _Node)) (param $destination (ref $AnyArray)) (param $offset i32)
+    (param $tree (ref null _Node)) (param $destination (ref KVArray)) (param $offset i32)
     (result i32)
 
     (when (ref.is_null $tree)
@@ -321,7 +322,7 @@
         $destination
         $offset))
 
-    (array.set $AnyArray $destination $offset
+    (array.set KVArray $destination $offset
       (struct.get _Node $kv $tree))
 
     (return_call _fillElements
@@ -329,12 +330,12 @@
       $destination
       (+ $offset 1)))
 
-  (func elements (param $map (ref T)) (result (ref $AnyArray))
+  (func elements (param $map (ref T)) (result (ref KVArray))
     (locals (ref null _Node) $tree)
-    (locals (ref $AnyArray) $result)
+    (locals (ref KVArray) $result)
 
     (local.set $tree (struct.get T $tree $map))
-    (local.set $result (array.new_default $AnyArray (struct.get T $count $map)))
+    (local.set $result (array.new_default KVArray (struct.get T $count $map)))
 
     (drop (call _fillElements $tree $result 0))
 

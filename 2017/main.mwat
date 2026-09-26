@@ -33,7 +33,7 @@
       (call $start.runDay 19 (funcref $day19.main) $fast)
       (call $start.runDay 20 (funcref $day20.main) $bitSlow)
       (call $start.runDay 21 (funcref $day21.main) $fast)
-      ;; (call $start.runDay 22 (funcref $day22.main) $fast)
+      (call $start.runDay 22 (funcref $day22.main) $fast)
       ;; (call $start.runDay 23 (funcref $day23.main) $fast)
       ;; (call $start.runDay 24 (funcref $day24.main) $fast)
       ;; (call $start.runDay 25 (funcref $day25.main) $fast)
