@@ -1,0 +1,283 @@
+;; -*- mode: wat -*-
+(namespace $day21
+  (type Rule (struct (field $from i32) (field $to i32) (field $src (ref $String))))
+  (type I32s (array (mut i32)))
+  (type Grid (array (mut (ref $String))))
+
+  (type RuleSet
+    (struct
+      (field $x2 (ref I32s))
+      (field $x3 (ref I32s))))
+
+  (func gridToI32 (param $str (ref $String)) (result i32)
+    (locals i32 $i $acc)
+    (loop $loop
+      (when (i32.lt_u $i (array.len $str))
+        (local.set $acc
+          (i32.or
+            (i32.shl $acc 1)
+            (= (array.get_u $String $str $i) #\#)))
+        (add! $i 1)
+        (br $loop)))
+    $acc)
+
+  (func rot (param $grid (ref $String)) (result (ref $String))
+    (locals (ref $String) $res)
+    (local.set $res (array.new_default $String (array.len $grid)))
+    (array.copy $String $String $res 0 $grid 0 (array.len $grid))
+    (cond
+      [(= (array.len $grid) 4)
+        (array.set $String $res 0 (array.get_u $String $grid 1))
+        (array.set $String $res 1 (array.get_u $String $grid 3))
+        (array.set $String $res 3 (array.get_u $String $grid 2))
+        (array.set $String $res 2 (array.get_u $String $grid 0))]
+      [(= (array.len $grid) 9)
+        ;; 012
+        ;; 345
+        ;; 678
+        (array.set $String $res 0 (array.get_u $String $grid 2))
+        (array.set $String $res 1 (array.get_u $String $grid 5))
+        (array.set $String $res 2 (array.get_u $String $grid 8))
+        (array.set $String $res 5 (array.get_u $String $grid 7))
+        (array.set $String $res 8 (array.get_u $String $grid 6))
+        (array.set $String $res 7 (array.get_u $String $grid 3))
+        (array.set $String $res 6 (array.get_u $String $grid 0))
+        (array.set $String $res 3 (array.get_u $String $grid 1))]
+      [otherwise unreachable])
+    $res)
+
+  (func flip (param $grid (ref $String)) (result (ref $String))
+    (locals (ref $String) $res)
+    (local.set $res (array.new_default $String (array.len $grid)))
+    (array.copy $String $String $res 0 $grid 0 (array.len $grid))
+    (cond
+      [(= (array.len $grid) 4)
+        (array.set $String $res 0 (array.get_u $String $grid 1))
+        (array.set $String $res 1 (array.get_u $String $grid 0))
+        (array.set $String $res 2 (array.get_u $String $grid 3))
+        (array.set $String $res 3 (array.get_u $String $grid 2))]
+      [(= (array.len $grid) 9)
+        ;; 012
+        ;; 345
+        ;; 678
+        (array.set $String $res 0 (array.get_u $String $grid 2))
+        (array.set $String $res 2 (array.get_u $String $grid 0))
+        (array.set $String $res 3 (array.get_u $String $grid 5))
+        (array.set $String $res 5 (array.get_u $String $grid 3))
+        (array.set $String $res 6 (array.get_u $String $grid 8))
+        (array.set $String $res 8 (array.get_u $String $grid 6))]
+      [otherwise unreachable])
+    $res)
+
+  (func allRotFlips (param $grid (ref $String)) (result (ref null $list<*>.T))
+    (locals (ref null $list<*>.T) $res)
+
+    (local.set $res (call $list<*>.cons $grid $res))
+    (local.set $grid (call rot $grid))
+    (local.set $res (call $list<*>.cons $grid $res))
+    (local.set $grid (call rot $grid))
+    (local.set $res (call $list<*>.cons $grid $res))
+    (local.set $grid (call rot $grid))
+    (local.set $res (call $list<*>.cons $grid $res))
+
+    (local.set $grid (call flip $grid))
+    (local.set $res (call $list<*>.cons $grid $res))
+    (local.set $grid (call rot $grid))
+    (local.set $res (call $list<*>.cons $grid $res))
+    (local.set $grid (call rot $grid))
+    (local.set $res (call $list<*>.cons $grid $res))
+    (local.set $grid (call rot $grid))
+    (local.set $res (call $list<*>.cons $grid $res))
+
+    $res)
+
+  (func parseRule (param $line (ref $String)) (result (ref $String) (ref $String))
+    (locals (ref null $list<*>.T) $words)
+    (locals (ref $String) $from $to)
+
+    (local.set $words (call $split.chars $line "> ="))
+    (local.set $from (call $list<$String>.nth 0 $words))
+    (local.set $to (call $list<$String>.nth 1 $words))
+
+    (local.set $from (call $join "" (call $split $from #\/ 1)))
+    (local.set $to (call $join "" (call $split $to #\/ 1)))
+
+    $from $to)
+
+  (func parse (param $lines (ref null $list<*>.T)) (result (ref RuleSet))
+    (locals (ref null $list<*>.T) $rots)
+    (locals (ref $String) $from $to)
+    (locals i32 $size)
+    (locals (ref I32s) $rule2s $rule3s)
+
+    (local.set $rule2s (array.new I32s -1 (i32.shl 1 4)))
+    (local.set $rule3s (array.new I32s -1 (i32.shl 1 9)))
+
+    (loop $lineLoop
+      (when (! (ref.is_null $lines))
+        (local.set $from
+          (local.set $to
+            (call parseRule (call $list<$String>.head $lines))))
+        (local.set $rots (call allRotFlips $from))
+        (loop $rotLoop
+          (when (! (ref.is_null $rots))
+            (local.set $from (call $list<$String>.head $rots))
+            (cond
+              [(= (array.len $from) 4)
+                (array.set I32s $rule2s (call gridToI32 $from) (call gridToI32 $to))]
+              [(= (array.len $from) 9)
+                (array.set I32s $rule3s (call gridToI32 $from) (call gridToI32 $to))]
+              [otherwise unreachable])
+            (local.set $rots (call $list<*>.tail $rots))
+            (br $rotLoop)))
+        (local.set $lines (call $list<*>.tail $lines))
+        (br $lineLoop)))
+
+    (struct.new RuleSet $rule2s $rule3s))
+
+  (func applyAt
+    (param $rules (ref RuleSet))
+    (param $chunkY i32) (param $chunkX i32) (param $n i32)
+    (param $inGrid (ref Grid)) (param $outGrid (ref Grid))
+
+    (locals i32 $y $x $dy $dx $pattern)
+    (locals (ref $String) $row)
+    (locals (ref null I32s) $ruleBook)
+
+    (local.set $y (* $n $chunkY))
+    (local.set $x (* $n $chunkX))
+
+    (loop $readY
+      (local.set $dx 0)
+      (local.set $row (array.get Grid $inGrid (+ $y $dy)))
+      (loop $readX
+        (local.set $pattern
+          (i32.or
+            (i32.shl $pattern 1)
+            (= (array.get_u $String $row (+ $x $dx)) #\#)))
+        (add! $dx 1)
+        (br_if $readX (i32.lt_u $dx $n)))
+      (add! $dy 1)
+      (br_if $readY (i32.lt_u $dy $n)))
+
+    (cond
+      [(= $n 2) (local.set $ruleBook (struct.get RuleSet $x2 $rules))]
+      [(= $n 3) (local.set $ruleBook (struct.get RuleSet $x3 $rules))]
+      [otherwise unreachable])
+
+    (local.set $pattern (array.get I32s $ruleBook $pattern))
+
+    (add! $n 1)
+    (local.set $y (* $n $chunkY))
+    (local.set $x (* $n $chunkX))
+
+    (local.set $dy $n)
+    (loop $writeY
+      (add! $dy -1)
+      (local.set $row (array.get Grid $outGrid (+ $y $dy)))
+      (local.set $dx $n)
+      (loop $writeX
+        (add! $dx -1)
+        (array.set $String $row (+ $x $dx)
+          (+ #\. (* (i32.and $pattern 1) (- #\# #\.))))
+        (local.set $pattern (i32.shr_u $pattern 1))
+        (br_if $writeX $dx))
+      (br_if $writeY $dy)))
+
+  (func step (param $rules (ref RuleSet)) (param $grid (ref Grid)) (result (ref Grid))
+    (locals i32 $y $x $n $chunks $i)
+    (locals (ref Grid) $out)
+
+    (local.set $n 2)
+    (when (i32.and (array.len $grid) 1)
+      (local.set $n 3))
+    (local.set $chunks (i32.div_u (array.len $grid) $n))
+
+    (local.set $out (array.new Grid "" (* $chunks (+ $n 1))))
+    (loop $allocRows
+      (when (i32.lt_u $i (array.len $out))
+        (array.set Grid $out $i (array.new_default $String (* $chunks (+ $n 1))))
+        (add! $i 1)
+        (br $allocRows)))
+
+    (loop $loopY
+      (when (i32.lt_u $y $chunks)
+        (local.set $x 0)
+        (loop $loopX
+          (when (i32.lt_u $x $chunks)
+            (call applyAt $rules $y $x $n $grid $out)
+            (add! $x 1)
+            (br $loopX)))
+        (add! $y 1)
+        (br $loopY)))
+
+    $out)
+
+  (func printGrid (param $grid (ref Grid))
+    (locals i32 $i)
+    (call $print.nl)
+    (loop $loop
+      (when (i32.lt_u $i (array.len $grid))
+        (call $printStr.nl (array.get Grid $grid $i))
+        (add! $i 1)
+        (br $loop))))
+
+  (func countGrid (param $grid (ref Grid)) (result i32)
+    (locals i32 $y $x $total)
+    (locals (ref $String) $row)
+
+    (loop $loopY
+      (when (i32.lt_u $y (array.len $grid))
+        (local.set $row (array.get Grid $grid $y))
+        (local.set $x 0)
+        (loop $loopX
+          (when (i32.lt_u $x (array.len $row))
+            (when (= (array.get_u $String $row $x) #\#)
+              (add! $total 1))
+            (add! $x 1)
+            (br $loopX)))
+        (add! $y 1)
+        (br $loopY)))
+    $total)
+
+  (func common (param $lines (ref null $list<*>.T)) (param $iterations i32) (result i64)
+    (locals (ref RuleSet) $rules)
+    (locals (ref Grid) $grid)
+
+    (local.set $rules (call parse $lines))
+
+    (local.set $grid (array.new Grid "" 3))
+    (array.set Grid $grid 0 ".#.")
+    (array.set Grid $grid 1 "..#")
+    (array.set Grid $grid 2 "###")
+
+    ;; (call printGrid $grid)
+    (loop $iterate
+      (when $iterations
+        (local.set $grid (call step $rules $grid))
+        ;; (call printGrid $grid)
+        (add! $iterations -1)
+        (br $iterate)))
+
+    (i64.extend_i32_s (call countGrid $grid)))
+
+  (indirect_func part0.ex (param $lines (ref null $list<*>.T)) (result i64)
+    (return_call common $lines 2))
+
+  (indirect_func part0.real (param $lines (ref null $list<*>.T)) (result i64)
+    (return_call common $lines 5))
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
+    (return_call common $lines 18))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkI64
+        "day-21/input-ex0.txt"
+        (funcref part0.ex) (i64 12)
+        (funcref part1) (i64 4782969))
+      (call $day-utils.checkI64
+        "day-21/input-real0.txt"
+        (funcref part0.real) (i64 139)
+        (funcref part1) (i64 1857134))
+      0)))

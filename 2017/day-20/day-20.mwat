@@ -125,8 +125,7 @@
     (when (i32.lt_s $disc 0)
       (return -1 -1))
 
-    (local.set $sqrtDisc
-      (i32.trunc_f64_s (f64.nearest (f64.sqrt (f64.convert_i32_s $disc)))))
+    (local.set $sqrtDisc (call $i32.sqrt $disc))
     (when (!= (* $sqrtDisc $sqrtDisc) $disc)
       (return -1 -1))
 

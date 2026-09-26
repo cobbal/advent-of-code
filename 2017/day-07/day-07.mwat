@@ -28,14 +28,10 @@
     ;; parse lines without building trees
     (loop $lineLoop
       (when (! (ref.is_null $lines))
-        (local.set $words
-          (call $split.fn (ref.cast (ref $String) (call $list<*>.head $lines))
-            (closure () (param $c i32) (result i32)
-              (bit-or (= #\space $c) (= #\( $c) (= #\) $c) (= #\, $c) (= #\- $c) (= #\> $c)))
-            0))
-        (local.set $name (ref.cast (ref $String) (call $list<*>.head $words)))
+        (local.set $words (call $split.chars (call $list<$String>.head $lines) " (),->"))
+        (local.set $name (call $list<$String>.head $words))
         (local.set $words (call $list<*>.tail $words))
-        (local.set $weight (call $parseI32 (ref.cast (ref $String) (call $list<*>.head $words))))
+        (local.set $weight (call $parseI32 (call $list<$String>.head $words)))
         (local.set $words (call $list<*>.tail $words))
 
         (local.set $programs

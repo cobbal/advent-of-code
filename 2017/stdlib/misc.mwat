@@ -23,3 +23,6 @@
   (local.set $tmp (i32.load $a))
   (i32.store $a (i32.load $b))
   (i32.store $b $tmp))
+
+(func $i32.sqrt (param $x i32) (result i32)
+  (i32.trunc_f64_s (f64.sqrt (f64.convert_i32_s $x))))

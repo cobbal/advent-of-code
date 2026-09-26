@@ -31,6 +31,9 @@
   (func rev (param $l (ref null T)) (result (ref null T))
     (return_call revAppend $l (ref.null T)))
 
+  (func append (param $l0 (ref null T)) (param $l1 (ref null T)) (result (ref null T))
+    (return_call revAppend (call rev $l0) $l1))
+
   (func map.acc (param $clo (ref $Closure.Base)) (param $l (ref null T)) (param $acc (ref null T)) (result (ref null T))
     (when (ref.is_null $l)
       (return_call rev $acc))
@@ -91,8 +94,14 @@
 (func $list<$String>.head (param $pair (ref null $list<*>.T)) (result (ref $String))
   (ref.cast (ref $String) (struct.get $list<*>.T 0 $pair)))
 
+(func $list<$String>.nth (param $n i32) (param $l (ref null $list<*>.T)) (result (ref $String))
+  (ref.cast (ref $String) (call $list<*>.nth $n $l)))
+
 (func $list<i31>.head (param $pair (ref null $list<*>.T)) (result i32)
   (i31.get_s (ref.cast i31ref (struct.get $list<*>.T 0 $pair))))
 
 (func $list<i31>.nth (param $n i32) (param $l (ref null $list<*>.T)) (result i32)
   (i31.get_s (ref.cast i31ref (call $list<*>.nth $n $l))))
+
+(func $list<i31>.cons (param $head i32) (param $tail (ref null $list<*>.T)) (result (ref null $list<*>.T))
+  (struct.new $list<*>.T (ref.i31 $head) $tail))

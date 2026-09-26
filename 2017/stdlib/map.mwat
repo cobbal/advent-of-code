@@ -1,0 +1,411 @@
+;; -*- mode: wat -*-
+
+(namespace $map
+
+  (global _R i32 0)
+  (global _B i32 1)
+  (type KV
+    (struct
+      (field $key (mut (ref null any)))
+      (field $value (mut (ref null any)))))
+  (type _Node
+    (struct
+      (field $color (mut i8))
+      (field $left (mut (ref null _Node)))
+      (field $kv (mut (ref null KV)))
+      (field $right (mut (ref null _Node)))))
+  (type T
+    (struct
+      (field $count (mut i32))
+      (field $cmp (ref $Closure.Base))
+      (field $tree (mut (ref null _Node)))))
+
+  (func _lbalance
+    (param $color i32) (param $left (ref null _Node)) (param $kv (ref null KV)) (param $right (ref null _Node))
+    (result (ref _Node))
+
+    (locals i32 $redLeft)
+    (locals (ref null _Node) $a $b $c $d $leftLeft $leftRight)
+    (locals (ref null KV) $x $y $z)
+
+    ;; bool redLeft = color == B && left && left->color == R;
+    (when (= $color (global.get _B))
+      (when (! (ref.is_null $left))
+        (local.set $redLeft (= (struct.get_u _Node $color $left) (global.get _R)))))
+
+    ;; if (redLeft && left->left && left->left->color == R) {
+    (block $ifBlock
+      (when $redLeft
+        (when (! (ref.is_null (local.tee $leftLeft (struct.get _Node $left $left))))
+          (when (= (struct.get_u _Node $color $leftLeft) (global.get _R))
+            ;; a = left->left->left;
+            (local.set $a (struct.get _Node $left $leftLeft))
+            ;; x = left->left->kv;
+            (local.set $x (struct.get _Node $kv $leftLeft))
+            ;; b = left->left->right;
+            (local.set $b (struct.get _Node $right $leftLeft))
+            ;; y = left->kv;
+            (local.set $y (struct.get _Node $kv $left))
+            ;; c = left->right;
+            (local.set $c (struct.get _Node $right $left))
+            ;; z = kv;
+            (local.set $z $kv)
+            ;; d = right;
+            (local.set $d $right)
+            (br $ifBlock))))
+
+      ;; } else if (redLeft && left->right && left->right->color == R) {
+      (when $redLeft
+        (when (! (ref.is_null (local.tee $leftRight (struct.get _Node $right $left))))
+          (when (= (struct.get_u _Node $color $leftRight) (global.get _R))
+            ;; a = left->left;
+            (local.set $a (struct.get _Node $left $left))
+            ;; x = left->kv;
+            (local.set $x (struct.get _Node $kv $left))
+            ;; b = left->right->left;
+            (local.set $b (struct.get _Node $left $leftRight))
+            ;; y = left->right->kv;
+            (local.set $y (struct.get _Node $kv $leftRight))
+            ;; c = left->right->right;
+            (local.set $c (struct.get _Node $right $leftRight))
+            ;; z = kv;
+            (local.set $z $kv)
+            ;; d = right;
+            (local.set $d $right)
+            (br $ifBlock))))
+      ;; } else { return treeCreate(arena, color, left, kv, right); }
+      (return (struct.new _Node $color $left $kv $right)))
+
+    ;; Tree newLeft = treeCreate(arena, B, a, x, b);
+    ;; Tree newRight = treeCreate(arena, B, c, z, d);
+    ;; return treeCreate(arena, R, newLeft, y, newRight);
+    (struct.new _Node (global.get _R)
+      (struct.new _Node (global.get _B) $a $x $b)
+      $y
+      (struct.new _Node (global.get _B) $c $z $d)))
+
+  ;; static Tree rbalance(Arena arena, Color color, CTree left, GKeyValue kv, CTree right) {
+  (func _rbalance
+    (param $color i32) (param $left (ref null _Node)) (param $kv (ref null KV)) (param $right (ref null _Node))
+    (result (ref _Node))
+
+    (locals i32 $redRight)
+    (locals (ref null _Node) $a $b $c $d $rightLeft $rightRight)
+    (locals (ref null KV) $x $y $z)
+
+    ;; bool redRight = color == B && right && right->color == R;
+    (when $color
+      (when (! (ref.is_null $right))
+        (local.set $redRight (= (struct.get_u _Node $color $right) (global.get _R)))))
+
+    ;; if (redRight && right->left && right->left->color == R) {
+    (block $ifBlock
+      (when $redRight
+        (when (! (ref.is_null (local.tee $rightLeft (struct.get _Node $left $right))))
+          (when (= (struct.get_u _Node $color $rightLeft) (global.get _R))
+            ;; a = left;
+            (local.set $a $left)
+            ;; x = kv;
+            (local.set $x $kv)
+            ;; b = right->left->left;
+            (local.set $b (struct.get _Node $left $rightLeft))
+            ;; y = right->left->kv;
+            (local.set $y (struct.get _Node $kv $rightLeft))
+            ;; c = right->left->right;
+            (local.set $c (struct.get _Node $right $rightLeft))
+            ;; z = right->kv;
+            (local.set $z (struct.get _Node $kv $right))
+            ;; d = right->right;
+            (local.set $d (struct.get _Node $right $right))
+            (br $ifBlock))))
+      ;; } else if (redRight && right->right && right->right->color == R) {
+      (when $redRight
+        (when (! (ref.is_null (local.tee $rightRight (struct.get _Node $right $right))))
+          (when (= (struct.get_u _Node $color $rightRight) (global.get _R))
+            ;; a = left;
+            (local.set $a $left)
+            ;; x = kv;
+            (local.set $x $kv)
+            ;; b = right->left;
+            (local.set $b (struct.get _Node $left $right))
+            ;; y = right->kv;
+            (local.set $y (struct.get _Node $kv $right))
+            ;; c = right->right->left;
+            (local.set $c (struct.get _Node $left $rightRight))
+            ;; z = right->right->kv;
+            (local.set $z (struct.get _Node $kv $rightRight))
+            ;; d = right->right->right;
+            (local.set $d (struct.get _Node $right $rightRight))
+            (br $ifBlock))))
+      ;; } else { return treeCreate(arena, color, left, kv, right); }
+      (return (struct.new _Node $color $left $kv $right)))
+
+    ;; Tree newLeft = treeCreate(arena, B, a, x, b);
+    ;; Tree newRight = treeCreate(arena, B, c, z, d);
+    ;; return treeCreate(arena, R, newLeft, y, newRight);
+    (struct.new _Node
+      (global.get _R)
+      (struct.new _Node (global.get _B) $a $x $b)
+      $y
+      (struct.new _Node (global.get _B) $c $z $d)))
+
+  ;; static struct InsertHelperResult {
+  ;;     Tree tree;
+  ;;     void *replacedKV;
+  ;; } insertHelper(Arena arena, const Node *tree, CompareFn cmp, GKeyValue kv) {
+  (func _insertHelper
+    (param $tree (ref null _Node))
+    (param $cmp (ref $Closure.Base))
+    (param $kv (ref KV))
+    (result (ref _Node) (ref null KV))
+
+    (locals i32 $order)
+    (locals (ref null _Node) $newSub)
+    (locals (ref null KV) $replacedKV)
+
+    ;; if (!tree) {
+    (when (ref.is_null $tree)
+      ;; return (struct InsertHelperResult){
+      ;;     treeCreate(arena, R, nullptr, kv, nullptr),
+      ;;     false,
+      ;;     nullptr
+      ;; };
+      (return
+        (struct.new _Node (global.get _R) (ref.null _Node) $kv (ref.null _Node))
+        (ref.null KV)))
+    ;; int order = cmp(kv.key, tree->kv.key);
+    (local.set $order
+      (call_closure (param anyref anyref) (result i32) $cmp
+        (struct.get KV $key $kv)
+        (struct.get KV $key (struct.get _Node $kv $tree))))
+
+    ;; if (order < 0) {
+    (when (i32.lt_s $order 0)
+      ;; auto newLeft = insertHelper(arena, tree->left, cmp, kv);
+      (local.set $newSub
+        (local.set $replacedKV
+          (call _insertHelper
+            (struct.get _Node $left $tree)
+            $cmp
+            $kv)))
+      ;; newLeft.tree = lbalance(arena, tree->color, newLeft.tree, tree->kv, tree->right);
+      ;; return newLeft;
+      (return
+        (call _lbalance
+          (struct.get_u _Node $color $tree)
+          $newSub
+          (struct.get _Node $kv $tree)
+          (struct.get _Node $right $tree))
+        $replacedKV))
+    ;; } else if (order > 0) {
+    (when (i32.gt_s $order 0)
+      ;; auto newRight = insertHelper(arena, tree->right, cmp, kv);
+      (local.set $newSub
+        (local.set $replacedKV
+          (call _insertHelper
+            (struct.get _Node $right $tree)
+            $cmp
+            $kv)))
+      ;; newRight.tree = rbalance(arena, tree->color, tree->left, tree->kv, newRight.tree);
+      ;; return newRight;
+      (return
+        (call _rbalance
+          (struct.get_u _Node $color $tree)
+          (struct.get _Node $left $tree)
+          (struct.get _Node $kv $tree)
+          $newSub)
+        $replacedKV))
+
+    ;; return (struct InsertHelperResult){
+    ;;     treeCreate(arena, tree->color, tree->left, kv, tree->right),
+    ;;     true,
+    ;;     tree->kv.value
+    ;; };
+    (struct.new _Node
+      (struct.get_u _Node $color $tree)
+      (struct.get _Node $left $tree)
+      $kv
+      (struct.get _Node $right $tree))
+    (struct.get _Node $kv $tree))
+
+  (func empty (param $cmp (ref $Closure.Base)) (result (ref T))
+    (struct.new T 0 $cmp (ref.null _Node)))
+
+  (func count (param $map (ref T)) (result i32)
+    (struct.get T $count $map))
+
+  ;; struct GMapLookupResult {
+  ;;     bool found;
+  ;;     void *value;
+  ;; } gmapLookup(GMap map, const void *key) {
+  (func lookup (param $map (ref T)) (param $key anyref) (result (ref null KV))
+    (locals i32 $order)
+    (locals (ref $Closure.Base) $cmp)
+    (locals (ref null _Node) $tree)
+
+    (local.set $cmp (struct.get T $cmp $map))
+
+    ;; CTree tree = map->tree;
+    (local.set $tree (struct.get T $tree $map))
+
+    ;; while (tree) {
+    (loop $loop
+      (when (! (ref.is_null $tree))
+          ;; int order = map->cmp(key, tree->kv.key);
+          (local.set $order
+            (call_closure (param anyref anyref) (result i32) $cmp
+              $key
+              (struct.get KV $key (struct.get _Node $kv $tree))))
+          ;; if (order < 0) {
+          (if (i32.lt_s $order 0)
+            (then
+              ;; tree = tree->left;
+              (local.set $tree (struct.get _Node $left $tree))
+              (br $loop)))
+          ;; } else if (order > 0) {
+          (if (i32.gt_s $order 0)
+            (then
+              ;; tree = tree->right;
+              (local.set $tree (struct.get _Node $right $tree))
+              (br $loop)))
+          ;; } else { return (struct GMapLookupResult){true, tree->kv.value};
+          (return (struct.get _Node $kv $tree))))
+    ;; return (struct GMapLookupResult){false, nullptr};
+    (ref.null KV))
+
+  ;; struct GMapInsertResult {
+  ;;     GMap map;
+  ;;     KV *replacedKV;
+  ;; } gmapInsert(GMap map, const void *key, void *value) {
+  (func insert (param $map (ref T)) (param $key anyref) (param $value anyref) (result (ref T) (ref null KV))
+    (locals (ref $Closure.Base) $cmp)
+    (locals (ref null _Node) $tree)
+    (locals (ref null KV) $replacedKV)
+    (locals i32 $count)
+
+    (local.set $count (struct.get T $count $map))
+    (local.set $cmp (struct.get T $cmp $map))
+    (local.set $tree (struct.get T $tree $map))
+
+    ;; auto subResult = insertHelper(map->arena, map->tree, map->cmp, (GKeyValue){key, value});
+    (local.set $tree
+      (local.set $replacedKV
+        (call _insertHelper
+          $tree
+          $cmp
+          (struct.new KV $key $value))))
+    ;; subResult.tree->color = B;
+    (struct.set _Node $color $tree (global.get _B))
+
+    ;; return (struct GMapInsertResult){
+    ;;     gmapCreateFill(map->count + !subResult.replaced, map->arena, map->cmp, subResult.tree),
+    ;;     subResult.replaced,
+    ;;     subResult.replacedValue
+    ;; };
+    (struct.new T
+      (i32.add $count (ref.is_null $replacedKV))
+      $cmp
+      $tree)
+    $replacedKV)
+
+  (func _fillElements
+    (param $tree (ref null _Node)) (param $destination (ref $AnyArray)) (param $offset i32)
+    (result i32)
+
+    (when (ref.is_null $tree)
+      (return $offset))
+
+    (local.set $offset
+      (call _fillElements
+        (struct.get _Node $left $tree)
+        $destination
+        $offset))
+
+    (array.set $AnyArray $destination $offset
+      (struct.get _Node $kv $tree))
+
+    (return_call _fillElements
+      (struct.get _Node $right $tree)
+      $destination
+      (+ $offset 1)))
+
+  (func elements (param $map (ref T)) (result (ref $AnyArray))
+    (locals (ref null _Node) $tree)
+    (locals (ref $AnyArray) $result)
+
+    (local.set $tree (struct.get T $tree $map))
+    (local.set $result (array.new_default $AnyArray (struct.get T $count $map)))
+
+    (drop (call _fillElements $tree $result 0))
+
+    $result)
+
+  ;; (func dumpStructure (param $map (ref T))
+  ;;   (call $printStr "{ count = ")
+  ;;   (call $printI32.nl (struct.get T $count $map))
+  ;;   (call $printStr ", tree = ")
+  ;;   (call _printTree (struct.get T $tree $map) 2)
+  ;;   (call $print.nl)
+  ;;   (call $printStr.nl "}"))
+
+  ;; (func _printTree (param $tree (ref null _Node)) (param $indent i32)
+  ;;   (if (ref.is_null $tree)
+  ;;     (then (call $printStr "<null>"))
+  ;;     (else
+  ;;       (if (struct.get_u _Node $color $tree)
+  ;;         (then (call $printStr "{ B"))
+  ;;         (else (call $printStr "{ R")))
+  ;;       (call $print.nl.indent $indent)
+  ;;       (call $printStr ", l =")
+  ;;       (call _printTree
+  ;;         (struct.get _Node $left $tree)
+  ;;         (i32.add $indent 2))
+  ;;       (call $print.nl.indent $indent)
+  ;;       (call $printStr ", k = ")
+  ;;       (call $printI32.hex (struct.get KV $key (struct.get _Node $kv $tree)))
+  ;;       (call $printStr ", v = ")
+  ;;       (call $printI32.hex (struct.get KV $value (struct.get _Node $kv $tree)))
+  ;;       (call $print.nl.indent $indent)
+  ;;       (call $printStr ", r = ")
+  ;;       (call _printTree
+  ;;         (struct.get _Node $right $tree)
+  ;;         (i32.add $indent 2))
+  ;;       (call $printStr "}")
+  ;;       nop)))
+
+  (func min (param $map (ref T)) (result (ref null KV))
+    (locals (ref null _Node) $tree $minNode)
+
+    (local.set $tree (struct.get T $tree $map))
+    (loop $loop
+      (when (! (ref.is_null $tree))
+        (local.set $minNode $tree)
+        (local.set $tree (struct.get _Node $left $tree))
+        (br $loop)))
+    (when (! (ref.is_null $minNode))
+      (return (struct.get _Node $kv $minNode)))
+    (ref.null KV))
+
+  (func max (param $map (ref T)) (result (ref null KV))
+    (locals (ref null _Node) $tree $maxNode)
+
+    (local.set $tree (struct.get T $tree $map))
+    (loop $loop
+      (when (! (ref.is_null $tree))
+        (local.set $maxNode $tree)
+        (local.set $tree (struct.get _Node $right $tree))
+        (br $loop)))
+    (when (! (ref.is_null $maxNode))
+      (return (struct.get _Node $kv $maxNode)))
+    (ref.null KV))
+
+  (func insert! (param $map (ref T)) (param $key anyref) (param $value anyref) (result (ref null KV))
+    (locals (ref T) $newMap)
+    (locals (ref null KV) $replacedKV)
+    (local.set $newMap (local.set $replacedKV (call insert $map $key $value)))
+
+    (struct.set T $count $map (struct.get T $count $newMap))
+    (struct.set T $tree $map (struct.get T $tree $newMap))
+    $replacedKV)
+
+  )

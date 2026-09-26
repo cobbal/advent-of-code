@@ -153,6 +153,14 @@
         results)
       forms)))
 
+(define (process/call-params-results-body env forms)
+  (match-let* ([`(,params ,forms) (take-while-car 'param forms)]
+                [`(,results ,forms) (take-while-car 'result forms)])
+    (list
+      (map (lambda (types) `(param ,@(map (process/type env) types))) params)
+      (map (lambda (types) `(result ,@(map (process/type env) types))) results)
+      forms)))
+
 (define (process/module env)
   (match-lambda
     [`(namespace ,name . ,forms)
@@ -271,7 +279,7 @@
                  [`(,var ,type) `(local.get ,var)])
                closure-env)))]
     [`(call_closure . ,forms)
-      (match-let* ([`(,params ,results (,clo-exp . ,forms)) (process/params-results-body env forms)])
+      (match-let* ([`(,params ,results (,clo-exp . ,forms)) (process/call-params-results-body env forms)])
         ;; TODO: figure out how to support arbitrary expressions here
         (unless (symbol? clo-exp) (error "call_closure: closure must be symbol, got: " clo-exp))
         `(call_indirect
@@ -285,7 +293,7 @@
     [`(,(? (one-of '(call return_call)) op) ,name . ,args)
       `(,op ,(lookup env name) ,@(map recur args))]
     [`(,(? (one-of '(call_indirect return_call_indirect)) op) . ,forms)
-      (match-let* ([`(,params ,results ,forms) (process/params-results-body env forms)])
+      (match-let* ([`(,params ,results ,forms) (process/call-params-results-body env forms)])
         `(,op ,@params ,@results ,@(map recur forms)))]
 
     [`(,(? (one-of '(loop block)) op) ,label . ,forms)
@@ -326,6 +334,7 @@
     [`(mul! ,var ,n) (recur `(local.set ,var (* ,var ,n)))]
 
     ['drop '(drop)]
+    ['nop '(nop)]
     ['unreachable '(unreachable)]
     [(or 'debugger '(debugger)) '(drop (call $sched_yield))]
 

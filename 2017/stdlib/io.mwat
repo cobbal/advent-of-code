@@ -186,6 +186,10 @@
       (br $loop)))
   (call $printStr "]"))
 
+(func $printStrList.nl (param $list (ref null $list<*>.T))
+  (call $printStrList $list)
+  (call $print.nl))
+
 ;; string -> (string, size)
 (func $readFile (param $path (ref $String)) (result (ref $String))
   (locals i32 $mempath $err $fd $len $buffer $i)

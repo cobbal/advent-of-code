@@ -201,6 +201,23 @@
         (call $list<*>.cons (call $subString $str 0 $end) $result))))
   $result)
 
+(func $split.chars (param $str (ref $String)) (param $sepChars (ref $String)) (result (ref null $list<*>.T))
+  (locals (ref $String) $set)
+  (locals i32 $i)
+
+  (local.set $set (array.new_default $String 256))
+
+  (loop $fillSet
+    (when (i32.lt_u $i (array.len $sepChars))
+      (array.set $String $set (array.get_u $String $sepChars $i) 1)
+      (add! $i 1)
+      (br $fillSet)))
+
+  (call $split.fn $str
+    (closure ([$set (ref $String)]) (param $c i32) (result i32)
+      (array.get_u $String $set $c))
+    0))
+
 (func $split.ws
   (param $str (ref $String)) (param $allowEmpty i32)
   (result (ref null $list<*>.T))
