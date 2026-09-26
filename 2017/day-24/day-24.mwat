@@ -1,0 +1,114 @@
+;; -*- mode: wat -*-
+(namespace $day24
+  (type Comp (struct (field $left i8) (field $right i8)))
+  (type ScrapBin (array (mut (ref Comp))))
+
+  (func parse (param $lines (ref null $list<*>.T)) (result (ref ScrapBin))
+    (locals (ref ScrapBin) $bin)
+    (locals (ref null $list<*>.T) $ints)
+    (locals i32 $i)
+
+    (local.set $bin (array.new ScrapBin (struct.new Comp 0 0) (call $list<*>.len $lines)))
+
+    (loop $loop
+      (when (! (ref.is_null $lines))
+        (local.set $ints (call $split.toI31s (call $list<$String>.head $lines)))
+
+        (array.set ScrapBin $bin $i
+          (struct.new Comp
+            (call $list<i31>.nth 0 $ints)
+            (call $list<i31>.nth 1 $ints)))
+
+        (add! $i 1)
+        (local.set $lines (call $list<*>.tail $lines))
+        (br $loop)))
+    $bin)
+
+  (func strongBridge (param $bin (ref ScrapBin)) (param $start i32) (param $usedSet i64) (result i32)
+    (locals i64 $mask)
+    (locals i32 $i $left $right $best)
+    (locals (ref Comp) $comp)
+
+    (loop $loop
+      (when (i32.lt_u $i (array.len $bin))
+        (local.set $comp (array.get ScrapBin $bin $i))
+        (local.set $left (struct.get_u Comp $left $comp))
+        (local.set $right (struct.get_u Comp $right $comp))
+        (local.set $mask (i64.shl (i64 1) (i64.extend_i32_s $i)))
+        (when (i64.eqz (i64.and $usedSet $mask))
+          (cond
+            [(= $left $start)
+              (local.set $best
+                (call $i32.max $best
+                  (+ $left $right
+                    (call strongBridge $bin $right (i64.or $usedSet $mask)))))]
+            [(= $right $start)
+              (local.set $best
+                (call $i32.max $best
+                  (+ $left $right
+                    (call strongBridge $bin $left (i64.or $usedSet $mask)))))]
+            [otherwise]))
+        (add! $i 1)
+        (br $loop)))
+    $best)
+
+  (indirect_func part0 (param $lines (ref null $list<*>.T)) (result i64)
+    (i64.extend_i32_s (call strongBridge (call parse $lines) 0 (i64 0))))
+
+  (func longBridge (param $bin (ref ScrapBin)) (param $start i32) (param $usedSet i64) (result i32 i32)
+    (locals i64 $mask)
+    (locals i32 $i $left $right $bestLength $bestStrength $subLength $subStrength)
+    (locals (ref Comp) $comp)
+
+    (loop $loop
+      (when (i32.lt_u $i (array.len $bin))
+        (local.set $comp (array.get ScrapBin $bin $i))
+        (local.set $left (struct.get_u Comp $left $comp))
+        (local.set $right (struct.get_u Comp $right $comp))
+        (local.set $mask (i64.shl (i64 1) (i64.extend_i32_s $i)))
+        (local.set $subLength 0)
+        (local.set $subStrength 0)
+        (when (i64.eqz (i64.and $usedSet $mask))
+          (cond
+            [(= $left $start)
+              (local.set $subLength
+                (local.set $subStrength
+                  (call longBridge $bin $right (i64.or $usedSet $mask))))
+              (add! $subLength 1)
+              (add! $subStrength (+ $left $right))]
+            [(= $right $start)
+              (local.set $subLength
+                (local.set $subStrength
+                  (call longBridge $bin $left (i64.or $usedSet $mask))))
+              (add! $subLength 1)
+              (add! $subStrength (+ $left $right))]
+            [otherwise]))
+        (cond
+          [(i32.gt_u $subLength $bestLength)
+            (local.set $bestLength $subLength)
+            (local.set $bestStrength $subStrength)]
+          [(i32.lt_u $subLength $bestLength)]
+          [(i32.gt_u $subStrength $bestStrength)
+            (local.set $bestLength $subLength)
+            (local.set $bestStrength $subStrength)]
+          [otherwise])
+        (add! $i 1)
+        (br $loop)))
+    $bestLength $bestStrength)
+
+  (indirect_func part1 (param $lines (ref null $list<*>.T)) (result i64)
+    (locals i32 $strength)
+    (drop (local.set $strength (call longBridge (call parse $lines) 0 (i64 0))))
+    (i64.extend_i32_s $strength))
+
+  (indirect_func main (result i32)
+    (+
+      (call $day-utils.checkI64
+        "day-24/input-ex0.txt"
+        (funcref part0) (i64 31)
+        (funcref part1) (i64 19))
+      (call $day-utils.checkI64
+        "day-24/input-real0.txt"
+        (funcref part0) (i64 1906)
+        (funcref part1) (i64 1824))
+      0)))
